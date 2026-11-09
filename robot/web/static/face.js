@@ -44,3 +44,27 @@ function fit() {
 }
 addEventListener("resize", fit);
 fit();
+
+// กระพริบตา/ลอยเป็นพักๆ ด้วย JS แทน CSS animation วนไม่หยุด — ระหว่างนั้นหน้านิ่ง จอไม่ต้องวาดใหม่ (ประหยัด CPU/GPU ของ Pi)
+const faceEl = document.querySelector(".face");
+function pulseClass(cls, ms) {
+  if (!faceEl) return;
+  faceEl.classList.remove(cls);
+  void faceEl.offsetWidth;            // รีสตาร์ท animation
+  faceEl.classList.add(cls);
+  setTimeout(() => faceEl.classList.remove(cls), ms);
+}
+function scheduleBlink() {
+  setTimeout(() => {
+    if (["idle", "listening", "thinking"].includes(current)) pulseClass("blink", 260);
+    scheduleBlink();
+  }, 3000 + Math.random() * 3000);
+}
+function scheduleBob() {
+  setTimeout(() => {
+    if (current === "idle") pulseClass("bob", 3300);
+    scheduleBob();
+  }, 9000 + Math.random() * 5000);
+}
+scheduleBlink();
+scheduleBob();

@@ -39,6 +39,12 @@ Wayland ไม่ฟัง `--window-position` จึงตั้ง `--class=tl
 จอสัมผัส ILITEK map ไป `HDMI-A-2` ไว้ทุกพอร์ต USB (ชื่ออุปกรณ์เปลี่ยนตามพอร์ตที่เสียบ)
 แก้ rc.xml แล้วโหลดใหม่: `kill -HUP $(pidof labwc)`
 
+## คีย์บอร์ด
+
+- คีย์บอร์ดบนจอใช้ของในหน้าเว็บ (`robot/web/static/osk.js`) — squeekboard ของระบบโดนหน้าต่าง kiosk เต็มจอบัง
+- คีย์บอร์ดจริงสลับไทย/อังกฤษด้วย Alt+Shift (`~/.config/labwc/environment` → symlink ไป `/boot/firmware/tlbot/labwc/environment`
+  ซึ่งตั้ง `DCONF_PROFILE=/boot/firmware/tlbot/dconf/profile` ไว้ด้วย: dconf อ่านอย่างเดียวที่เพิ่มภาษาไทยให้ squeekboard)
+
 ## อัปเดตโค้ดบน Pi
 
 1. สร้าง `app.tar.gz` ใหม่ (คำสั่งด้านบน) แล้ว `scp` ไปที่ Pi

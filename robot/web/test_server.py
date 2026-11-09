@@ -119,6 +119,18 @@ def test_screen_header_uses_real_logo():
     assert b"/static/logo.jpg" in screen.data   # header อ้างโลโก้จริง
 
 
+def test_screen_has_onscreen_keyboard():
+    """หน้าแชทโหลดคีย์บอร์ดบนจอ (osk.js) ที่มีทั้งแป้นไทยและอังกฤษ — คีย์บอร์ดของระบบโดน kiosk เต็มจอบัง"""
+    c = make_client()
+    html = c.get("/screen").get_data(as_text=True)
+    assert '<script src="/static/osk.js"></script>' in html
+    assert html.index("/static/screen.js") < html.index("/static/osk.js")   # ต้องโหลดหลัง screen.js
+    js = c.get("/static/osk.js")
+    assert js.status_code == 200
+    src = js.get_data(as_text=True)
+    assert "ฟหกดเ" in src and "qwertyuiop" in src
+
+
 def test_campus_tour_only_in_sidebar():
     """ปุ่มแนะนำสถานที่วิทยาลัยอยู่แถบซ้ายเท่านั้น และหน้าทัวร์ 3 มิติเปิดได้จริง"""
     c = make_client()

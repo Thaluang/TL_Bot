@@ -41,6 +41,8 @@ for _ in $(seq 1 60); do
 done
 sleep 4
 
+# คีย์บอร์ดบนจอ: ใช้ของในหน้าเว็บ (static/osk.js) — squeekboard ของระบบโดนหน้าต่าง kiosk เต็มจอบัง
+
 # Wayland ไม่ฟัง --window-position → ใช้ --class เป็น app_id แล้วให้ labwc ย้ายจอ
 # (กฎอยู่ใน /boot/firmware/tlbot/labwc/rc.xml: tlbot-screen → HDMI-A-2 จอสัมผัส 1920, tlbot-face → HDMI-A-1)
 OUTS=$(wlr-randr 2>/dev/null | grep -c '^[A-Z]')

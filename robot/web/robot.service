@@ -8,7 +8,7 @@ ExecStart=/usr/bin/python3 server.py
 Restart=always
 RestartSec=3
 User=pi
-EnvironmentFile=/home/pi/robot-briefing/.env
+EnvironmentFile=-/home/pi/robot-briefing/robot/.env
 
 [Install]
 WantedBy=multi-user.target

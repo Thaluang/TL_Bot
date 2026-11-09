@@ -288,6 +288,23 @@
   @keyframes blink{50%{opacity:.3}}
   @keyframes eye{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
   @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  /* ---------- คีย์บอร์ดบนจอ (osk.js) — อยู่ท้าย .stage ดันพื้นที่แชทขึ้นตอนเปิด ---------- */
+  .osk{display:none;flex:none;flex-direction:column;gap:.45rem;padding:.7rem .8rem .9rem;background:var(--side);
+    border-top:1px solid var(--line);box-shadow:0 -10px 30px -18px rgba(0,0,0,.45);user-select:none;touch-action:manipulation}
+  .osk.open{display:flex;animation:osk-up .22s ease-out both}
+  .osk-row{display:flex;gap:.45rem;justify-content:center}
+  .osk .k{all:unset;box-sizing:border-box;flex:1 1 0;min-width:0;max-width:5.6rem;height:3.3rem;border-radius:.8rem;
+    display:grid;place-items:center;background:var(--surface-2);color:var(--strong);font-family:"IBM Plex Sans Thai",sans-serif;
+    font-size:1.45rem;line-height:1;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.18);transition:background .08s,transform .08s}
+  .osk .k:active{background:var(--accent-bg);color:var(--accent-ink);transform:translateY(1px);box-shadow:none}
+  .osk .k.fn{flex:1.5 1 0;max-width:8rem;background:var(--hover);font-size:1.1rem;color:var(--ink)}
+  .osk .k.ico{font-size:1.9rem}
+  .osk .k.fn.on{background:var(--accent-bg);color:var(--accent-ink)}
+  .osk .k.space{flex:6 1 0;max-width:none;font-size:1rem;color:var(--muted)}
+  .osk .k.send{flex:2 1 0;max-width:11rem;background:var(--head);color:var(--bg);font-size:1.1rem;font-weight:600}
+  @keyframes osk-up{from{transform:translateY(30%);opacity:0}to{transform:none;opacity:1}}
+  body.osk-open .welcome{padding:8px 0 16px}
+  body.osk-open .welcome .hello,body.osk-open .welcome .sub,body.osk-open .quick{display:none}
   @media (max-width:860px){aside{display:none}.top .brand-mini{display:flex}.led{margin-right:0}.top .spacer{flex:1}}
   @media (max-width:560px){.col{width:calc(100% - 28px)}.top{padding:12px 14px;gap:6px}.top .brand-mini span,.pill span{display:none}
     .msg.user{max-width:88%}.led{padding:7px 10px}}
@@ -385,5 +402,6 @@
 </div>
 <script src="/static/vendor/qrcode.js"></script>
 <script src="/static/screen.js"></script>
+<script src="/static/osk.js"></script>
 </body>
 </html>

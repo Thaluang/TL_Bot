@@ -1,0 +1,4 @@
+[Desktop Entry]
+Type=Application
+Name=Robot Kiosk (RAM)
+Exec=bash /boot/firmware/tlbot/start.sh

@@ -1,0 +1,5 @@
+# สคริปต์/ค่าตั้งที่รันบน Pi ต้องเป็น LF เสมอ (CRLF ทำให้ bash พัง)
+*.sh text eol=lf
+robot/pi_ram/** text eol=lf
+*.desktop text eol=lf
+*.service text eol=lf

@@ -65,6 +65,10 @@ answers = AnswerCache(config.ANSWER_CACHE_SECONDS, data_files=[
     version_fn=lambda: (news.version, _now().date().isoformat()))
 # หุ่นรู้ข่าวที่ขึ้นจออยู่ (ต่อท้ายข้อมูลวิทยาลัยที่ส่งให้ AI)
 ai.extra_context = lambda: news.ai_text(_now().date())
+# โหลดไลบรารี AI ไว้ก่อนตั้งแต่เปิดเซิร์ฟเวอร์ (บน Pi ช้า ~5 วิ) — คนแรกหลังเปิดเครื่องไม่ต้องรอ
+if config.AI_PROVIDER == "gemini":
+    import threading as _threading                             # noqa: E402
+    _threading.Thread(target=ai.warm_up, daemon=True).start()
 _now = datetime.now   # แยกไว้ให้เทสต์แกล้งเปลี่ยนเวลาได้
 
 

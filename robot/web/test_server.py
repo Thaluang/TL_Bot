@@ -1046,3 +1046,22 @@ def test_screen_js_texts_are_single_line():
     table = js[js.index("const T = {"):js.index("\n};", js.index("const T = {"))]
     for line in table.split("\n"):
         assert line.replace('\\"', "").count('"') % 2 == 0, line[:60]
+
+
+def _screen_js():
+    return make_client().get("/static/screen.js").get_data(as_text=True).replace(chr(13), "")
+
+
+def test_answer_speaks_before_stream_ends():
+    js = _screen_js()
+    assert "function earlySpeech(" in js
+    ask = js[js.index("async function ask("):js.index("// ---- ทักทาย")]
+    assert "earlySpeech(tw.text" in ask            # ระหว่างคำตอบไหล ได้ช่วงต้นครบแล้วพูดเลย
+    assert "spokeEarly" in ask                     # จบแล้วไม่พูดซ้ำ
+
+
+def test_idle_video_loops_until_tap():
+    js = _screen_js()
+    play = js[js.index("function playVideo()"):js.index("function startAttract()")]
+    assert "stopAttract()" not in play.split('video.addEventListener("ended"')[1].split("\n")[0]
+    assert 'video.addEventListener("ended", () => { vidIdx++; playVideo(); });' in js

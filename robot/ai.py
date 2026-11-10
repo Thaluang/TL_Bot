@@ -68,8 +68,21 @@ _gemini_clients = {}   # key -> client
 _gemini_idx = 0        # key ที่ใช้อยู่ตอนนี้ (โควตาหมดแล้วเลื่อนไปตัวถัดไป)
 
 
+# ข้อมูลที่เปลี่ยนบ่อย (ข่าวประชาสัมพันธ์ที่ครูลง) — เซิร์ฟเวอร์ตั้งเป็นฟังก์ชันคืนข้อความ
+def extra_context() -> str:
+    return ""
+
+
+def _extra() -> str:
+    try:
+        text = extra_context() or ""
+    except Exception:
+        return ""
+    return "\n\n" + text if text else ""
+
+
 def _system_text(college_data: dict, saraburi_data: dict, lang: str = "th", question: str = None) -> str:
-    return _rules(lang) + "\n\n" + format_all_data(college_data, saraburi_data, question=question)
+    return _rules(lang) + "\n\n" + format_all_data(college_data, saraburi_data, question=question) + _extra()
 
 
 def is_quota_error(e: Exception) -> bool:
@@ -286,6 +299,7 @@ def _claude_args(question: str, college_data: dict, saraburi_data: dict, lang: s
                 "text": format_all_data(college_data, saraburi_data),
                 "cache_control": {"type": "ephemeral"},
             },
+            *([{"type": "text", "text": _extra().strip()}] if _extra() else []),
         ],
         messages=[{"role": "user", "content": question}],
     )

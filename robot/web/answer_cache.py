@@ -19,9 +19,10 @@ def normalize(question: str) -> str:
 
 
 class AnswerCache:
-    def __init__(self, ttl_seconds: float, data_files=(), max_items: int = 300):
+    def __init__(self, ttl_seconds: float, data_files=(), max_items: int = 300, version_fn=None):
         self.ttl = ttl_seconds
         self.files = list(data_files)
+        self.version_fn = version_fn          # ข้อมูลอื่นที่ไม่ใช่ไฟล์ (เช่น ข่าว) — ค่าเปลี่ยน = คำตอบเก่าใช้ไม่ได้
         self.max_items = max_items
         self._items = {}                      # key -> (เวลาที่จำ, คำตอบ)
         self._lock = threading.Lock()
@@ -33,6 +34,8 @@ class AnswerCache:
                 out.append(os.path.getmtime(f))
             except OSError:
                 out.append(0)
+        if self.version_fn:
+            out.append(self.version_fn())
         return tuple(out)
 
     def _key(self, question: str, lang: str):

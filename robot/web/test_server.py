@@ -784,3 +784,152 @@ def test_stats_db_lives_in_data_dir():
 def test_config_defaults_for_kiosk():
     assert server.config.IDLE_VIDEO_SECONDS == 180
     assert hasattr(server.config, "ADMIN_PASSWORD")
+
+
+# ---- ข่าวประชาสัมพันธ์ + หน้าครู ----
+JPEG = b"\xff\xd8\xff\xe0" + b"0" * 100
+
+
+@pytest.fixture
+def news_env(tmp_path, monkeypatch):
+    from news import NewsStore
+    store = NewsStore(tmp_path)
+    monkeypatch.setattr(server, "news", store)
+    monkeypatch.setattr(server.config, "ADMIN_PASSWORD", "ครู1234")
+    server._admin_tokens.clear()
+    return store
+
+
+def login(c, pw="ครู1234"):
+    return c.post("/admin/login", json={"password": pw})
+
+
+def news_form(**kw):
+    d = {"category": "event", "title": "งานเปิดบ้าน", "subtitle": "20 ธ.ค.", "detail": "มีกิจกรรม"}
+    d.update(kw)
+    return d
+
+
+def test_admin_login_wrong_and_right(news_env):
+    c = make_client()
+    assert login(c, "ผิด").status_code == 401
+    r = login(c)
+    assert r.status_code == 200 and "tlbot_admin=" in r.headers.get("Set-Cookie", "")
+    assert c.get("/admin/news").status_code == 200
+
+
+def test_admin_disabled_without_password(news_env, monkeypatch):
+    monkeypatch.setattr(server.config, "ADMIN_PASSWORD", "")
+    assert login(make_client(), "").status_code == 403
+
+
+def test_admin_needs_login(news_env):
+    c = make_client()
+    assert c.get("/admin/news").status_code == 401
+    assert c.post("/admin/news", data=news_form()).status_code == 401
+    assert c.delete("/admin/news/abc").status_code == 401
+
+
+def test_add_news_with_image_shows_on_screen(news_env):
+    import io
+    c = make_client(); login(c)
+    r = c.post("/admin/news", data={**news_form(), "image": (io.BytesIO(JPEG), "a.jpg")},
+               content_type="multipart/form-data")
+    assert r.status_code == 201
+    pub = make_client().get("/news").get_json()
+    item = pub["items"][0]
+    assert item["title"] == "งานเปิดบ้าน" and item["image_url"].startswith("/news/img/")
+    assert make_client().get(item["image_url"]).data == JPEG
+    assert pub["version"]
+
+
+def test_add_news_rejects_non_image(news_env):
+    import io
+    c = make_client(); login(c)
+    r = c.post("/admin/news", data={**news_form(), "image": (io.BytesIO(b"hello"), "a.txt")},
+               content_type="multipart/form-data")
+    assert r.status_code == 400 and r.get_json()["error"]
+
+
+def test_add_news_rejects_huge_upload(news_env):
+    import io
+    c = make_client(); login(c)
+    big = b"\xff\xd8\xff" + b"0" * (5 * 1024 * 1024)
+    r = c.post("/admin/news", data={**news_form(), "image": (io.BytesIO(big), "a.jpg")},
+               content_type="multipart/form-data")
+    assert r.status_code == 413
+
+
+def test_edit_delete_and_order(news_env):
+    c = make_client(); login(c)
+    a = c.post("/admin/news", data=news_form(title="A")).get_json()
+    b = c.post("/admin/news", data=news_form(title="B")).get_json()
+    assert c.post(f"/admin/news/{a['id']}", data={"title": "A2"}).get_json()["title"] == "A2"
+    assert c.post("/admin/news/order", json={"ids": [a["id"], b["id"]]}).status_code == 200
+    assert [n["title"] for n in c.get("/news").get_json()["items"]] == ["A2", "B"]
+    assert c.delete(f"/admin/news/{a['id']}").status_code == 200
+    assert c.delete(f"/admin/news/{a['id']}").status_code == 404
+    assert c.post("/admin/news/nope", data={"title": "x"}).status_code == 404
+
+
+def test_admin_news_reports_storage(news_env):
+    c = make_client(); login(c)
+    st = c.get("/admin/news").get_json()["storage"]
+    assert set(st) == {"persistent", "path"}
+
+
+def test_news_image_bad_name_404(news_env):
+    assert make_client().get("/news/img/..%2Fnews.json").status_code == 404
+
+
+def test_news_reaches_ai_and_resets_cache(news_env, monkeypatch):
+    import ai
+    seen = []
+    monkeypatch.setattr(server, "ask_ai_stream", lambda q, c, s, lang="th": (seen.append(ai.extra_context()) or iter(["ตอบ"])))
+    monkeypatch.setattr(server.config, "GEMINI_API_KEY", "k")
+    monkeypatch.setattr(server.config, "AI_PROVIDER", "gemini")
+    c = make_client()
+    c.post("/ask/stream", json={"question": "มีงานอะไรบ้าง"}).get_data()
+    login(c); c.post("/admin/news", data=news_form(title="งานเปิดบ้าน"))
+    c.post("/ask/stream", json={"question": "มีงานอะไรบ้าง"}).get_data()
+    assert len(seen) == 2 and "งานเปิดบ้าน" in seen[1]
+
+
+def fake_weather(monkeypatch, payload=None, fail=False):
+    import json as _json
+
+    class R:
+        def __init__(self, b): self.b = b
+        def read(self): return self.b
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def opener(url, timeout=None):
+        if fail:
+            raise OSError("no internet")
+        return R(_json.dumps(payload).encode())
+    monkeypatch.setattr(server, "urlopen", opener)
+
+
+WX = {"current": {"temperature_2m": 33.4, "weather_code": 2},
+      "daily": {"temperature_2m_max": [35.1], "temperature_2m_min": [24.2], "precipitation_probability_max": [40]}}
+
+
+def test_weather_ok(monkeypatch):
+    monkeypatch.setattr(server, "_weather_cache", {"at": 0, "data": None})
+    fake_weather(monkeypatch, WX)
+    d = make_client().get("/weather").get_json()
+    assert d["temp"] == 33 and d["text_th"] == "แดดสลับเมฆ" and d["high"] == 35 and d["low"] == 24 and d["rain"] == 40
+
+
+def test_weather_offline_without_cache_503(monkeypatch):
+    monkeypatch.setattr(server, "_weather_cache", {"at": 0, "data": None})
+    fake_weather(monkeypatch, fail=True)
+    assert make_client().get("/weather").status_code == 503
+
+
+def test_weather_offline_uses_recent_cache(monkeypatch):
+    import time
+    monkeypatch.setattr(server, "_weather_cache", {"at": time.time() - 3600, "data": {"temp": 30}})
+    fake_weather(monkeypatch, fail=True)
+    assert make_client().get("/weather").get_json()["temp"] == 30

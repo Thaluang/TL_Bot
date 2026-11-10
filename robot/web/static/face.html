@@ -4,8 +4,9 @@
   วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์
   เปิดไฟล์นี้คู่กับ screen.html ในเบราว์เซอร์เดียว สถานะจะ sync กัน
 -->
-<html lang="th">
+<html lang="th" translate="no">
 <head>
+<meta name="google" content="notranslate">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>หุ่นยนต์ — จอใบหน้า (mockup)</title>
@@ -32,18 +33,16 @@
     background:radial-gradient(50% 40% at 50% 42%, color-mix(in srgb, var(--glow) 28%, transparent), transparent 70%);
     transition:background .6s ease; opacity:.9;
   }
-  /* scanline + vignette ให้รู้สึกเป็นจออุปกรณ์ */
+  /* vignette ขอบมืด (เดิมมี scanline + mix-blend-mode:overlay ทั้งจอ — หนักมากบน GPU ของ Pi เลยเอาออก) */
   body::after{
     content:""; position:fixed; inset:0; pointer-events:none; z-index:5;
-    background:
-      repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px),
-      radial-gradient(130% 130% at 50% 50%, transparent 58%, rgba(0,0,0,.55) 100%);
-    mix-blend-mode:overlay;
+    background:radial-gradient(130% 130% at 50% 50%, transparent 58%, rgba(0,0,0,.4) 100%);
   }
 
   .stage{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:46px}
 
-  .face{position:relative; animation:float 6s ease-in-out infinite; display:flex; flex-direction:column; align-items:center; gap:34px}
+  /* ไม่มี animation วนไม่หยุด (Pi ต้องวาดใหม่ 60fps ตลอด) — face.js สั่งกระพริบตา (.blink) / ลอย (.bob) เป็นพักๆ แทน */
+  .face{position:relative; will-change:transform; display:flex; flex-direction:column; align-items:center; gap:34px}
   /* วงพลังงานรอบหน้า (เด่นตอนฟัง) */
   .face::before{
     content:""; position:absolute; top:42%; left:50%; width:440px; height:440px;
@@ -53,17 +52,17 @@
   }
 
   .eyes{display:flex; gap:64px}
-  .eye{transition:transform .45s cubic-bezier(.34,1.4,.5,1)}
+  .eye{will-change:transform; transition:transform .45s cubic-bezier(.34,1.4,.5,1)}
   .eye-ball{
     width:104px; height:122px; border-radius:34px; position:relative;
     background:radial-gradient(120% 90% at 40% 28%,
       color-mix(in srgb, var(--accent) 96%, #fff 40%), var(--accent) 62%,
       color-mix(in srgb, var(--accent) 70%, #1c3a66) 100%);
     box-shadow:
-      0 0 26px var(--glow),
-      0 0 70px color-mix(in srgb, var(--glow) 65%, transparent),
+      0 0 24px var(--glow),
+      0 0 56px color-mix(in srgb, var(--glow) 55%, transparent),
       inset 0 -14px 26px color-mix(in srgb, var(--glow) 45%, transparent);
-    animation:blink 5.4s infinite;
+    will-change:transform;
     transition:height .45s cubic-bezier(.34,1.4,.5,1), border-radius .45s, background .6s, box-shadow .6s;
   }
   .eye-ball::after{ /* ประกายตา */
@@ -71,7 +70,9 @@
     border-radius:50%; background:rgba(255,255,255,.9); filter:blur(2px); opacity:.85;
   }
 
-  .mouth{margin-top:4px; transition:all .45s ease; filter:drop-shadow(0 0 10px var(--glow))}
+  .face.blink .eye-ball{animation:blink .22s ease-in-out 1}
+  .face.bob{animation:float 3.2s ease-in-out 1}
+  .mouth{margin-top:4px; transition:width .45s ease, height .45s ease, border-radius .45s ease, background .45s ease; will-change:transform}
 
   .status{
     position:relative; z-index:2; display:flex; align-items:center; gap:12px;
@@ -95,6 +96,7 @@
   /* ---------- ม้วนแต่ละสถานะ ---------- */
   /* รอ (ขาว/ฟ้าอ่อน) — ยิ้มเบาๆ */
   body.state-idle{--accent:#CFEBFF;--glow:#86CEFF}
+  body.state-idle .status .dot{animation:none}
   body.state-idle .mouth{width:96px;height:46px;border:8px solid var(--accent);border-top:0;border-radius:0 0 96px 96px}
 
   /* ฟัง (ฟ้า) — ตาเบิ่ง วงพลังงานเต้น */
@@ -118,7 +120,7 @@
 
   /* ผิดพลาด (แดง) — ตาเศร้า ปากคว่ำ สั่นเบาๆ */
   body.state-error{--accent:#FF6B7A;--glow:#FF4757}
-  body.state-error .face{animation:float 6s ease-in-out infinite, shake .5s ease 1}
+  body.state-error .face{animation:shake .5s ease 1}
   body.state-error .eye-ball{height:78px;animation:none}
   body.state-error .eye.left{transform:rotate(-15deg)}
   body.state-error .eye.right{transform:rotate(15deg)}
@@ -126,7 +128,7 @@
 
   /* ทักทาย (ชมพูส้ม) — ตายิ้มโค้ง ^ ^ ปากยิ้มกว้าง หน้าเอียงไปมาเหมือนโบกมือ */
   body.state-greeting{--accent:#FF9EB5;--glow:#FF6F91}
-  body.state-greeting .face{animation:float 6s ease-in-out infinite, hello 1s ease-in-out 3}
+  body.state-greeting .face{animation:hello 1s ease-in-out 3}
   body.state-greeting .eye-ball{height:58px;background:none;border:16px solid var(--accent);border-bottom:0;
     border-radius:90px 90px 0 0;box-shadow:0 -6px 22px var(--glow);animation:none}
   body.state-greeting .eye-ball::after{display:none}
@@ -137,7 +139,7 @@
     opacity:0; transform:translateY(60px) scale(.6); pointer-events:none;
     transition:opacity .35s ease, transform .45s cubic-bezier(.34,1.4,.5,1)}
   .hand svg{display:block; width:100%; overflow:visible; fill:var(--accent);
-    filter:drop-shadow(0 0 12px var(--glow)) drop-shadow(0 0 32px color-mix(in srgb, var(--glow) 60%, transparent));
+    filter:drop-shadow(0 0 14px var(--glow)); will-change:transform;
     transform-origin:50% 95%}
   body.state-greeting .hand{opacity:1; transform:none}
   body.state-greeting .hand svg{animation:wave .55s ease-in-out infinite alternate}
@@ -145,7 +147,7 @@
   /* ---------- animations ---------- */
   @keyframes wave{from{transform:rotate(-22deg)}to{transform:rotate(18deg)}}
   @keyframes hello{0%,100%{rotate:0deg}25%{rotate:-6deg}75%{rotate:6deg}}
-  @keyframes blink{0%,93%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.08)}}
+  @keyframes blink{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.08)}}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
   @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.6);opacity:.5}}
   @keyframes talk{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}

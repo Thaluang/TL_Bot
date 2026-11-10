@@ -5,8 +5,9 @@
   สลับโหมดมืด/สว่าง + ภาษาไทย/อังกฤษ ได้ที่มุมขวาบน (ภาษาส่งไปเซิร์ฟเวอร์ให้จอใบหน้าเปลี่ยนตาม)
   ข้อความทุกภาษาอยู่ใน screen.js (ตัวแปร T) — ในนี้เป็นค่าเริ่มต้นภาษาไทย
 -->
-<html lang="th" data-theme="dark">
+<html lang="th" translate="no" data-theme="dark">
 <head>
+<meta name="google" content="notranslate">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ผู้ช่วยท่าหลวงฯ</title>
@@ -45,23 +46,25 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
+  /* ขยายตัวอักษรตามจอ: ~16px ที่จอ 1024 → ~25px ที่จอ 1920 (จอพกพาเล็กแต่ละเอียดสูง) (ทุกอย่างที่เป็น rem ขยายตาม) */
+  html{font-size:clamp(16px,calc(6px + 1vw),28px)}
   body{font-family:"IBM Plex Sans Thai",system-ui,sans-serif;background:var(--bg);color:var(--ink);
     display:flex;overflow:hidden;transition:background .4s,color .4s}
   button{font:inherit;color:inherit}
 
   /* ---------- แถบซ้าย (จอแคบจะซ่อน) ---------- */
-  aside{width:280px;flex:none;background:var(--side);display:flex;flex-direction:column;padding:14px 10px;
+  aside{width:17rem;flex:none;background:var(--side);display:flex;flex-direction:column;padding:14px 10px;
     overflow-y:auto;transition:background .4s}
   .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
-  .brand img{width:36px;height:36px;border-radius:50%;background:#fff;object-fit:contain;padding:2px;border:1px solid var(--line);flex:none}
+  .brand img{width:2.25rem;height:2.25rem;border-radius:50%;background:#fff;object-fit:contain;padding:2px;border:1px solid var(--line);flex:none}
   .brand b{font-family:"Mitr";font-weight:400;font-size:1.05rem;display:block;line-height:1.2}
-  .brand small{font-size:.7rem;color:var(--muted);display:block;line-height:1.35}
+  .brand small{font-size:.8rem;color:var(--muted);display:block;line-height:1.35}
   .nav{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:999px;
     font-size:.88rem;transition:background .2s}
   .nav:hover{background:var(--hover)}
   .nav.on{background:var(--accent-bg);color:var(--accent-ink)}
-  .sec{font-size:.74rem;color:var(--muted);padding:18px 12px 6px}
-  .side-foot{margin-top:auto;padding:12px;font-size:.72rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line)}
+  .sec{font-size:.82rem;color:var(--muted);padding:18px 12px 6px}
+  .side-foot{margin-top:auto;padding:12px;font-size:.82rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line)}
   .side-foot b{color:var(--ink);font-weight:500}
 
   /* ---------- พื้นที่หลัก ---------- */
@@ -80,7 +83,7 @@
   .top{flex:none;display:flex;align-items:center;gap:8px;padding:14px 20px}
   .top .brand-mini{display:none;align-items:center;gap:8px;font-family:"Mitr";font-size:.95rem}
   .top .brand-mini img{width:30px;height:30px;border-radius:50%;background:#fff;object-fit:contain;padding:2px}
-  .led{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--muted);
+  .led{display:flex;align-items:center;gap:7px;font-size:.84rem;color:var(--muted);
     background:var(--surface);padding:7px 13px;border-radius:999px;margin-right:auto;white-space:nowrap}
   .led .d{width:8px;height:8px;border-radius:50%;background:#34a853;flex:none}
   body.state-listening .led .d{background:var(--g3);animation:blink .7s infinite}
@@ -88,19 +91,19 @@
   body.state-answering .led .d{background:var(--g1);animation:blink 1.4s infinite}
   body.state-error .led .d{background:#ea4335}
   .seg{display:flex;background:var(--surface);border-radius:999px;padding:3px}
-  .seg button{all:unset;cursor:pointer;font-size:.76rem;font-weight:600;padding:6px 12px;border-radius:999px;color:var(--muted)}
+  .seg button{all:unset;cursor:pointer;font-size:.82rem;font-weight:600;padding:6px 12px;border-radius:999px;color:var(--muted)}
   .seg button.on{background:var(--accent-bg);color:var(--accent-ink)}
-  .icon-btn{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  .icon-btn{all:unset;cursor:pointer;width:2.4rem;height:2.4rem;border-radius:50%;display:grid;place-items:center;
     background:var(--surface);transition:background .2s;flex:none}
   .icon-btn:hover{background:var(--hover)}
-  .icon-btn svg{width:19px;height:19px;fill:currentColor}
+  .icon-btn svg{width:1.2rem;height:1.2rem;fill:currentColor}
   :root[data-theme="light"] .i-sun,:root:not([data-theme="light"]) .i-moon{display:none}
   .pill{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:.8rem;padding:8px 14px;
     border-radius:999px;background:var(--accent-bg);color:var(--accent-ink);white-space:nowrap}
 
   .scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;scroll-behavior:smooth}
   .scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:9px}
-  .col{width:min(100% - 40px,760px);margin:0 auto}
+  .col{width:min(100% - 40px,48rem);margin:0 auto}
 
   /* ---------- หน้าแรก (กลางจอ) ---------- */
   .welcome{margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 0 50px}
@@ -110,7 +113,7 @@
   .welcome .sub{color:var(--muted);font-size:.95rem;margin:8px 0 26px;animation:rise .6s .08s both}
   .bar-slot{width:100%;animation:rise .6s .15s both}
   .quick{margin-top:18px;animation:rise .6s .22s both}
-  .quick-label{font-size:.74rem;color:var(--muted);margin-bottom:10px}
+  .quick-label{font-size:.82rem;color:var(--muted);margin-bottom:10px}
   .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
   .chip{all:unset;cursor:pointer;font-size:.85rem;padding:9px 15px;border-radius:999px;background:var(--surface);
     border:1px solid var(--line);transition:background .2s;white-space:nowrap}
@@ -129,9 +132,9 @@
     padding:8px 8px 8px 22px;min-height:64px;position:relative;box-shadow:var(--bar-shadow);transition:background .4s}
   .composer input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:1rem;color:var(--ink)}
   .composer input::placeholder{color:var(--muted)}
-  .ibtn{all:unset;cursor:pointer;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;transition:background .2s}
+  .ibtn{all:unset;cursor:pointer;width:3rem;height:3rem;border-radius:50%;display:grid;place-items:center;flex:none;transition:background .2s}
   .ibtn:hover{background:var(--hover)}
-  .ibtn svg{width:24px;height:24px;fill:currentColor}
+  .ibtn svg{width:1.5rem;height:1.5rem;fill:currentColor}
   .ibtn.send{display:none;color:var(--head)}
   .composer.has-text .ibtn.send{display:grid}
   .wave{display:none;flex:1;align-items:center;gap:4px;height:30px;min-width:0}
@@ -150,7 +153,7 @@
   body.v-thread .chat{display:flex}
   .msg.user{align-self:flex-end;max-width:75%;background:var(--surface-2);padding:12px 18px;
     border-radius:24px 6px 24px 24px;font-size:.98rem;line-height:1.5;animation:rise .4s both;overflow-wrap:anywhere}
-  .mic-tag{display:block;font-size:.7rem;color:var(--muted);margin-bottom:2px}
+  .mic-tag{display:block;font-size:.8rem;color:var(--muted);margin-bottom:2px}
   .msg.bot{display:flex;gap:16px;align-items:flex-start;animation:rise .5s both}
   .a-body{flex:1;min-width:0;font-size:1rem;line-height:1.75;padding-top:3px;overflow-wrap:anywhere}
   .a-body.warn{border-left:3px solid var(--warn);padding-left:12px}
@@ -165,15 +168,15 @@
   .a-body .md-link:active{transform:scale(.97)}
   .a-body .link-card{display:inline-flex;vertical-align:middle;flex-wrap:wrap;align-items:center;gap:14px 18px;margin:6px 0}
   .a-body .link-qr{display:inline-flex;flex-direction:column;align-items:center;gap:4px}
-  .a-body .link-qr svg{width:150px;height:150px;border-radius:10px;display:block}
+  .a-body .link-qr svg{width:9.5rem;height:9.5rem;border-radius:10px;display:block}
   .a-body .link-qr small{font-size:.8rem;opacity:.8}
   .tools{display:flex;gap:2px;margin:-4px 0 0 -8px}
-  .tools button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+  .tools button{all:unset;cursor:pointer;width:2.4rem;height:2.4rem;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
   .tools button:hover{background:var(--hover);color:var(--ink)}
-  .tools svg{width:19px;height:19px;fill:currentColor}
+  .tools svg{width:1.2rem;height:1.2rem;fill:currentColor}
   .caret{display:inline-block;width:.55em;height:.55em;margin-left:4px;border-radius:50%;vertical-align:middle;
     background:var(--grad);animation:blink .8s infinite}
-  .map-thumb{display:block;width:100%;max-width:380px;border-radius:16px;margin:8px 0;cursor:zoom-in;border:1px solid var(--line)}
+  .map-thumb{display:block;width:100%;max-width:24rem;border-radius:16px;margin:8px 0;cursor:zoom-in;border:1px solid var(--line)}
 
   /* หน้าหุ่น + วงแหวนไล่สี */
   .ava{position:relative;width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center}
@@ -195,30 +198,30 @@
   .chip-row::-webkit-scrollbar{display:none}
   .chip-row .chip{font-size:.8rem;padding:7px 13px}
   @media (max-height:600px){.chip-row,.hint{display:none}}   /* จอเตี้ย (เช่นจอ Pi 800×480) เก็บที่ให้คำตอบ */
-  .hint{text-align:center;font-size:.72rem;color:var(--muted);margin-top:10px}
+  .hint{text-align:center;font-size:.82rem;color:var(--muted);margin-top:10px}
 
   /* ---------- รูปสถานที่ + เมนูที่เที่ยว/ของฝาก ---------- */
-  .place-photo{display:block;width:100%;max-width:420px;border-radius:16px;cursor:zoom-in;border:1px solid var(--line);object-fit:cover}
+  .place-photo{display:block;width:100%;max-width:26rem;border-radius:16px;cursor:zoom-in;border:1px solid var(--line);object-fit:cover}
   .photo-one{margin:8px 0}
   .photo-one .place-photo,.place-card .place-photo{max-height:min(320px,45vh)}   /* รูปแนวตั้งไม่ให้สูงล้นจอเล็ก (แตะดูเต็มได้) */
   .photo-one figcaption,.photo-row figcaption{font-size:.8rem;color:var(--muted);margin-top:4px}
   .photo-row{display:flex;gap:10px;overflow-x:auto;margin:8px 0;padding-bottom:4px}
-  .photo-row figure{flex:none;width:170px}
+  .photo-row figure{flex:none;width:10.5rem}
   .photo-row .place-photo{height:120px}
   .menu-grid{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
   .menu-btn{all:unset;cursor:pointer;min-height:48px;box-sizing:border-box;padding:0 18px;border-radius:16px;display:flex;align-items:center;gap:8px;
     background:var(--surface);border:1px solid var(--line);font-size:.95rem;transition:background .2s}
   .menu-btn:hover{background:var(--hover)}
   .menu-btn:active{transform:scale(.97)}
-  .menu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:6px 0 4px}
+  .menu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:10px;margin:6px 0 4px}
   .menu-item{all:unset;cursor:pointer;min-height:64px;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:8px;
     border-radius:16px;background:var(--surface);border:1px solid var(--line);transition:background .2s}
   .menu-item:hover{background:var(--hover)}
-  .menu-item img,.menu-item .m-icon{width:64px;height:64px;border-radius:12px;flex:none;object-fit:cover}
+  .menu-item img,.menu-item .m-icon{width:4rem;height:4rem;border-radius:12px;flex:none;object-fit:cover}
   .menu-item .m-icon{display:grid;place-items:center;font-size:1.8rem;background:var(--surface-2)}
   .menu-item b{display:block;font-weight:500;line-height:1.35}
   .menu-item small,.place-card small{color:var(--muted);font-size:.8rem}
-  .place-card{margin:6px 0 4px;max-width:420px}
+  .place-card{margin:6px 0 4px;max-width:26rem}
   .place-card .m-icon{width:100%;height:140px;border-radius:16px;display:grid;place-items:center;font-size:3rem;background:var(--surface-2)}
   .place-card h3{font-family:"Mitr";font-weight:500;font-size:1.15rem;margin:10px 0 2px;color:var(--head)}
   .place-card p{margin-top:6px}
@@ -242,7 +245,7 @@
   /* ---------- ให้ดาวคำตอบ ---------- */
   .rate{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:.85rem;color:var(--muted)}
   .stars{display:flex;flex-direction:row-reverse}   /* กลับด้าน: hover ดาวไหน ดาวก่อนหน้าติดตาม (~ ใช้กับตัวถัดไป) */
-  .stars button{all:unset;cursor:pointer;width:42px;height:42px;display:grid;place-items:center;font-size:1.6rem;line-height:1;
+  .stars button{all:unset;cursor:pointer;width:2.6rem;height:2.6rem;display:grid;place-items:center;font-size:1.6rem;line-height:1;
     color:var(--line);transition:color .15s,transform .15s}
   .stars button:hover,.stars button:hover~button,.stars button.on,.stars button.on~button{color:#f5b301}
   .stars button:active{transform:scale(1.25)}
@@ -285,6 +288,23 @@
   @keyframes blink{50%{opacity:.3}}
   @keyframes eye{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
   @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  /* ---------- คีย์บอร์ดบนจอ (osk.js) — อยู่ท้าย .stage ดันพื้นที่แชทขึ้นตอนเปิด ---------- */
+  .osk{display:none;flex:none;flex-direction:column;gap:.45rem;padding:.7rem .8rem .9rem;background:var(--side);
+    border-top:1px solid var(--line);box-shadow:0 -10px 30px -18px rgba(0,0,0,.45);user-select:none;touch-action:manipulation}
+  .osk.open{display:flex;animation:osk-up .22s ease-out both}
+  .osk-row{display:flex;gap:.45rem;justify-content:center}
+  .osk .k{all:unset;box-sizing:border-box;flex:1 1 0;min-width:0;max-width:5.6rem;height:3.3rem;border-radius:.8rem;
+    display:grid;place-items:center;background:var(--surface-2);color:var(--strong);font-family:"IBM Plex Sans Thai",sans-serif;
+    font-size:1.45rem;line-height:1;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.18);transition:background .08s,transform .08s}
+  .osk .k:active{background:var(--accent-bg);color:var(--accent-ink);transform:translateY(1px);box-shadow:none}
+  .osk .k.fn{flex:1.5 1 0;max-width:8rem;background:var(--hover);font-size:1.1rem;color:var(--ink)}
+  .osk .k.ico{font-size:1.9rem}
+  .osk .k.fn.on{background:var(--accent-bg);color:var(--accent-ink)}
+  .osk .k.space{flex:6 1 0;max-width:none;font-size:1rem;color:var(--muted)}
+  .osk .k.send{flex:2 1 0;max-width:11rem;background:var(--head);color:var(--bg);font-size:1.1rem;font-weight:600}
+  @keyframes osk-up{from{transform:translateY(30%);opacity:0}to{transform:none;opacity:1}}
+  body.osk-open .welcome{padding:8px 0 16px}
+  body.osk-open .welcome .hello,body.osk-open .welcome .sub,body.osk-open .quick{display:none}
   @media (max-width:860px){aside{display:none}.top .brand-mini{display:flex}.led{margin-right:0}.top .spacer{flex:1}}
   @media (max-width:560px){.col{width:calc(100% - 28px)}.top{padding:12px 14px;gap:6px}.top .brand-mini span,.pill span{display:none}
     .msg.user{max-width:88%}.led{padding:7px 10px}}
@@ -382,5 +402,6 @@
 </div>
 <script src="/static/vendor/qrcode.js"></script>
 <script src="/static/screen.js"></script>
+<script src="/static/osk.js"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" translate="no">
 <head>
+<meta name="google" content="notranslate">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>3D Campus Tour – วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</title>
@@ -121,9 +122,16 @@ function canvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;
 
 /* ---------------- renderer / scene ---------------- */
 const stage=$('stage');
-const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:false});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+/* โหมดเบา: GPU เล็ก (Raspberry Pi = V3D/VideoCore, GPU มือถือ, หรือวาดด้วยซอฟต์แวร์) หรือเปิดด้วย ?lite=1
+   — ปิด antialias, เรนเดอร์ 67% ของจอ, วัสดุ Lambert, ไม่มีเงา, ธงไม่โบก, ไม่วาดใหม่ตอนไม่มีอะไรขยับ (?lite=0 บังคับคุณภาพเต็ม)
+   (ดูจากชื่อ GPU เพราะ Chromium รุ่นใหม่รายงาน userAgent เป็น "Linux x86_64" แม้บน Pi) */
+function gpuName(){try{const g=document.createElement('canvas').getContext('webgl');const e=g&&g.getExtension('WEBGL_debug_renderer_info');return e?String(g.getParameter(e.UNMASKED_RENDERER_WEBGL)):'';}catch(e){return '';}}
+const LITE=/[?&]lite=1/.test(location.search)||(!/[?&]lite=0/.test(location.search)&&/V3D|VideoCore|Broadcom|Mali|Adreno|PowerVR|llvmpipe|SwiftShader|softpipe/i.test(gpuName()));
+const renderer=new THREE.WebGLRenderer({antialias:!LITE,preserveDrawingBuffer:false,powerPreference:'high-performance'});
+const PR=parseFloat((location.search.match(/[?&]pr=([\d.]+)/)||[])[1])||0;   // ?pr=0.5 ทดสอบความละเอียด
+renderer.setPixelRatio(PR||(LITE?0.67:Math.min(devicePixelRatio,2)));
+renderer.shadowMap.enabled=!LITE;renderer.shadowMap.type=THREE.PCFSoftShadowMap;   // เงาบน Pi กิน ~35% ของเฟรม → ปิดในโหมดเบา
+renderer.shadowMap.autoUpdate=false;   // ฉากไม่ขยับ (ยกเว้นธง) → คำนวณเงาครั้งเดียวหลังสร้างฉาก
 renderer.outputEncoding=THREE.sRGBEncoding;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 stage.insertBefore(renderer.domElement,stage.firstChild);
@@ -150,7 +158,9 @@ const winTex=canvasTex(128,128,(g,w,h)=>{g.fillStyle='#ffffff';g.fillRect(0,0,w,
   for(const x of [10,70]){const gr=g.createLinearGradient(x,0,x+48,0);gr.addColorStop(0,'#3d5a78');gr.addColorStop(.6,'#6f93b5');gr.addColorStop(1,'#3d5a78');g.fillStyle=gr;g.fillRect(x,22,48,56);g.fillStyle='rgba(255,255,255,.55)';g.fillRect(x+23,22,2,56);}
 });
 winTex.wrapS=winTex.wrapT=THREE.RepeatWrapping;winTex.encoding=THREE.sRGBEncoding;
-const std=(o)=>new THREE.MeshStandardMaterial(Object.assign({roughness:.85,metalness:0},o));
+const std=LITE
+  ?(o)=>{const q=Object.assign({},o);delete q.roughness;delete q.metalness;return new THREE.MeshLambertMaterial(q);}
+  :(o)=>new THREE.MeshStandardMaterial(Object.assign({roughness:.85,metalness:0},o));
 const matCache={};
 function M(hex,o){const k=hex+JSON.stringify(o||{});return matCache[k]||(matCache[k]=std(Object.assign({color:hex},o)));}
 function shadowAll(obj){obj.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});return obj;}
@@ -456,6 +466,7 @@ function tickTour(dt){
   camera.position.copy(pose.pos);camTgt.copy(pose.tgt);camera.lookAt(camTgt);
 }
 function highlight(){
+  dirty=true;
   const cur=tour.mode!=='free'?STOPS[tour.idx]:null;
   PL.forEach(p=>{const on=cur&&cur.p===p;const sp=p.label;const b=sp.userData.base;const s=on?1.7:1;sp.scale.set(b.x*s,b.y*s,1);
     sp.material.opacity=!cur||on?1:cur.kind==='end'?.85:.0;sp.visible=sp.material.opacity>0;});
@@ -584,22 +595,55 @@ renderer.domElement.addEventListener('pointerup',ev=>{
 });
 
 /* ---------------- loop ---------------- */
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?58:42;camera.updateProjectionMatrix();
+let dirty=true,lastDraw=0;   // dirty = ต้องวาดใหม่ (โหมดเบาจะข้ามเฟรมที่ไม่มีอะไรเปลี่ยน)
+function resize(){dirty=true;const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?58:42;camera.updateProjectionMatrix();
   const pr=renderer.getPixelRatio();ov.width=Math.round(w*pr);ov.height=Math.round(h*pr);}
 addEventListener('resize',resize);
 let last=performance.now();const clock={t:0};
 function frame(now){
   const dt=Math.min(.25,(now-last)/1000);last=now;clock.t+=dt;
   tickTour(dt);
-  if(tour.mode==='free'){controls.update();camTgt.copy(controls.target);}
-  const flag=byCode['I'].obj.userData.flag;if(flag){const pa=flag.geometry.attributes.position;for(let i=0;i<pa.count;i++){const x=pa.getX(i);pa.setZ(i,Math.sin(x*3-clock.t*5)*.12*x);}pa.needsUpdate=true;}
+  let moved=false;
+  if(tour.mode==='free'){moved=controls.update();camTgt.copy(controls.target);}
+  if(LITE&&tour.mode==='free'&&!moved&&!dirty&&!rec.active&&now-lastDraw<1000){requestAnimationFrame(frame);return;}
+  dirty=false;lastDraw=now;
+  const flag=!LITE&&byCode['I'].obj.userData.flag;if(flag){const pa=flag.geometry.attributes.position;for(let i=0;i<pa.count;i++){const x=pa.getX(i);pa.setZ(i,Math.sin(x*3-clock.t*5)*.12*x);}pa.needsUpdate=true;}
   renderer.render(scene,camera);drawOverlay();captureFrame();
   if(tour.mode==='tour'){$('progFill').style.width=(100*tour.elapsed/totalDur()).toFixed(2)+'%';}else $('progFill').style.width='0';
   requestAnimationFrame(frame);
 }
+/* รวมชิ้นที่อยู่นิ่ง + ใช้วัสดุเดียวกันเป็นก้อนเดียว — ฉากมี ~380 ชิ้น = ~520 draw call ต่อเฟรม หนักมากบน CPU ของ Pi
+   หน้าตาเหมือนเดิมทุกอย่าง (ข้ามธงที่โบก, ต้นไม้ InstancedMesh, ป้ายชื่อ Sprite) */
+function mergeStatic(){
+  scene.updateMatrixWorld(true);
+  const flag=byCode['I']&&byCode['I'].obj.userData.flag;const groups=new Map();
+  scene.traverse(o=>{
+    if(!o.isMesh||o.isInstancedMesh||o===flag||Array.isArray(o.material)||o.material.vertexColors)return;
+    const g=o.geometry;if(!g.attributes.position||!g.attributes.normal||g.morphAttributes.position)return;
+    const k=[o.material.uuid,o.castShadow,o.receiveShadow,o.renderOrder,!!g.attributes.uv].join('|');
+    if(!groups.has(k))groups.set(k,[]);groups.get(k).push(o);
+  });
+  groups.forEach(list=>{
+    if(list.length<2)return;
+    const parts=list.map(o=>{const g=(o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone());g.applyMatrix4(o.matrixWorld);
+      if(o.matrixWorld.determinant()<0){for(const a of ['position','normal','uv']){const at=g.attributes[a];if(!at)continue;const s=at.itemSize,arr=at.array;
+        for(let i=0;i<at.count;i+=3)for(let c=0;c<s;c++){const t=arr[(i+1)*s+c];arr[(i+1)*s+c]=arr[(i+2)*s+c];arr[(i+2)*s+c]=t;}}}
+      return g;});
+    const n=parts.reduce((t,g)=>t+g.attributes.position.count,0),hasUv=!!parts[0].attributes.uv;
+    const pos=new Float32Array(n*3),nor=new Float32Array(n*3),uv=hasUv?new Float32Array(n*2):null;let off=0;
+    parts.forEach(g=>{const c=g.attributes.position.count;pos.set(g.attributes.position.array.subarray(0,c*3),off*3);nor.set(g.attributes.normal.array.subarray(0,c*3),off*3);
+      if(uv)uv.set(g.attributes.uv.array.subarray(0,c*2),off*2);off+=c;g.dispose();});
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.BufferAttribute(nor,3));
+    if(uv)geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.computeBoundingSphere();
+    const m=new THREE.Mesh(geo,list[0].material);m.castShadow=list[0].castShadow;m.receiveShadow=list[0].receiveShadow;m.renderOrder=list[0].renderOrder;
+    list.forEach(o=>{o.parent&&o.parent.remove(o);o.geometry.dispose();});scene.add(m);
+  });
+}
 function init(){
-  buildAll();buildList();resize();
+  buildAll();buildList();mergeStatic();resize();
   const p0=poseFor(STOPS[0],0);camera.position.copy(p0.pos);controls.target.copy(p0.tgt);camTgt.copy(p0.tgt);controls.update();
+  renderer.shadowMap.needsUpdate=true;
+  window.__tour={renderer,scene,LITE};   // ไว้วัดประสิทธิภาพ (renderer.info)
   $('loading').remove();requestAnimationFrame(frame);
   setTimeout(()=>toast('กด “▶ เริ่มเล่นวิดีโอทัวร์” เพื่อชมแบบอัตโนมัติ หรือแตะ “☰ สถานที่” เพื่อเลือกจุด',4200),600);
 }

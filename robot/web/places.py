@@ -3,6 +3,7 @@
 ทั้งหมดอ่านจาก saraburi_data.json + ไฟล์รูปใน static/places/ (ไม่เรียก AI)
 """
 from pathlib import Path
+from urllib.parse import quote_plus
 
 PLACES_DIR = Path(__file__).resolve().parent / "static" / "places"
 MAX_PHOTOS = 3
@@ -89,6 +90,20 @@ def photos_for(question: str, answer: str, saraburi_data: dict, lang: str = "th"
     return out[:MAX_PHOTOS]
 
 
+MAPS_URL = "https://www.google.com/maps/search/?api=1&query="
+
+
+def map_link(entry: dict) -> str:
+    """ลิงก์ Google Maps ของสถานที่ (หน้าจอทำเป็น QR ให้สแกนแล้วกดนำทางในมือถือ)
+    มีช่อง "พิกัด" ("ละติจูด, ลองจิจูด") = ปักหมุดตรงจุด / ไม่มี = ค้นจาก ชื่อเต็ม + อำเภอ + สระบุรี"""
+    coords = str(entry.get("พิกัด") or "").replace(" ", "")
+    if coords:
+        return MAPS_URL + quote_plus(coords)
+    name = entry.get("ชื่อเต็ม") or entry["ชื่อ"]
+    district = entry.get("อำเภอ", "")
+    return MAPS_URL + quote_plus(" ".join(x for x in (name, f"อำเภอ{district}" if district else "", "สระบุรี") if x))
+
+
 def menu_tree(saraburi_data: dict, places_dir: Path = PLACES_DIR) -> dict:
     """โครงเมนู ที่เที่ยว/ของฝาก → หมวด → รายการ ให้หน้าจอโหลดครั้งเดียว"""
     tree = {}
@@ -103,6 +118,8 @@ def menu_tree(saraburi_data: dict, places_dir: Path = PLACES_DIR) -> dict:
                     "district": e.get("อำเภอ", ""),
                     "highlight": e.get("จุดเด่น", ""),
                     "photo": _photo_src(e, places_dir),
+                    # ที่เที่ยว/วัด: QR นำทาง + ระยะทาง (หุ่นพูดตอนเปิดรายละเอียด) — ของฝากไม่ใช่สถานที่ ไม่มี
+                    **({"map": map_link(e), "distance": e.get("ระยะทางจากวิทยาลัย", "")} if key == "trips" else {}),
                 } for e in items if e.get("ชื่อ")],
             })
         tree[key] = {"label": label, "categories": cats}

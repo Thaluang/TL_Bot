@@ -41,6 +41,18 @@
       { question: "รถเมล์สายไหนผ่านวิทยาลัย", stars: 2, ts: "2026-11-01 14:03:18" },
     ],
   };
+  // ข่าวตัวอย่าง (หุ่นจริง: ครูลงผ่านหน้า stats) — เดโมแก้ข่าวไม่ได้
+  const SAMPLE_NEWS = [
+    { id: "d1", category: "admission", title: "เปิดรับนักศึกษาใหม่ ปีการศึกษา 2570", subtitle: "รับสมัครถึง 31 มี.ค. 2570",
+      detail: "รับสมัคร ปวช. และ ปวส. ทุกสาขา สมัครออนไลน์ได้ทันที", link: "https://tctatc.github.io/thaluang-admission/",
+      image_url: "static/places/phraphutthabat.jpg", image: "x", start: "", end: "2027-03-31", hidden: false },
+    { id: "d2", category: "event", title: "งานเปิดบ้าน Open House 2569", subtitle: "20 ธ.ค. · หอประชุมวิทยาลัย",
+      detail: "มีกิจกรรมแนะแนวทุกสาขา ทดลองเรียนจริง", link: "", image_url: "static/map.jpg", image: "x", start: "", end: "", hidden: false },
+    { id: "d3", category: "scholarship", title: "ทุนปูนซิเมนต์ไทย เปิดรับสมัครแล้ว", subtitle: "ยื่นได้ถึง 15 ธ.ค. 2569",
+      detail: "ทุนการศึกษาสำหรับนักศึกษาเรียนดี", link: "", image_url: "", image: "", start: "", end: "", hidden: false },
+  ];
+  const DEMO_NO_EDIT = { error: "นี่คือเดโม — แก้ข่าวได้เฉพาะบนหุ่นตัวจริง" };
+  window.DEMO_SCREEN_URL = "index.html";   // หน้าครูใช้เป็นจอตัวอย่าง
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
@@ -59,6 +71,11 @@
     if (u === "/attract") return json({ videos: [], after: 90 });     // build_demo.py ใส่รายการวิดีโอจาก static/videos/ ให้ (ไม่มี = โชว์ตราวิทยาลัย)
     if (u === "/announcements/due") return json({ due: [] });
     if (u === "/stats.json") return json(SAMPLE_STATS);
+    if (u === "/news") return json({ version: "demo", items: SAMPLE_NEWS });
+    if (u === "/weather") return json({ temp: 33, code: 2, text_th: "แดดสลับเมฆ", text_en: "Partly cloudy", high: 35, low: 24, rain: 40 });
+    if (u === "/admin/news" && !(opts && opts.method && opts.method !== "GET"))
+      return json({ items: SAMPLE_NEWS, today: new Date().toISOString().slice(0, 10), storage: { persistent: true, path: "demo" } });
+    if (u.startsWith("/admin/")) return Promise.resolve(new Response(JSON.stringify(DEMO_NO_EDIT), { status: 403, headers: { "Content-Type": "application/json" } }));
     if (u === "/ask/stream") {
       let lang = "th", q = "";
       try { const b = JSON.parse(opts.body); lang = b.lang === "en" ? "en" : "th"; q = String(b.question || ""); } catch (e) {}

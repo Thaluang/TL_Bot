@@ -933,3 +933,12 @@ def test_weather_offline_uses_recent_cache(monkeypatch):
     monkeypatch.setattr(server, "_weather_cache", {"at": time.time() - 3600, "data": {"temp": 30}})
     fake_weather(monkeypatch, fail=True)
     assert make_client().get("/weather").get_json()["temp"] == 30
+
+
+def test_stats_page_has_news_admin():
+    html = make_client().get("/stats").get_data(as_text=True)
+    for needle in ('id="newsTab"', 'id="newsForm"', 'id="newsList"', 'id="loginBox"', "function shrinkImage",
+                   'fetch("/stats.json")', "/admin/news", 'id="storageWarn"'):
+        assert needle in html, needle
+    for cat in ("admission", "event", "scholarship", "award", "general"):
+        assert f'value="{cat}"' in html, cat

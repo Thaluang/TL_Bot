@@ -21,7 +21,7 @@ for _stream in (sys.stdout, sys.stderr):
 from flask import Flask, request, jsonify, send_from_directory, Response  # noqa: E402
 import config                                                   # noqa: E402
 from database import load_college_data, load_saraburi_data      # noqa: E402
-from ai import ask_ai, ask_ai_stream, is_quota_error, speak_wav                            # noqa: E402
+from ai import ask_ai, ask_ai_stream, is_quota_error, speak_wav, transcribe                # noqa: E402
 from wayfinding import wants_map                               # noqa: E402
 from places import photos_for, menu_tree                       # noqa: E402
 import json                                                    # noqa: E402
@@ -321,6 +321,32 @@ def tts():
 
     return Response(gen(), mimetype=mime, headers={"Cache-Control": "no-store"})
 
+
+
+# ---- ฟังเสียง: POST /stt?lang=th (body = ไฟล์เสียงที่จออัด) → {"text": "..."} ----
+# Chromium บน Pi ใช้ Web Speech API ของ Google ไม่ได้ (ไม่มีคีย์) จอเลยอัดเสียงส่งมาให้ Gemini ถอดแทน
+STT_MAX_BYTES = 2 * 1024 * 1024   # ~2 นาทีของ opus — ยาวกว่านี้ไม่ใช่คำถามแล้ว
+
+
+@app.post("/stt")
+def stt():
+    lang = request.args.get("lang") if request.args.get("lang") in LANGS else "th"
+    if (request.content_length or 0) > STT_MAX_BYTES:
+        return jsonify(error="ไฟล์เสียงยาวเกินไป"), 413
+    audio = request.get_data()
+    if not audio:
+        return jsonify(error="ไม่มีเสียง"), 400
+    if len(audio) > STT_MAX_BYTES:
+        return jsonify(error="ไฟล์เสียงยาวเกินไป"), 413
+    problem = missing_key_error()
+    if problem:
+        return jsonify(error=problem), 500
+    mime = (request.mimetype or "audio/webm").split(";")[0]
+    try:
+        return jsonify(text=transcribe(audio, mime, lang))
+    except Exception as e:
+        print("STT error:", str(e)[:200])
+        return jsonify(error=friendly_error(e, lang)), 503
 
 @app.post("/rate")
 def rate():

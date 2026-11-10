@@ -501,27 +501,111 @@ document.addEventListener("pointerdown", onActivity, true);
 document.addEventListener("keydown", onActivity, true);
 
 // ---- ไมค์ (STT) ----
+// ใช้ Web Speech API ของเบราว์เซอร์ก่อน (Chrome/Edge บน Windows ใช้ได้)
+// Chromium บน Pi ไม่มีคีย์บริการเสียงของ Google → error "network" ทุกครั้ง
+// เจอแล้วสลับไปอัดเสียงเอง ส่งให้เซิร์ฟเวอร์ถอดเป็นข้อความ (POST /stt) แล้วใช้ทางนั้นตลอด
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recog = null, listening = false;
+const CAN_RECORD = !!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let recog = null, listening = false, rec = null;
+let useServerStt = !SR || store.get("serverStt") === "1";
+function cancelMic() {   // เลิกฟัง ไม่ส่งเสียงที่อัดไว้
+  if (!listening) return;
+  listening = false;
+  if (rec) rec.finish(); else if (recog) recog.stop();
+}
+function noHear() { listening = false; addMsg("bot", t().noHear, { warn: true }); setState("idle"); }
 function toggleMic() {
-  if (!recog) return;
-  if (listening) { recog.stop(); listening = false; setState("idle"); return; }
+  if (listening) {   // กดซ้ำระหว่างฟัง = พูดจบแล้ว
+    if (rec) rec.finish(); else { recog.stop(); listening = false; setState("idle"); }
+    return;
+  }
   if (busy()) return;
   if (greeting) { greeting.then(toggleMic); return; }   // ทักให้จบก่อน แล้วเริ่มฟังเอง
   stopSpeech();
   setState("listening"); listening = true;
+  if (useServerStt) { serverListen(); return; }
+  recog.lang = t().speech;
   try { recog.start(); } catch (e) { listening = false; setState("idle"); }
 }
+
+// อัดเสียงจนคนพูดจบ (เงียบ ~1.2 วิ หลังเริ่มพูด) แล้วส่งให้เซิร์ฟเวอร์ถอดเป็นข้อความ
+const STT_SILENCE_MS = 1200, STT_NO_SPEECH_MS = 6000, STT_MAX_MS = 12000;
+async function serverListen() {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(
+      { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) { console.warn("mic:", e); noHear(); return; }
+  if (!listening) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+  const type = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm"]
+    .find((m) => MediaRecorder.isTypeSupported(m)) || "";
+  const mr = new MediaRecorder(stream, type ? { mimeType: type } : {});
+  const chunks = [];
+  let heard = false, done = false;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const an = ctx.createAnalyser(); an.fftSize = 1024;
+  ctx.createMediaStreamSource(stream).connect(an);
+  const buf = new Float32Array(an.fftSize);
+  const t0 = performance.now();
+  let floor = 0, lastLoud = t0;
+  const level = () => {
+    an.getFloatTimeDomainData(buf);
+    let s = 0; for (const v of buf) s += v * v;
+    return Math.sqrt(s / buf.length);
+  };
+  const timer = setInterval(() => {
+    const now = performance.now(), v = level();
+    if (now - t0 < 300) { floor = Math.max(floor, v); return; }   // 0.3 วิแรก = วัดเสียงรบกวนในห้อง
+    if (v > Math.max(0.02, floor * 2.5)) { heard = true; lastLoud = now; }
+    if ((heard && now - lastLoud > STT_SILENCE_MS) || (!heard && now - t0 > STT_NO_SPEECH_MS) || now - t0 > STT_MAX_MS) finish();
+  }, 50);
+  function finish() {
+    if (done) return; done = true;
+    clearInterval(timer);
+    if (mr.state !== "inactive") mr.stop(); else onStop();
+  }
+  function onStop() {
+    stream.getTracks().forEach((tr) => tr.stop());
+    ctx.close().catch(() => {});
+    rec = null;
+    if (!listening) return;            // ผู้ใช้กดยกเลิก/คุยใหม่ระหว่างฟัง
+    listening = false;
+    if (!heard) { noHear(); return; }
+    sendStt(new Blob(chunks, { type: mr.mimeType || type || "audio/webm" }));
+  }
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop = onStop;
+  rec = { finish: () => { heard = true; finish(); } };   // กดไมค์ซ้ำ = พูดจบ ส่งเลย
+  mr.start(250);
+}
+async function sendStt(blob) {
+  setState("thinking");
+  try {
+    const r = await fetch("/stt?lang=" + lang, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { addMsg("bot", d.error || t().sysErr, { warn: true }); setState("idle"); return; }
+    if (!d.text) { noHear(); return; }
+    ask(d.text, { voice: true });
+  } catch (e) { addMsg("bot", t().sysErr, { warn: true }); setState("idle"); }
+}
+
 if (SR) {
   recog = new SR();
   recog.lang = t().speech; recog.interimResults = false; recog.maxAlternatives = 1;
   recog.onresult = (e) => { listening = false; ask(e.results[0][0].transcript, { voice: true }); };
-  recog.onerror = () => { listening = false; addMsg("bot", t().noHear, { warn: true }); setState("idle"); };
-  recog.onend = () => { listening = false; if (state === "listening") setState("idle"); };
-  mic.addEventListener("click", toggleMic);
-} else {
-  mic.style.display = "none";
+  recog.onerror = (e) => {
+    // บริการเสียงของเบราว์เซอร์ใช้ไม่ได้ → สลับไปฟังผ่านเซิร์ฟเวอร์ แล้วฟังต่อเลยไม่ต้องกดใหม่
+    if (CAN_RECORD && (e.error === "network" || e.error === "service-not-allowed")) {
+      useServerStt = true; store.set("serverStt", "1");
+      if (listening) serverListen();
+      return;
+    }
+    noHear();
+  };
+  recog.onend = () => { if (!useServerStt) { listening = false; if (state === "listening") setState("idle"); } };
 }
+if (SR || CAN_RECORD) mic.addEventListener("click", toggleMic);
+else mic.style.display = "none";
 
 // ---- พิมพ์ ----
 composer.addEventListener("submit", (e) => {
@@ -572,7 +656,7 @@ function onScan(code) {
   if (attractOn) stopAttract();
   closeTour();
   if (busy() || announcing) return;
-  if (recog && listening) { recog.stop(); listening = false; }
+  cancelMic();
   fetch("/qr?code=" + encodeURIComponent(code) + "&lang=" + lang)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
@@ -593,7 +677,7 @@ document.querySelectorAll("#quickQs .chip").forEach((chip) => {
 });
 
 function newChat() {
-  if (recog && listening) { recog.stop(); listening = false; }
+  cancelMic();
   stopSpeech();
   convo++;
   chat.innerHTML = "";
@@ -682,7 +766,7 @@ const EXTERNAL_IDLE_MS = 15 * 60 * 1000;
 let tourOpen = false, tourIdleMs = TOUR_IDLE_MS;
 function openTour(src = TOUR_SRC) {
   if (tourOpen) return;
-  if (recog && listening) { recog.stop(); listening = false; }
+  cancelMic();
   stopSpeech();
   tourOpen = true; idleSince = Date.now();
   tourIdleMs = src === TOUR_SRC ? TOUR_IDLE_MS : EXTERNAL_IDLE_MS;

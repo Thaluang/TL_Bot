@@ -5,6 +5,7 @@
 ทั้งสองเจ้าใช้ system prompt กันตอบมั่วตัวเดียวกัน + แนบข้อมูลวิทยาลัยและสระบุรีทุกครั้ง
 """
 
+import re
 from config import (
     AI_PROVIDER,
     AI_MAX_TOKENS,
@@ -188,6 +189,36 @@ def _stream_gemini(question: str, college_data: dict, saraburi_data: dict, lang:
         _gemini_idx = idx
 
     yield from _try_gemini(call)
+
+
+# ---- ฟังเสียง: Gemini ถอดเสียงพูด → ข้อความ ----
+# ใช้แทน Web Speech API ของเบราว์เซอร์ — Chromium บน Pi ไม่มีคีย์บริการเสียงของ Google เลยฟังไม่ได้
+NO_SPEECH = "[NO_SPEECH]"
+_STT_PROMPT = {
+    "th": "ถอดเสียงพูดในไฟล์เสียงนี้เป็นข้อความภาษาไทยตามที่ได้ยินเท่านั้น ห้ามตอบคำถาม ห้ามอธิบาย "
+          f"ห้ามใส่เครื่องหมายคำพูด ถ้าไม่มีเสียงคนพูด ให้ตอบว่า {NO_SPEECH}",
+    "en": "Transcribe the speech in this audio exactly as spoken. Do not answer or explain. "
+          f"No quotation marks. If there is no human speech, reply {NO_SPEECH}",
+}
+
+
+def transcribe(audio: bytes, mime: str, lang: str = "th") -> str:
+    """เสียงที่อัดจากจอ (webm/ogg/wav) → ข้อความที่พูด ('' = ไม่มีเสียงพูด)
+    ใช้รุ่น lite ก่อนเพราะเร็วกว่า ล่มก็สลับไปรุ่นอื่นเองเหมือนตอนถามคำถาม"""
+    from google.genai import types
+    contents = [types.Part.from_bytes(data=audio, mime_type=mime), _STT_PROMPT.get(lang, _STT_PROMPT["th"])]
+    config = types.GenerateContentConfig(temperature=0)
+
+    def call(client, model, idx):
+        response = client.models.generate_content(model=model, contents=contents, config=config)
+        yield (response.text or "").strip().strip('"“”')
+
+    models = [*GEMINI_FALLBACK_MODELS[:1], GEMINI_MODEL, *GEMINI_FALLBACK_MODELS[1:]]
+    text = "".join(_try_gemini(call, models)).strip()
+    if NO_SPEECH in text:
+        return ""
+    # บางรุ่นเว้นวรรคทุกคำ ("ห้อง สมุด อยู่ ไหน") — ภาษาไทยไม่เว้นวรรคระหว่างคำ ตัดออกให้อ่านเหมือนคนพิมพ์
+    return re.sub(r"(?<=[\u0E00-\u0E7F])\s+(?=[\u0E00-\u0E7F])", "", text)
 
 
 # ---- เสียงพูด: Gemini TTS ----

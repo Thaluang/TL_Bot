@@ -119,6 +119,18 @@ def test_screen_header_uses_real_logo():
     assert b"/static/logo.jpg" in screen.data   # header อ้างโลโก้จริง
 
 
+def test_screen_has_onscreen_keyboard():
+    """หน้าแชทโหลดคีย์บอร์ดบนจอ (osk.js) ที่มีทั้งแป้นไทยและอังกฤษ — คีย์บอร์ดของระบบโดน kiosk เต็มจอบัง"""
+    c = make_client()
+    html = c.get("/screen").get_data(as_text=True)
+    assert '<script src="/static/osk.js"></script>' in html
+    assert html.index("/static/screen.js") < html.index("/static/osk.js")   # ต้องโหลดหลัง screen.js
+    js = c.get("/static/osk.js")
+    assert js.status_code == 200
+    src = js.get_data(as_text=True)
+    assert "ฟหกดเ" in src and "qwertyuiop" in src
+
+
 def test_campus_tour_only_in_sidebar():
     """ปุ่มแนะนำสถานที่วิทยาลัยอยู่แถบซ้ายเท่านั้น และหน้าทัวร์ 3 มิติเปิดได้จริง"""
     c = make_client()
@@ -706,3 +718,58 @@ def test_qr_fixed_answer_is_counted_in_stats(tmp_path, monkeypatch, temp_stats):
 def test_qr_unknown_code_404(tmp_path, monkeypatch):
     qr_file(tmp_path, monkeypatch, {})
     assert make_client().get("/qr?code=WHAT").status_code == 404
+
+
+# ---- ฟังเสียงที่เซิร์ฟเวอร์ (Chromium บน Pi ใช้ Web Speech ของ Google ไม่ได้) ----
+@pytest.fixture
+def stt_env(monkeypatch):
+    set_valid_key(monkeypatch)
+    calls = []
+
+    def fake_transcribe(audio, mime, lang):
+        calls.append((audio, mime, lang))
+        return "ห้องสมุดอยู่ไหน"
+    monkeypatch.setattr(server, "transcribe", fake_transcribe)
+    return calls
+
+
+def test_stt_returns_text(stt_env):
+    r = make_client().post("/stt?lang=th", data=b"webmdata", content_type="audio/webm;codecs=opus")
+    assert r.status_code == 200 and r.get_json() == {"text": "ห้องสมุดอยู่ไหน"}
+    assert stt_env == [(b"webmdata", "audio/webm", "th")]
+
+
+def test_stt_rejects_empty_or_too_big(stt_env):
+    c = make_client()
+    assert c.post("/stt", data=b"", content_type="audio/webm").status_code == 400
+    big = b"x" * (server.STT_MAX_BYTES + 1)
+    assert c.post("/stt", data=big, content_type="audio/webm").status_code == 413
+    assert stt_env == []
+
+
+def test_stt_quota_error_is_friendly(stt_env, monkeypatch):
+    def boom(audio, mime, lang):
+        raise RuntimeError("429 RESOURCE_EXHAUSTED")
+    monkeypatch.setattr(server, "transcribe", boom)
+    r = make_client().post("/stt", data=b"a", content_type="audio/webm")
+    assert r.status_code == 503 and r.get_json()["error"]
+
+
+def test_transcribe_sends_audio_and_cleans_no_speech(monkeypatch):
+    import ai
+    seen = []
+
+    class Models:
+        def __init__(self, reply): self.reply = reply
+        def generate_content(self, model, contents, config):
+            seen.append(contents)
+            return type("R", (), {"text": self.reply})()
+    monkeypatch.setattr(ai, "_keys_in_order", lambda: [(0, "k")])
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models(" ห้องสมุดอยู่ไหน \n")})())
+    assert ai.transcribe(b"aud", "audio/webm", "th") == "ห้องสมุดอยู่ไหน"
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models("ห้อง สมุด อยู่ ไหน ครับ ห้อง 301")})())
+    assert ai.transcribe(b"aud", "audio/webm", "th") == "ห้องสมุดอยู่ไหนครับห้อง 301"
+    part = seen[0][0]
+    assert part.inline_data.data == b"aud" and part.inline_data.mime_type == "audio/webm"
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models("[NO_SPEECH]")})())
+    assert ai.transcribe(b"aud", "audio/webm", "th") == ""

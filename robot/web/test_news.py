@@ -115,3 +115,28 @@ def test_ai_text_only_active(tmp_path):
     txt = s.ai_text(TODAY, "th")
     assert "งานเปิดบ้าน" in txt and "มีกิจกรรมทุกสาขา" in txt and "ข่าวซ่อน" not in txt
     assert make(tmp_path / "empty").ai_text(TODAY, "th") == ""
+
+
+def test_failed_save_keeps_memory_unchanged(tmp_path, monkeypatch):
+    s = make(tmp_path)
+    keep = s.add(base(title="เดิม"), None)
+
+    def boom():
+        raise OSError("drive gone")
+    monkeypatch.setattr(s, "_save_items", lambda items: boom())
+    with pytest.raises(OSError):
+        s.add(base(title="ใหม่"), JPEG)
+    with pytest.raises(OSError):
+        s.update(keep["id"], {"title": "แก้"}, None)
+    with pytest.raises(OSError):
+        s.delete(keep["id"])
+    assert [n["title"] for n in s.all()] == ["เดิม"]
+    assert list((tmp_path / "news").glob("*")) == []   # รูปของข่าวที่บันทึกไม่สำเร็จไม่ค้าง
+
+
+def test_save_flushes_to_disk(tmp_path, monkeypatch):
+    import news as news_mod
+    synced = []
+    monkeypatch.setattr(news_mod.os, "fsync", lambda fd: synced.append(fd))
+    make(tmp_path).add(base(), None)
+    assert synced, "ต้อง fsync ก่อน rename (ไฟดับกลางเขียนบน FAT แล้วไฟล์ว่าง)"

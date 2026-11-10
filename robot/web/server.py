@@ -33,7 +33,7 @@ from announce import load_announcements, due_announcements    # noqa: E402
 from qr import load_qr_codes, resolve as resolve_qr            # noqa: E402
 from answer_cache import AnswerCache, replay_pieces            # noqa: E402
 from datetime import datetime                                  # noqa: E402
-from datadir import DataDir, resolve_data_dir                  # noqa: E402
+from datadir import DataDir, resolve_data_dir, _writable       # noqa: E402
 from news import NewsStore, NewsError                           # noqa: E402
 from urllib.request import urlopen                              # noqa: E402
 import secrets                                                  # noqa: E402
@@ -376,7 +376,8 @@ def _public_news(item: dict) -> dict:
 @app.get("/news")
 def news_list():
     items = [_public_news(d) for d in news.active(_now().date())]
-    return jsonify(version=news.version, items=items)
+    # วันเปลี่ยน = รายการเปลี่ยนได้ (ข่าวเริ่ม/หมดอายุตามวัน) → จอวาดใหม่ แม้ไม่มีใครแก้ข่าว
+    return jsonify(version=f"{news.version}-{_now().date().isoformat()}", items=items)
 
 
 @app.get("/news/img/<name>")
@@ -429,7 +430,7 @@ def admin_news():
         return bad
     items = [{**d, "image_url": f"/news/img/{d['image']}" if d.get("image") else ""} for d in news.all()]
     return jsonify(items=items, today=_now().date().isoformat(),
-                   storage={"persistent": DATA.persistent, "path": str(DATA.folder)})
+                   storage={"persistent": DATA.persistent and _writable(DATA.folder), "path": str(DATA.folder)})
 
 
 def _news_upload():
@@ -441,6 +442,11 @@ def _news_upload():
     if image and len(image) > 3 * 1024 * 1024:
         return None, (jsonify(error="รูปใหญ่เกินไป (ไม่เกิน 3 MB)"), 413)
     return (request.form.to_dict(), image), None
+
+
+def _save_failed(e):
+    print("news save error:", str(e)[:120])
+    return jsonify(error="บันทึกลงแฟลชไดรฟ์ไม่ได้ — เช็กว่าแฟลชไดรฟ์ยังเสียบอยู่ แล้วลองใหม่"), 503
 
 
 @app.post("/admin/news")
@@ -455,6 +461,8 @@ def admin_news_add():
         return jsonify(news.add(*got)), 201
     except NewsError as e:
         return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
 
 
 @app.post("/admin/news/order")
@@ -484,6 +492,8 @@ def admin_news_edit(news_id):
         return jsonify(error="ไม่พบข่าวนี้"), 404
     except NewsError as e:
         return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
 
 
 @app.delete("/admin/news/<news_id>")

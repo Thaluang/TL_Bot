@@ -975,3 +975,35 @@ def test_screen_preview_mode_is_silent():
     js = make_client().get("/static/screen.js").get_data(as_text=True)
     assert "const PREVIEW" in js and "if (PREVIEW) return" in js
     assert "Board.show" in js and "news-read" in js
+
+
+def test_news_version_changes_at_midnight(news_env, monkeypatch):
+    from datetime import datetime
+    monkeypatch.setattr(server, "_now", lambda: datetime(2026, 11, 10, 23, 59))
+    v1 = make_client().get("/news").get_json()["version"]
+    monkeypatch.setattr(server, "_now", lambda: datetime(2026, 11, 11, 0, 1))
+    assert make_client().get("/news").get_json()["version"] != v1
+
+
+def test_news_save_failure_is_503(news_env, monkeypatch):
+    c = make_client(); login(c)
+
+    def boom(items):
+        raise OSError("drive gone")
+    monkeypatch.setattr(news_env, "_save_items", boom)
+    r = c.post("/admin/news", data=news_form())
+    assert r.status_code == 503 and r.get_json()["error"]
+
+
+def test_admin_news_rechecks_storage(news_env, monkeypatch):
+    c = make_client(); login(c)
+    monkeypatch.setattr(server.DATA, "persistent", True)
+    monkeypatch.setattr(server, "_writable", lambda p: False)
+    assert c.get("/admin/news").get_json()["storage"]["persistent"] is False
+
+
+def test_news_read_aloud_in_thai():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    block = js[js.index('window.addEventListener("news-read"'):]
+    block = block[:block.index("});")]
+    assert 'speakAnswer(text, "th")' in block   # ข่าวที่ครูเขียนเป็นภาษาไทย อ่านด้วยเสียงไทยเสมอ

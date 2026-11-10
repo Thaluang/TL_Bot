@@ -68,11 +68,20 @@ class NewsStore:
         except (OSError, ValueError):
             return []
 
-    def _save(self) -> None:
+    def _save_items(self, items: list) -> None:
+        """เขียนรายการลงไฟล์ — สำเร็จแล้วค่อยเปลี่ยนในหน่วยความจำ (ไดรฟ์หลุด = ทุกอย่างเหมือนเดิม)"""
         self.folder.mkdir(parents=True, exist_ok=True)
         tmp = self.file.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(self._items, ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(tmp, self.file)   # ไฟดับกลางเขียน ไฟล์เก่ายังอยู่ครบ
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(items, ensure_ascii=False, indent=1))
+            f.flush()
+            os.fsync(f.fileno())   # ไฟดับกลางเขียนบนแฟลชไดรฟ์ (FAT) ไม่ให้ได้ไฟล์ว่าง
+        os.replace(tmp, self.file)
+
+    def _commit(self, items: list) -> None:
+        """เรียกขณะถือ lock: บันทึกก่อน แล้วค่อยใช้รายการใหม่"""
+        self._save_items(items)
+        self._items = items
         self.version = uuid.uuid4().hex[:8]
 
     def _write_image(self, news_id: str, data: bytes) -> str:
@@ -131,10 +140,13 @@ class NewsStore:
         item = self._clean(fields, blank)
         if image:
             item["image"] = self._write_image(item["id"], image)
-        with self._lock:
-            item["order"] = min((d.get("order", 0) for d in self._items), default=1) - 1   # ข่าวใหม่ขึ้นบนสุด
-            self._items.append(item)
-            self._save()
+        try:
+            with self._lock:
+                item["order"] = min((d.get("order", 0) for d in self._items), default=1) - 1   # ข่าวใหม่ขึ้นบนสุด
+                self._commit(self._items + [item])
+        except OSError:
+            self._drop_image(item["image"])   # บันทึกไม่สำเร็จ ไม่ทิ้งรูปค้าง
+            raise
         return dict(item)
 
     def update(self, news_id: str, fields: dict, image, remove_image: bool = False) -> dict:
@@ -147,9 +159,13 @@ class NewsStore:
             item["image"] = self._write_image(news_id, image)
         elif remove_image:
             item["image"] = ""
-        with self._lock:
-            self._items = [item if d["id"] == news_id else d for d in self._items]
-            self._save()
+        try:
+            with self._lock:
+                self._commit([item if d["id"] == news_id else d for d in self._items])
+        except OSError:
+            if item["image"] and item["image"] != old:
+                self._drop_image(item["image"])
+            raise
         if old and old != item["image"]:
             self._drop_image(old)
         return dict(item)
@@ -159,8 +175,7 @@ class NewsStore:
         if cur is None:
             return False
         with self._lock:
-            self._items = [d for d in self._items if d["id"] != news_id]
-            self._save()
+            self._commit([d for d in self._items if d["id"] != news_id])
         if cur.get("image"):
             self._drop_image(cur["image"])
         return True
@@ -173,9 +188,7 @@ class NewsStore:
                 if d["id"] not in rank:
                     rank[d["id"]] = rest
                     rest += 1
-            for d in self._items:
-                d["order"] = rank[d["id"]]
-            self._save()
+            self._commit([{**d, "order": rank[d["id"]]} for d in self._items])
 
     def image_path(self, name: str):
         if not name or not _NAME.match(name):

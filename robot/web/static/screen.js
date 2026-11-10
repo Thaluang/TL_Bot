@@ -830,7 +830,7 @@ window.addEventListener("news-read", (e) => {
   addMsg("user", t().newsTag + " " + n.title);
   addMsg("bot", text);
   setState("answering");
-  speakAnswer(text, lang);
+  speakAnswer(text, "th");   // ครูเขียนข่าวเป็นภาษาไทย — อ่านด้วยเสียงไทยเสมอ (จออังกฤษก็ตาม)
 });
 
 applyLang(lang);   // ตั้งภาษา + ส่งสถานะ idle ไปเซิร์ฟเวอร์

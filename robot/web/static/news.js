@@ -8,11 +8,11 @@
   const W = {
     th: { morning: "สวัสดีตอนเช้าครับ", noon: "สวัสดีตอนกลางวันครับ", afternoon: "สวัสดีตอนบ่ายครับ", evening: "สวัสดีตอนเย็นครับ",
       cats: { admission: "รับสมัคร", event: "กิจกรรม", scholarship: "ทุนการศึกษา", award: "ผลงาน", general: "ประกาศ" },
-      scan: "สแกนเปิดลิงก์", set: "ชุดที่", inviteA: "อยากรู้อะไรเกี่ยวกับ<br><em>ท่าหลวงฯ</em> ถามน้องทานตะวันได้เลย",
+      scan: "สแกนเปิดลิงก์", set: "ชุดที่", inviteA: "อยากรู้อะไรเกี่ยวกับ<br><em>ท่าหลวงฯ</em> ถามน้องทานตะวัน-Botได้เลย",
       inviteB: "แตะปุ่ม 🎤 ด้านขวาแล้วพูด หรือพิมพ์คำถามก็ได้ครับ", back: (n) => `กลับหน้าข่าวใน ${n} วินาที`, rainy: "โอกาสฝน" },
     en: { morning: "Good morning", noon: "Good day", afternoon: "Good afternoon", evening: "Good evening",
       cats: { admission: "Admission", event: "Event", scholarship: "Scholarship", award: "Achievement", general: "Notice" },
-      scan: "Scan to open", set: "Set", inviteA: "Curious about <em>Tha Luang</em>?<br>Ask Nong Tantawan anything",
+      scan: "Scan to open", set: "Set", inviteA: "Curious about <em>Tha Luang</em>?<br>Ask Nong Tantawan-Bot anything",
       inviteB: "Tap 🎤 on the right and speak, or type your question", back: (n) => `Back to news in ${n}s`, rainy: "Rain chance" },
   };
   const w = () => W[isEn() ? "en" : "th"];

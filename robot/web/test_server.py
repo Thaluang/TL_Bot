@@ -505,7 +505,7 @@ def test_face_shows_waving_hand_when_greeting():
 def test_screen_greets_as_male_tantawan():
     c = make_client()
     js = c.get("/static/screen.js").data.decode("utf-8")
-    assert "ผมชื่อน้องทานตะวัน" in js and "ทีแอลบอท" not in js
+    assert "ผมชื่อน้องทานตะวัน-Bot" in js and "ทีแอลบอท" not in js
     assert "หนู" not in js and "ค่ะ" not in js
     assert "/greet" in js
 
@@ -1023,3 +1023,26 @@ def test_four_equal_news_blocks():
     html = make_client().get("/stats").get_data(as_text=True)
     assert 'name="layout" value="portrait"' in html.replace("  ", " ") or 'value="portrait"' in html
     assert 'value="landscape"' in html
+
+
+def test_news_tap_shows_picture_big():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    block = js[js.index('window.addEventListener("news-read"'):]
+    block = block[:block.index("});")]
+    assert "image_url" in block and "showPictures" in block   # แตะข่าวมีรูป → รูปขึ้นใหญ่ฝั่งซ้าย
+
+
+def test_map_offers_3d_tour():
+    js = make_client().get("/static/screen.js").get_data(as_text=True).replace(chr(13), "")
+    assert "เยี่ยมชม" in js and "3D" in js
+    show = js[js.index("function showPictures"):]
+    show = show[:show.index("\n}\n")]
+    assert 'data-action="campusTour"' in show   # บนแผนผังมีปุ่มเปิดทัวร์ 3D
+
+
+def test_screen_js_texts_are_single_line():
+    """ข้อความในตาราง T ต้องอยู่ในบรรทัดเดียว (เคยมีการขึ้นบรรทัดจริงในสตริง → JS พังทั้งไฟล์ จอขาว)"""
+    js = make_client().get("/static/screen.js").get_data(as_text=True).replace(chr(13), "")
+    table = js[js.index("const T = {"):js.index("\n};", js.index("const T = {"))]
+    for line in table.split("\n"):
+        assert line.replace('\\"', "").count('"') % 2 == 0, line[:60]

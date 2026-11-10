@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  จอ 1920 (จอสัมผัสที่คนเดินผ่านเห็น) ของหุ่นน้องทานตะวัน — วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์
+  จอ 1920 (จอสัมผัสที่คนเดินผ่านเห็น) ของหุ่นน้องทานตะวัน-Bot — วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์
   ซ้าย: นาฬิกา อากาศ ข่าวเด่น (news.js) — แผนผัง/รูป/เมนู ขึ้นแทนข่าวชั่วคราว (Board)
   ขวา: คุยกับหุ่น (screen.js) — พูด/พิมพ์/สแกน QR
   ออกแบบที่ 1920×1080 แล้วย่อ/ขยายทั้งหน้าให้พอดีจอ (เปิดบนจอเล็กก็ยังใช้ได้)
@@ -12,7 +12,7 @@
 <meta name="google" content="notranslate">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>น้องทานตะวัน · ท่าหลวงฯ</title>
+<title>น้องทานตะวัน-Bot · ท่าหลวงฯ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -132,6 +132,11 @@
   .gallery.one img{height:auto;flex:1;min-height:0;object-fit:contain;background:#faf8ff}
   .gallery figcaption{padding:12px 18px;font-size:20px}
   .gallery figcaption small{color:var(--muted)}
+  .tour3d{all:unset;cursor:pointer;position:absolute;right:22px;bottom:22px;display:flex;align-items:center;gap:10px;padding:16px 28px;border-radius:999px;
+    font:600 24px var(--head);color:#fff;background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 14px 30px -10px #7c3aedcc;animation:tap 2.4s ease-in-out infinite}
+  .tour-btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:12px 24px;border-radius:999px;
+    font:600 21px var(--head);color:#fff;background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 10px 24px -10px #7c3aedaa}
+  .tour-btn:active,.tour3d:active{transform:scale(.97)}
   .board-auto{position:absolute;left:24px;bottom:22px;font-size:17px;color:var(--muted);background:#ffffffd8;padding:6px 14px;border-radius:999px;pointer-events:none}
   /* เมนู */
   .menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
@@ -353,7 +358,7 @@
     <div class="ch">
       <div class="row">
         <div class="face"><i></i><i></i><b></b></div>
-        <div><h2 data-t="botName">น้องทานตะวัน</h2><p data-t="botSub">ถามอะไรก็ได้ ยินดีช่วยเสมอครับ</p></div>
+        <div><h2 data-t="botName">น้องทานตะวัน-Bot</h2><p data-t="botSub">ถามอะไรก็ได้ ยินดีช่วยเสมอครับ</p></div>
         <div class="side">
           <div class="led"><span class="d"></span><span class="led-text">พร้อมคุย</span></div>
         </div>

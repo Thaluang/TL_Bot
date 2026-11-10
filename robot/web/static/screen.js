@@ -21,7 +21,7 @@ const T = {
     cMapShort: "แผนผัง", cTripsShort: "ที่เที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
     cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
     cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
-    botName: "น้องทานตะวัน", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
+    botName: "น้องทานตะวัน-Bot", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
     backNews: "กลับหน้าข่าว", allMenu: "เมนูทั้งหมด", allMenuTitle: "เมนูทั้งหมด", allMenuSub: "แตะเลือกได้เลยครับ",
     talk: "แตะเพื่อพูด", talkSub: "หุ่นฟังจนคุณพูดจบเอง", listenTalk: "กำลังฟัง…", listenSub: "แตะอีกครั้งเมื่อพูดจบ",
     intro: "สวัสดีครับ 👋 วันนี้มาติดต่อเรื่องอะไรครับ แตะปุ่มด้านล่างแล้วพูดได้เลย หรือแตะข่าวทางซ้ายให้ผมอ่านให้ฟังก็ได้ครับ",
@@ -29,14 +29,15 @@ const T = {
     cTour: "ทัวร์ 3 มิติ", openLink: "แตะเพื่อเปิด", scanQr: "📱 สแกนเปิดในโทรศัพท์", closeTour: "ปิด กลับหน้าถามตอบ",
     hint: "หุ่นยนต์ตอบจากข้อมูลของวิทยาลัย ถ้าไม่แน่ใจ สอบถามเจ้าหน้าที่ได้นะครับ",
     spoken: "🎤 พูด", mapAlt: "แผนผังวิทยาลัย",
-    mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ ดูทางซ้ายได้เลย แตะที่รูปเพื่อขยาย",
+    mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ ดูทางซ้ายได้เลย แตะที่รูปเพื่อขยาย\n\nสามารถเยี่ยมชมวิทยาลัยในรูปแบบ 3D ได้ด้วยนะครับ แตะปุ่มด้านล่างได้เลย 👇",
+    tour3d: "🏫 เยี่ยมชมแบบ 3D",
     sysErr: "ขออภัยครับ ระบบขัดข้อง ลองใหม่อีกครั้งนะครับ",
     noHear: "ไม่ได้ยินครับ ลองพูดใหม่ หรือพิมพ์คำถามดูนะครับ 🙏",
     menuPick: "เลือกหมวดได้เลยครับ 👇", menuItems: "แตะดูรายละเอียดได้เลยครับ 👇",
     back: "ย้อนกลับ", home: "หน้าแรก", districtPre: "อ.",
-    greet: "สวัสดีครับ ผมชื่อน้องทานตะวัน มีอะไรให้ช่วยไหมครับ",
+    greet: "สวัสดีครับ ผมชื่อน้องทานตะวัน-Bot มีอะไรให้ช่วยไหมครับ",
     rateAsk: "คำตอบนี้ช่วยได้ไหมครับ?", rateThanks: "ขอบคุณที่ให้คะแนนครับ 🙏", starUnit: "ดาว",
-    attractSub: "สวัสดีครับ ผมชื่อน้องทานตะวัน ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
+    attractSub: "สวัสดีครับ ผมชื่อน้องทานตะวัน-Bot ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
     announceTag: "ประกาศ",
     scanned: "📷 สแกน QR", qrUnknown: "ยังไม่รู้จัก QR นี้ครับ 🙏 ลองถามด้วยเสียงหรือพิมพ์ดูนะครับ",
     stopTalk: "⏹ หยุดพูด", seeScreen: "รายละเอียดเพิ่มเติมดูบนจอได้เลยครับ",
@@ -57,7 +58,7 @@ const T = {
     cMapShort: "Map", cTripsShort: "Visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
     cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
     cSouvenirSub: "OTOP and local food", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
-    botName: "Nong Tantawan", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
+    botName: "Nong Tantawan-Bot", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
     backNews: "Back to news", allMenu: "All menus", allMenuTitle: "All menus", allMenuSub: "Tap to choose",
     talk: "Tap to speak", talkSub: "I'll listen until you finish", listenTalk: "Listening…", listenSub: "Tap again when done",
     intro: "Hi! 👋 How can I help you today? Tap the button below and speak, or tap a news card on the left and I'll read it to you.",
@@ -65,14 +66,15 @@ const T = {
     cTour: "3D campus tour", openLink: "Tap to open", scanQr: "📱 Scan to open on your phone", closeTour: "Close",
     hint: "Answers come from the college's own information. When in doubt, please ask our staff.",
     spoken: "🎤 Spoken", mapAlt: "Campus map",
-    mapMsg: "Here's the campus map 🗺️ It's on the left — tap it to zoom in.",
+    mapMsg: "Here's the campus map 🗺️ It's on the left — tap it to zoom in.\n\nYou can also visit the campus in 3D — tap the button below 👇",
+    tour3d: "🏫 Visit in 3D",
     sysErr: "Sorry, something went wrong. Please try again.",
     noHear: "Sorry, I didn't catch that. Try speaking again or type your question 🙏",
     menuPick: "Pick a category 👇", menuItems: "Tap one to see more 👇",
     back: "Back", home: "Home", districtPre: "",
-    greet: "Hi! I'm Nong Tantawan. How can I help you today?",
+    greet: "Hi! I'm Nong Tantawan-Bot. How can I help you today?",
     rateAsk: "Was this answer helpful?", rateThanks: "Thanks for rating! 🙏", starUnit: "stars",
-    attractSub: "Hi! I'm Nong Tantawan, the college's question assistant.", attractTap: "👆 Tap the screen to ask the robot",
+    attractSub: "Hi! I'm Nong Tantawan-Bot, the college's question assistant.", attractTap: "👆 Tap the screen to ask the robot",
     announceTag: "Announcement",
     scanned: "📷 QR scan", qrUnknown: "Sorry, I don't recognise this QR code 🙏 Try asking by voice or typing.",
     stopTalk: "⏹ Stop", seeScreen: "More details are on the screen.",
@@ -277,7 +279,8 @@ function sendRating(btn) {
 // รูปสถานที่/แผนผังขึ้นเต็มฝั่งซ้าย: แผนผัง = รูปเดียวเต็มกรอบ, รูปสถานที่ = แกลเลอรี (แตะขยายได้)
 function showPictures(pics) {
   if (pics[0].map) {
-    Board.show("map", `<img class="board-img" src="${pics[0].src}" alt="${escapeHtml(pics[0].name)}">`, t().cMap, "", "🗺️");
+    Board.show("map", `<img class="board-img" src="${pics[0].src}" alt="${escapeHtml(pics[0].name)}">` +
+      `<button type="button" class="tour3d" data-action="campusTour">${t().tour3d}</button>`, t().cMap, "", "🗺️");
     return;
   }
   const fig = (p) => `<figure><img class="place-photo" src="${p.src}" alt="${escapeHtml(p.name)}">` +
@@ -313,7 +316,12 @@ function typewriter(m) {
 }
 // ---- โชว์แผนผังทันที (ไม่เรียก /ask) ----
 function showMap() {
-  addMsg("bot", t().mapMsg, { image: "/static/map.jpg" });
+  const m = addMsg("bot", t().mapMsg, { image: "/static/map.jpg" });   // renderBot ส่งแผนผังขึ้นฝั่งซ้ายให้
+  // ชวนเยี่ยมชมแบบ 3D: ปุ่มเปิดทัวร์ 3 มิติต่อท้ายคำตอบ
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "tour-btn"; b.dataset.action = "campusTour"; b.textContent = t().tour3d;
+  const box = m.querySelector(".a-body");
+  box.insertBefore(b, box.querySelector(".tools"));
 }
 
 function typing(on) {
@@ -828,6 +836,7 @@ window.addEventListener("news-read", (e) => {
     (n.link ? "\n[" + t().openLink + "](" + n.link + ")" : "");
   addMsg("user", t().newsTag + " " + n.title);
   addMsg("bot", text);
+  if (n.image_url) showPictures([{ src: n.image_url, name: n.title, caption: "" }]);   // รูป/โปสเตอร์ขึ้นใหญ่ฝั่งซ้าย แตะอีกทีขยายเต็มจอ
   setState("answering");
   speakAnswer(text, "th");   // ครูเขียนข่าวเป็นภาษาไทย — อ่านด้วยเสียงไทยเสมอ (จออังกฤษก็ตาม)
 });

@@ -773,3 +773,14 @@ def test_transcribe_sends_audio_and_cleans_no_speech(monkeypatch):
     assert part.inline_data.data == b"aud" and part.inline_data.mime_type == "audio/webm"
     monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models("[NO_SPEECH]")})())
     assert ai.transcribe(b"aud", "audio/webm", "th") == ""
+
+
+# ---- โฟลเดอร์ข้อมูลถาวร (แฟลชไดรฟ์บน Pi) ----
+def test_stats_db_lives_in_data_dir():
+    # (fixture แทน server.stats ด้วยฐานชั่วคราว — เช็กไฟล์จริงที่สร้างตอน import แทน)
+    assert server.DATA.path("stats.db").is_file()
+
+
+def test_config_defaults_for_kiosk():
+    assert server.config.IDLE_VIDEO_SECONDS == 180
+    assert hasattr(server.config, "ADMIN_PASSWORD")

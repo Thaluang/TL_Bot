@@ -33,6 +33,7 @@ from announce import load_announcements, due_announcements    # noqa: E402
 from qr import load_qr_codes, resolve as resolve_qr            # noqa: E402
 from answer_cache import AnswerCache, replay_pieces            # noqa: E402
 from datetime import datetime                                  # noqa: E402
+from datadir import DataDir, resolve_data_dir                  # noqa: E402
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 VIDEO_DIR = STATIC_DIR / "videos"          # วิดีโอโหมดรอ — วางไฟล์ .mp4/.webm ในนี้
@@ -47,7 +48,10 @@ LANGS = ("th", "en")                    # ภาษาที่จอเนื�
 button_queue: queue.Queue = queue.Queue()
 _gpio = GpioButton(button_queue)
 arm = Arm()
-stats = Stats(ROBOT_DIR / config.STATS_DB_PATH)
+# ข้อมูลที่ต้องอยู่รอดหลังรีบูต (ข่าว รูป สถิติ) — บน Pi อยู่บนแฟลชไดรฟ์ (ดู datadir.py)
+DATA = DataDir(*resolve_data_dir(os.environ, [Path("/media")], ROBOT_DIR / "data"))
+print(f"[data] เก็บข้อมูลที่ {DATA.folder}" + ("" if DATA.persistent else " (ชั่วคราว — รีบูตแล้วหาย)"))
+stats = Stats(DATA.path("stats.db"))
 # คำถามที่เคยตอบแล้ว ตอบซ้ำได้ทันที (แก้ไฟล์ข้อมูลเมื่อไหร่ คำตอบเก่าใช้ไม่ได้เอง)
 answers = AnswerCache(config.ANSWER_CACHE_SECONDS, data_files=[
     ROBOT_DIR / config.COLLEGE_DATA_PATH, ROBOT_DIR / config.SARABURI_DATA_PATH, config.SAR_DATA_PATH])

@@ -9,7 +9,9 @@
 → ตอนบูต `start.sh` แตกโปรเจกต์ลง `/dev/shm` (RAM) แล้วรันจากตรงนั้น
 
 > ทางแก้ถาวรคือเปลี่ยน SD card ของแท้แล้วลง OS ใหม่ — โหมดนี้เป็นทางชั่วคราว
-> ข้อมูลที่หุ่นบันทึกระหว่างใช้ (สถิติ ฯลฯ) หายเมื่อปิดเครื่อง
+> ข้อมูลที่ต้องอยู่รอด (ข่าวที่ครูลง รูปข่าว สถิติ) เก็บบน **แฟลชไดรฟ์ USB** — เสียบทิ้งไว้ที่ Pi
+> `start.sh` หาไดรฟ์ที่ `/media/<user>/*` แล้วตั้ง `TLBOT_DATA_DIR=<ไดรฟ์>/tlbot-data` ให้เซิร์ฟเวอร์
+> ไม่มีไดรฟ์ = เก็บใน RAM หายเมื่อปิดเครื่อง (หน้าครูขึ้นคำเตือน)
 
 ## ไฟล์ในโฟลเดอร์นี้
 
@@ -22,7 +24,7 @@
 | `hosts` | `/boot/firmware/tlbot/hosts` | `/etc/hosts` |
 
 ไฟล์ที่ไม่อยู่ใน git ต้องใส่เอง:
-- `/boot/firmware/tlbot/env` — เนื้อหาเหมือน `robot/.env` (Gemini key)
+- `/boot/firmware/tlbot/env` — เนื้อหาเหมือน `robot/.env` (Gemini key + `ADMIN_PASSWORD=` รหัสหน้าครูลงข่าว)
 - `/boot/firmware/tlbot/app.tar.gz` — โปรเจกต์ทั้งก้อน สร้างบนคอม:
   `git ls-files -z | tar --force-local --null -T - -czf app.tar.gz`
 - `/boot/firmware/tlbot/fonts/NotoColorEmoji.ttf` — ฟอนต์ emoji

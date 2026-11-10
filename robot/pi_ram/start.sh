@@ -16,6 +16,18 @@ if [ ! -f "$APP/robot/web/server.py" ]; then
 fi
 cp "$SRC/env" "$APP/robot/.env" 2>/dev/null
 
+# ข้อมูลที่ต้องอยู่รอดหลังรีบูต (ข่าว รูปข่าว สถิติ) เก็บบนแฟลชไดรฟ์ USB
+# desktop เมานต์ให้เองที่ /media/<user>/<ชื่อไดรฟ์> แต่อาจช้ากว่าสคริปต์นี้ — รอไม่เกิน 30 วินาที
+# ไม่เจอ = เซิร์ฟเวอร์เก็บใน RAM (หายเมื่อรีบูต) และหน้าครูจะขึ้นคำเตือน
+ME="$(id -un)"
+for _ in $(seq 1 30); do
+  for d in /media/"$ME"/*/; do
+    [ -d "$d" ] && [ -w "$d" ] && export TLBOT_DATA_DIR="${d}tlbot-data" && break 2
+  done
+  sleep 1
+done
+echo "data: ${TLBOT_DATA_DIR:-RAM (ไม่เจอแฟลชไดรฟ์)}"
+
 # เซิร์ฟเวอร์ (ล้มเมื่อไรเปิดใหม่เอง)
 # ปิดตัวเก่าที่ค้างอยู่ (กรณีรันซ้ำ)
 for p in $(pgrep -f "[t]lbot/start.sh"); do [ "$p" != "$$" ] && kill "$p" 2>/dev/null; done

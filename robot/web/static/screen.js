@@ -31,6 +31,8 @@ const T = {
     spoken: "🎤 พูด", mapAlt: "แผนผังวิทยาลัย",
     mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ ดูทางซ้ายได้เลย แตะที่รูปเพื่อขยาย\n\nสามารถเยี่ยมชมวิทยาลัยในรูปแบบ 3D ได้ด้วยนะครับ แตะปุ่มด้านล่างได้เลย 👇",
     tour3d: "🏫 เยี่ยมชมแบบ 3D",
+    fromCollege: "ระยะทางจากวิทยาลัย", scanMap: "📍 สแกนเปิดแผนที่ นำทางไปได้เลย", scanMapSub: "เปิดใน Google Maps แล้วกด \"เส้นทาง\"",
+    scanMapSay: "สแกนคิวอาร์โค้ดบนจอ เพื่อเปิดแผนที่นำทางในมือถือได้เลยครับ",
     sysErr: "ขออภัยครับ ระบบขัดข้อง ลองใหม่อีกครั้งนะครับ",
     noHear: "ไม่ได้ยินครับ ลองพูดใหม่ หรือพิมพ์คำถามดูนะครับ 🙏",
     menuPick: "เลือกหมวดได้เลยครับ 👇", menuItems: "แตะดูรายละเอียดได้เลยครับ 👇",
@@ -68,6 +70,8 @@ const T = {
     spoken: "🎤 Spoken", mapAlt: "Campus map",
     mapMsg: "Here's the campus map 🗺️ It's on the left — tap it to zoom in.\n\nYou can also visit the campus in 3D — tap the button below 👇",
     tour3d: "🏫 Visit in 3D",
+    fromCollege: "Distance from the college:", scanMap: "📍 Scan to open the map", scanMapSub: "Opens Google Maps — tap \"Directions\"",
+    scanMapSay: "Scan the QR code on the screen to get directions on your phone.",
     sysErr: "Sorry, something went wrong. Please try again.",
     noHear: "Sorry, I didn't catch that. Try speaking again or type your question 🙏",
     menuPick: "Pick a category 👇", menuItems: "Tap one to see more 👇",
@@ -720,6 +724,17 @@ function menuStep(label, html, back, sub) {
 }
 const district = (d) => (d ? `📍 ${t().districtPre}${escapeHtml(d)}` : "");
 
+// หุ่นพูดแนะนำสถานที่ (เปิดรายละเอียดในเมนู / กด 🔊 ฟังอีกครั้ง)
+let lastPlace = null;
+function speakPlace(it) {
+  lastPlace = it || lastPlace;
+  if (!lastPlace) return;
+  const p = lastPlace;
+  const text = [pick(p.name), p.district ? `อำเภอ${p.district}` : "", p.highlight,
+    p.distance ? `${t().fromCollege} ${p.distance}` : "", p.map ? t().scanMapSay : ""].filter(Boolean).join(" ");
+  setState("answering");
+  speakAnswer(text, "th");
+}
 function openMenu(b) {
   const [sec, i, j] = (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem).split(":");
   const s = menuData && menuData[sec];
@@ -740,10 +755,17 @@ function openMenu(b) {
     return true;
   }
   const it = c.items[j];
+  // ที่เที่ยว/วัด: QR เปิด Google Maps (สแกนแล้วกดนำทางในมือถือ) + หุ่นพูดชื่อ จุดเด่น ระยะทาง
+  const code = it.map ? qrSvg(it.map) : "";
   menuStep(pick(it.name), '<div class="place-card">' +
     (it.photo ? `<img class="place-photo" src="${it.photo}" alt="${L(it.name)}">` : `<div class="m-icon">${c.icon}</div>`) +
     `<div><h3>${L(it.name)}</h3><small>${district(it.district)}</small>` +
-    (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") + "</div></div>", `data-menu-cat="${sec}:${i}"`, pick(c.label));
+    (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") +
+    (it.distance ? `<p class="dist">🚗 ${t().fromCollege} ${escapeHtml(it.distance)}</p>` : "") +
+    (code ? `<div class="place-qr">${code}<span><b>${t().scanMap}</b><small>${t().scanMapSub}</small></span></div>` : "") +
+    `<button type="button" class="tour-btn" data-action="placeSpeak">🔊 ${t().replay}</button>` +
+    "</div></div>", `data-menu-cat="${sec}:${i}"`, pick(c.label));
+  speakPlace(it);
   return true;
 }
 
@@ -755,6 +777,7 @@ document.addEventListener("click", (e) => {
   if (action === "closeTour") { closeTour(); return; }
   if (action === "boardHome") { Board.home(); return; }
   if (action === "allMenu") { showAllMenu(); return; }
+  if (action === "placeSpeak") { if (!busy()) speakPlace(); return; }
   if (busy()) return;   // กันแตะรัวระหว่างหุ่นกำลังคิด/พูด
   if (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem) {
     // เมนูยังไม่มา (โหลดไม่ทัน/เคยพัง) → ลองโหลดใหม่ก่อน ถ้ายังไม่ได้จริง ๆ ชิปค่อยตกไปถาม AI แบบเดิม

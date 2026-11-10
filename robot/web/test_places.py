@@ -104,3 +104,42 @@ def test_refusal_answer_shows_no_photo_of_other_place(DIR):
     en = "Sorry, I don't have that information yet. Saraburi has Jet Sao Noi Waterfall though."
     assert photos_for("น้ำตกเอราวัณอยู่ที่ไหน", th, DATA, places_dir=DIR) == []
     assert photos_for("Where is Erawan waterfall?", en, DATA, lang="en", places_dir=DIR) == []
+
+
+# ---- QR นำทาง (Google Maps) + ข้อมูลสำหรับเสียงพูด ----
+def test_trip_items_have_google_maps_link(DIR):
+    from urllib.parse import unquote_plus
+    m = menu_tree(DATA, places_dir=DIR)
+    temple = m["trips"]["categories"][1]["items"][0]
+    assert temple["map"].startswith("https://www.google.com/maps/search/?api=1&query=")
+    q = unquote_plus(temple["map"].split("query=", 1)[1])
+    assert "วัดพระพุทธบาท" in q and "พระพุทธบาท" in q and "สระบุรี" in q
+
+
+def test_trip_map_uses_coordinates_when_given(DIR):
+    data = {"ท่องเที่ยวสระบุรี": {"วัด": [{"ชื่อ": "วัดทดสอบ", "อำเภอ": "เสาไห้", "พิกัด": "14.5401, 100.8623"}]}}
+    item = menu_tree(data, places_dir=DIR)["trips"]["categories"][0]["items"][0]
+    assert item["map"] == "https://www.google.com/maps/search/?api=1&query=14.5401%2C100.8623"
+
+
+def test_trip_full_name_and_distance_for_speech(DIR):
+    data = {"ท่องเที่ยวสระบุรี": {"น้ำตก": [{"ชื่อ": "น้ำตกสามหลั่น", "ชื่อเต็ม": "อุทยานแห่งชาติน้ำตกสามหลั่น",
+                                          "อำเภอ": "เมืองสระบุรี", "ระยะทางจากวิทยาลัย": "ประมาณ 40 กม."}]}}
+    item = menu_tree(data, places_dir=DIR)["trips"]["categories"][0]["items"][0]
+    assert "อุทยานแห่งชาติน้ำตกสามหลั่น" in item["map"].replace("+", " ") or "%" in item["map"]
+    assert item["distance"] == "ประมาณ 40 กม."
+
+
+def test_souvenirs_have_no_map(DIR):
+    m = menu_tree(DATA, places_dir=DIR)
+    assert "map" not in m["souvenirs"]["categories"][0]["items"][0]
+
+
+def test_place_card_speaks_and_shows_map_qr():
+    from test_server import make_client
+    js = make_client().get("/static/screen.js").get_data(as_text=True).replace(chr(13), "")
+    card = js[js.index("const it = c.items[j];"):]
+    card = card[:card.index("return true;")]
+    assert "it.map" in card and "qrSvg(it.map)" in card       # QR เปิด Google Maps
+    assert "speakPlace(" in card                               # หุ่นพูดชื่อ + จุดเด่น
+    assert "function speakPlace" in js

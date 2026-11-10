@@ -21,7 +21,7 @@ for _stream in (sys.stdout, sys.stderr):
 from flask import Flask, request, jsonify, send_from_directory, Response  # noqa: E402
 import config                                                   # noqa: E402
 from database import load_college_data, load_saraburi_data      # noqa: E402
-from ai import ask_ai, ask_ai_stream, is_quota_error, speak_wav                            # noqa: E402
+from ai import ask_ai, ask_ai_stream, is_quota_error, speak_wav, transcribe                # noqa: E402
 from wayfinding import wants_map                               # noqa: E402
 from places import photos_for, menu_tree                       # noqa: E402
 import json                                                    # noqa: E402
@@ -33,6 +33,12 @@ from announce import load_announcements, due_announcements    # noqa: E402
 from qr import load_qr_codes, resolve as resolve_qr            # noqa: E402
 from answer_cache import AnswerCache, replay_pieces            # noqa: E402
 from datetime import datetime                                  # noqa: E402
+from datadir import DataDir, resolve_data_dir, _writable       # noqa: E402
+from news import NewsStore, NewsError                           # noqa: E402
+from urllib.request import urlopen                              # noqa: E402
+import secrets                                                  # noqa: E402
+import time                                                     # noqa: E402
+import ai                                                       # noqa: E402
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 VIDEO_DIR = STATIC_DIR / "videos"          # วิดีโอโหมดรอ — วางไฟล์ .mp4/.webm ในนี้
@@ -47,10 +53,18 @@ LANGS = ("th", "en")                    # ภาษาที่จอเนื�
 button_queue: queue.Queue = queue.Queue()
 _gpio = GpioButton(button_queue)
 arm = Arm()
-stats = Stats(ROBOT_DIR / config.STATS_DB_PATH)
+# ข้อมูลที่ต้องอยู่รอดหลังรีบูต (ข่าว รูป สถิติ) — บน Pi อยู่บนแฟลชไดรฟ์ (ดู datadir.py)
+DATA = DataDir(*resolve_data_dir(os.environ, [Path("/media")], ROBOT_DIR / "data"))
+print(f"[data] เก็บข้อมูลที่ {DATA.folder}" + ("" if DATA.persistent else " (ชั่วคราว — รีบูตแล้วหาย)"))
+stats = Stats(DATA.path("stats.db"))
 # คำถามที่เคยตอบแล้ว ตอบซ้ำได้ทันที (แก้ไฟล์ข้อมูลเมื่อไหร่ คำตอบเก่าใช้ไม่ได้เอง)
+news = NewsStore(DATA.folder)   # ข่าวประชาสัมพันธ์ที่ครูลงผ่านหน้า /stats
+# คำตอบที่จำไว้ใช้ไม่ได้เมื่อข่าวเปลี่ยน หรือข้ามวัน (ข่าวเริ่ม/หมดอายุตามวันที่)
 answers = AnswerCache(config.ANSWER_CACHE_SECONDS, data_files=[
-    ROBOT_DIR / config.COLLEGE_DATA_PATH, ROBOT_DIR / config.SARABURI_DATA_PATH, config.SAR_DATA_PATH])
+    ROBOT_DIR / config.COLLEGE_DATA_PATH, ROBOT_DIR / config.SARABURI_DATA_PATH, config.SAR_DATA_PATH],
+    version_fn=lambda: (news.version, _now().date().isoformat()))
+# หุ่นรู้ข่าวที่ขึ้นจออยู่ (ต่อท้ายข้อมูลวิทยาลัยที่ส่งให้ AI)
+ai.extra_context = lambda: news.ai_text(_now().date())
 _now = datetime.now   # แยกไว้ให้เทสต์แกล้งเปลี่ยนเวลาได้
 
 
@@ -320,6 +334,220 @@ def tts():
         _save_tts(path, b"".join(got))
 
     return Response(gen(), mimetype=mime, headers={"Cache-Control": "no-store"})
+
+
+
+# ---- ฟังเสียง: POST /stt?lang=th (body = ไฟล์เสียงที่จออัด) → {"text": "..."} ----
+# Chromium บน Pi ใช้ Web Speech API ของ Google ไม่ได้ (ไม่มีคีย์) จอเลยอัดเสียงส่งมาให้ Gemini ถอดแทน
+STT_MAX_BYTES = 2 * 1024 * 1024   # ~2 นาทีของ opus — ยาวกว่านี้ไม่ใช่คำถามแล้ว
+
+
+@app.post("/stt")
+def stt():
+    lang = request.args.get("lang") if request.args.get("lang") in LANGS else "th"
+    if (request.content_length or 0) > STT_MAX_BYTES:
+        return jsonify(error="ไฟล์เสียงยาวเกินไป"), 413
+    audio = request.get_data()
+    if not audio:
+        return jsonify(error="ไม่มีเสียง"), 400
+    if len(audio) > STT_MAX_BYTES:
+        return jsonify(error="ไฟล์เสียงยาวเกินไป"), 413
+    problem = missing_key_error()
+    if problem:
+        return jsonify(error=problem), 500
+    mime = (request.mimetype or "audio/webm").split(";")[0]
+    try:
+        return jsonify(text=transcribe(audio, mime, lang))
+    except Exception as e:
+        print("STT error:", str(e)[:200])
+        return jsonify(error=friendly_error(e, lang)), 503
+
+# ---- ข่าวประชาสัมพันธ์ (จอ 1920 อ่าน /news, ครูแก้ผ่าน /admin/* จากหน้า /stats) ----
+NEWS_UPLOAD_MAX = 4 * 1024 * 1024   # รูปไม่เกิน 3 MB + ข้อความในฟอร์ม
+_admin_tokens: set = set()          # token ของเบราว์เซอร์ที่ใส่รหัสถูกแล้ว (รีสตาร์ทเซิร์ฟเวอร์ = ต้องใส่ใหม่)
+
+
+def _public_news(item: dict) -> dict:
+    out = {k: item.get(k, "") for k in ("id", "category", "title", "subtitle", "detail", "link")}
+    out["layout"] = item.get("layout") or "landscape"
+    out["image_url"] = f"/news/img/{item['image']}" if item.get("image") else ""
+    return out
+
+
+@app.get("/news")
+def news_list():
+    items = [_public_news(d) for d in news.active(_now().date())]
+    # วันเปลี่ยน = รายการเปลี่ยนได้ (ข่าวเริ่ม/หมดอายุตามวัน) → จอวาดใหม่ แม้ไม่มีใครแก้ข่าว
+    return jsonify(version=f"{news.version}-{_now().date().isoformat()}", items=items)
+
+
+@app.get("/news/img/<name>")
+def news_image(name):
+    p = news.image_path(name)
+    if not p:
+        return jsonify(error="ไม่พบรูป"), 404
+    return send_from_directory(p.parent, p.name, max_age=7 * 24 * 3600)
+
+
+def _is_admin() -> bool:
+    return bool(config.ADMIN_PASSWORD) and request.cookies.get("tlbot_admin") in _admin_tokens
+
+
+def _need_admin():
+    if not config.ADMIN_PASSWORD:
+        return jsonify(error="ยังไม่ได้ตั้งรหัสหน้าครู (ADMIN_PASSWORD ในไฟล์ .env)"), 403
+    if not _is_admin():
+        return jsonify(error="กรุณาใส่รหัสก่อน"), 401
+    return None
+
+
+@app.post("/admin/login")
+def admin_login():
+    if not config.ADMIN_PASSWORD:
+        return jsonify(error="ยังไม่ได้ตั้งรหัสหน้าครู (ADMIN_PASSWORD ในไฟล์ .env)"), 403
+    pw = str((request.get_json(silent=True) or {}).get("password", ""))
+    if not secrets.compare_digest(pw.encode(), config.ADMIN_PASSWORD.encode()):
+        time.sleep(0.5)   # กันเดารหัสรัว ๆ
+        return jsonify(error="รหัสไม่ถูกต้อง"), 401
+    token = secrets.token_urlsafe(24)
+    _admin_tokens.add(token)
+    r = jsonify(ok=True)
+    r.set_cookie("tlbot_admin", token, httponly=True, samesite="Strict", max_age=30 * 24 * 3600)
+    return r
+
+
+@app.post("/admin/logout")
+def admin_logout():
+    _admin_tokens.discard(request.cookies.get("tlbot_admin"))
+    r = jsonify(ok=True)
+    r.delete_cookie("tlbot_admin")
+    return r
+
+
+@app.get("/admin/news")
+def admin_news():
+    bad = _need_admin()
+    if bad:
+        return bad
+    items = [{**d, "image_url": f"/news/img/{d['image']}" if d.get("image") else ""} for d in news.all()]
+    return jsonify(items=items, today=_now().date().isoformat(),
+                   storage={"persistent": DATA.persistent and _writable(DATA.folder), "path": str(DATA.folder)})
+
+
+def _news_upload():
+    """อ่านฟอร์มข่าว: คืน (fields, รูป bytes|None) หรือ response error"""
+    if (request.content_length or 0) > NEWS_UPLOAD_MAX:
+        return None, (jsonify(error="รูปใหญ่เกินไป (ไม่เกิน 3 MB)"), 413)
+    f = request.files.get("image")
+    image = f.read() if f and f.filename else None
+    if image and len(image) > 3 * 1024 * 1024:
+        return None, (jsonify(error="รูปใหญ่เกินไป (ไม่เกิน 3 MB)"), 413)
+    return (request.form.to_dict(), image), None
+
+
+def _save_failed(e):
+    print("news save error:", str(e)[:120])
+    return jsonify(error="บันทึกลงแฟลชไดรฟ์ไม่ได้ — เช็กว่าแฟลชไดรฟ์ยังเสียบอยู่ แล้วลองใหม่"), 503
+
+
+@app.post("/admin/news")
+def admin_news_add():
+    bad = _need_admin()
+    if bad:
+        return bad
+    got, err = _news_upload()
+    if err:
+        return err
+    try:
+        return jsonify(news.add(*got)), 201
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.post("/admin/news/order")
+def admin_news_order():
+    bad = _need_admin()
+    if bad:
+        return bad
+    ids = (request.get_json(silent=True) or {}).get("ids")
+    if not isinstance(ids, list):
+        return jsonify(error="ต้องส่ง ids เป็นรายการ"), 400
+    news.reorder([str(i) for i in ids])
+    return jsonify(ok=True)
+
+
+@app.post("/admin/news/<news_id>")
+def admin_news_edit(news_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    got, err = _news_upload()
+    if err:
+        return err
+    fields, image = got
+    try:
+        return jsonify(news.update(news_id, fields, image, remove_image=fields.get("remove_image") == "1"))
+    except KeyError:
+        return jsonify(error="ไม่พบข่าวนี้"), 404
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.delete("/admin/news/<news_id>")
+def admin_news_delete(news_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    return (jsonify(ok=True), 200) if news.delete(news_id) else (jsonify(error="ไม่พบข่าวนี้"), 404)
+
+
+# ---- อากาศ (Open-Meteo ฟรี ไม่ต้องสมัคร) — จอ 1920 ถามทุก 30 นาที ----
+WEATHER_URL = ("https://api.open-meteo.com/v1/forecast?latitude=14.53&longitude=100.93"
+               "&current=temperature_2m,weather_code"
+               "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+               "&forecast_days=1&timezone=Asia%2FBangkok")
+WEATHER_TTL, WEATHER_STALE = 30 * 60, 3 * 3600   # ดึงใหม่ทุก 30 นาที / เน็ตหลุดใช้ค่าเก่าได้ไม่เกิน 3 ชม.
+_weather_cache = {"at": 0, "data": None}
+# รหัสอากาศ WMO → ข้อความ (ไทย, อังกฤษ)
+WMO_TEXT = {0: ("ฟ้าใส", "Clear sky"), 1: ("แดดจัด มีเมฆบางส่วน", "Mainly clear"), 2: ("แดดสลับเมฆ", "Partly cloudy"),
+            3: ("เมฆมาก", "Overcast"), 45: ("มีหมอก", "Fog"), 48: ("มีหมอก", "Fog"),
+            51: ("ฝนปรอย ๆ", "Light drizzle"), 53: ("ฝนปรอย ๆ", "Drizzle"), 55: ("ฝนปรอย ๆ", "Drizzle"),
+            61: ("ฝนตกเล็กน้อย", "Light rain"), 63: ("ฝนตก", "Rain"), 65: ("ฝนตกหนัก", "Heavy rain"),
+            80: ("ฝนตกเป็นช่วง ๆ", "Rain showers"), 81: ("ฝนตกเป็นช่วง ๆ", "Rain showers"),
+            82: ("ฝนตกหนักเป็นช่วง ๆ", "Heavy showers"), 95: ("พายุฝนฟ้าคะนอง", "Thunderstorm"),
+            96: ("พายุฝนฟ้าคะนอง", "Thunderstorm"), 99: ("พายุฝนฟ้าคะนอง", "Thunderstorm")}
+
+
+def _fetch_weather() -> dict:
+    with urlopen(WEATHER_URL, timeout=5) as r:
+        d = json.loads(r.read())
+    cur, day = d["current"], d.get("daily", {})
+    code = int(cur.get("weather_code", 0))
+    th, en = WMO_TEXT.get(code, ("", ""))
+    first = lambda k: (day.get(k) or [None])[0]   # noqa: E731
+    rnd = lambda v: round(v) if isinstance(v, (int, float)) else None   # noqa: E731
+    return {"temp": rnd(cur.get("temperature_2m")), "code": code, "text_th": th, "text_en": en,
+            "high": rnd(first("temperature_2m_max")), "low": rnd(first("temperature_2m_min")),
+            "rain": rnd(first("precipitation_probability_max"))}
+
+
+@app.get("/weather")
+def weather():
+    now = time.time()
+    c = _weather_cache
+    if c["data"] and now - c["at"] < WEATHER_TTL:
+        return jsonify(c["data"])
+    try:
+        c["data"], c["at"] = _fetch_weather(), now
+    except Exception as e:
+        print("weather error:", str(e)[:120])
+        if not (c["data"] and now - c["at"] < WEATHER_STALE):
+            return jsonify(error="ดึงข้อมูลอากาศไม่ได้"), 503
+    return jsonify(c["data"])
 
 
 @app.post("/rate")

@@ -5,6 +5,7 @@
 ทั้งสองเจ้าใช้ system prompt กันตอบมั่วตัวเดียวกัน + แนบข้อมูลวิทยาลัยและสระบุรีทุกครั้ง
 """
 
+import re
 from config import (
     AI_PROVIDER,
     AI_MAX_TOKENS,
@@ -23,7 +24,7 @@ from database import format_all_data
 _SYSTEM_RULES = (
     "คุณเป็นหุ่นยนต์ผู้ช่วยแนะนำข้อมูลของวิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์ "
     "และข้อมูลจังหวัดสระบุรี "
-    "คุณเป็นหุ่นยนต์ผู้ชาย ชื่อทีแอลบอท แทนตัวเองว่า ผม และลงท้ายประโยคด้วย ครับ เสมอ (ห้ามใช้ ค่ะ คะ หนู ดิฉัน) "
+    "คุณเป็นหุ่นยนต์ผู้ชาย ชื่อน้องทานตะวัน-Bot (หุ่นยนต์ของวิทยาลัย) แทนตัวเองว่า ผม และลงท้ายประโยคด้วย ครับ เสมอ (ห้ามใช้ ค่ะ คะ หนู ดิฉัน) "
     "ตอบเป็นภาษาไทย สุภาพ สั้น กระชับ เข้าใจง่าย "
     "น้ำเสียงร่าเริง เป็นกันเอง มีชีวิตชีวา "
     "ไม่ต้องขึ้นต้นด้วยคำทักทาย (เช่น สวัสดีครับ สวัสดีน้อง ๆ) และไม่ต้องเรียกผู้ถามว่าน้อง "
@@ -48,7 +49,7 @@ _LANG_RULES = {
     "en": (
         "\n\nIMPORTANT: The user has chosen English. Reply entirely in natural, friendly English "
         "(translate the Thai data; write Thai place names in English letters). "
-        "You are TL-Bot, a male robot. Keep the same cheerful tone, emojis, **Heading:** and * list format. "
+        "You are Nong Tantawan-Bot (\"Sunflower\"), the college's male robot. Keep the same cheerful tone, emojis, **Heading:** and * list format. "
         "Write links only as [button text](url), never a bare URL, e.g. [Click to apply online](https://...). "
         "If the information is not available, say 'Sorry, I don't have that information yet' "
         "and suggest contacting the college staff (Tel. 0-3628-1295)."
@@ -67,8 +68,21 @@ _gemini_clients = {}   # key -> client
 _gemini_idx = 0        # key ที่ใช้อยู่ตอนนี้ (โควตาหมดแล้วเลื่อนไปตัวถัดไป)
 
 
+# ข้อมูลที่เปลี่ยนบ่อย (ข่าวประชาสัมพันธ์ที่ครูลง) — เซิร์ฟเวอร์ตั้งเป็นฟังก์ชันคืนข้อความ
+def extra_context() -> str:
+    return ""
+
+
+def _extra() -> str:
+    try:
+        text = extra_context() or ""
+    except Exception:
+        return ""
+    return "\n\n" + text if text else ""
+
+
 def _system_text(college_data: dict, saraburi_data: dict, lang: str = "th", question: str = None) -> str:
-    return _rules(lang) + "\n\n" + format_all_data(college_data, saraburi_data, question=question)
+    return _rules(lang) + "\n\n" + format_all_data(college_data, saraburi_data, question=question) + _extra()
 
 
 def is_quota_error(e: Exception) -> bool:
@@ -190,6 +204,36 @@ def _stream_gemini(question: str, college_data: dict, saraburi_data: dict, lang:
     yield from _try_gemini(call)
 
 
+# ---- ฟังเสียง: Gemini ถอดเสียงพูด → ข้อความ ----
+# ใช้แทน Web Speech API ของเบราว์เซอร์ — Chromium บน Pi ไม่มีคีย์บริการเสียงของ Google เลยฟังไม่ได้
+NO_SPEECH = "[NO_SPEECH]"
+_STT_PROMPT = {
+    "th": "ถอดเสียงพูดในไฟล์เสียงนี้เป็นข้อความภาษาไทยตามที่ได้ยินเท่านั้น ห้ามตอบคำถาม ห้ามอธิบาย "
+          f"ห้ามใส่เครื่องหมายคำพูด ถ้าไม่มีเสียงคนพูด ให้ตอบว่า {NO_SPEECH}",
+    "en": "Transcribe the speech in this audio exactly as spoken. Do not answer or explain. "
+          f"No quotation marks. If there is no human speech, reply {NO_SPEECH}",
+}
+
+
+def transcribe(audio: bytes, mime: str, lang: str = "th") -> str:
+    """เสียงที่อัดจากจอ (webm/ogg/wav) → ข้อความที่พูด ('' = ไม่มีเสียงพูด)
+    ใช้รุ่น lite ก่อนเพราะเร็วกว่า ล่มก็สลับไปรุ่นอื่นเองเหมือนตอนถามคำถาม"""
+    from google.genai import types
+    contents = [types.Part.from_bytes(data=audio, mime_type=mime), _STT_PROMPT.get(lang, _STT_PROMPT["th"])]
+    config = types.GenerateContentConfig(temperature=0)
+
+    def call(client, model, idx):
+        response = client.models.generate_content(model=model, contents=contents, config=config)
+        yield (response.text or "").strip().strip('"“”')
+
+    models = [*GEMINI_FALLBACK_MODELS[:1], GEMINI_MODEL, *GEMINI_FALLBACK_MODELS[1:]]
+    text = "".join(_try_gemini(call, models)).strip()
+    if NO_SPEECH in text:
+        return ""
+    # บางรุ่นเว้นวรรคทุกคำ ("ห้อง สมุด อยู่ ไหน") — ภาษาไทยไม่เว้นวรรคระหว่างคำ ตัดออกให้อ่านเหมือนคนพิมพ์
+    return re.sub(r"(?<=[\u0E00-\u0E7F])\s+(?=[\u0E00-\u0E7F])", "", text)
+
+
 # ---- เสียงพูด: Gemini TTS ----
 # ส่งเฉพาะข้อความที่จะพูด — ห้ามใส่คำสั่งนำหน้า (เช่น "พูดด้วยน้ำเสียง…") เพราะโมเดลจะอ่านคำสั่งออกเสียงด้วย
 # ความร่าเริงมาจากตัวเสียง (GEMINI_TTS_VOICE) อยู่แล้ว
@@ -255,6 +299,7 @@ def _claude_args(question: str, college_data: dict, saraburi_data: dict, lang: s
                 "text": format_all_data(college_data, saraburi_data),
                 "cache_control": {"type": "ephemeral"},
             },
+            *([{"type": "text", "text": _extra().strip()}] if _extra() else []),
         ],
         messages=[{"role": "user", "content": question}],
     )

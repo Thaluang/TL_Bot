@@ -66,3 +66,4 @@ def test_today_counts(st):
 def test_long_question_trimmed(st):
     st.log_question("ก" * 5000, "th")
     assert len(st.summary()["top"][0]["question"]) <= 500
+

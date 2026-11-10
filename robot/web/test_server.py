@@ -132,12 +132,12 @@ def test_screen_has_onscreen_keyboard():
 
 
 def test_campus_tour_only_in_sidebar():
-    """ปุ่มแนะนำสถานที่วิทยาลัยอยู่แถบซ้ายเท่านั้น และหน้าทัวร์ 3 มิติเปิดได้จริง"""
+    """ปุ่มแนะนำสถานที่วิทยาลัย (ทัวร์ 3 มิติ) อยู่ในเมนูทั้งหมดที่เดียว และหน้าทัวร์เปิดได้จริง"""
     c = make_client()
     html = c.get("/screen").get_data(as_text=True)
-    aside = html[html.index("<aside>"):html.index("</aside>")]
-    assert 'data-action="campusTour"' in aside
-    assert html.count('data-action="campusTour"') == 1     # ไม่ไปโผล่ในชิปหน้าแรก/แถวล่าง
+    allmenu = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    assert 'data-action="campusTour"' in allmenu
+    assert html.count('data-action="campusTour"') == 1
     r = c.get("/static/campus_tour.html")
     assert r.status_code == 200 and "Campus Tour" in r.get_data(as_text=True)
 
@@ -148,9 +148,8 @@ def test_screen_has_quick_questions():
     screen = c.get("/screen")
     assert screen.status_code == 200
     html = screen.data.decode("utf-8")
-    assert 'id="quickQs"' in html
-    assert "คำถามยอดนิยม" in html
-    assert html.count('class="chip"') >= 3      # มีปุ่มคำถามอย่างน้อย 3 ปุ่ม
+    dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
+    assert dock.count('class="chip') >= 4      # ชิปใต้แชท 4 ปุ่ม (สมัครเรียน/หลักสูตร/แผนผัง/ที่เที่ยว)
 
 
 # ---------- wayfinding ----------
@@ -304,10 +303,12 @@ def test_wants_map_english_questions():
 
 
 def test_screen_has_language_and_theme_switches():
+    """จอหน้าวิทยาลัยใช้ภาษาไทยอย่างเดียว (เจ้าของสั่งเอาภาษาอังกฤษออก)"""
     html = make_client().get("/screen").data.decode("utf-8")
-    assert 'data-lang="en"' in html
-    assert 'id="themeBtn"' in html
-    assert 'data-q-en="What are the places to visit in Saraburi?"' in html
+    assert 'data-lang="en"' not in html and 'id="langSeg"' not in html
+    js = make_client().get("/static/screen.js").data.decode("utf-8")
+    assert 'let lang = "th"' in js
+    assert 'id="themeBtn"' not in html   # ดีไซน์ใหม่มีโหมดสว่างอย่างเดียว
 
 
 # ---------- คำตอบแบบทยอยไหล (/ask/stream) ----------
@@ -501,10 +502,10 @@ def test_face_shows_waving_hand_when_greeting():
     assert "body.state-greeting .hand" in html
 
 
-def test_screen_greets_as_male_tl_bot():
+def test_screen_greets_as_male_tantawan():
     c = make_client()
     js = c.get("/static/screen.js").data.decode("utf-8")
-    assert "ผมชื่อทีแอลบอท" in js
+    assert "ผมชื่อน้องทานตะวัน-Bot" in js and "ทีแอลบอท" not in js
     assert "หนู" not in js and "ค่ะ" not in js
     assert "/greet" in js
 
@@ -656,7 +657,7 @@ def test_gemini_voice_gets_only_the_text(monkeypatch):
 def test_screen_uses_ai_voice_with_local_fallback():
     js = make_client().get("/static/screen.js").data.decode("utf-8")
     assert "/tts?lang=" in js and "localSpeak" in js and "TTS_TIMEOUT_MS" in js
-    assert "startAttract()" in js   # เปิดหน้าเว็บมาเข้าโหมดรอ
+    assert "startAttract()" in js and "STARTS_IN_ATTRACT" not in js   # วิดีโอแทรกเมื่อว่างนาน (ไม่เริ่มที่วิดีโอ)
 
 
 # ---- จำคำตอบ: ถามซ้ำตอบได้ทันที ไม่ถาม AI ใหม่ ----
@@ -718,3 +719,330 @@ def test_qr_fixed_answer_is_counted_in_stats(tmp_path, monkeypatch, temp_stats):
 def test_qr_unknown_code_404(tmp_path, monkeypatch):
     qr_file(tmp_path, monkeypatch, {})
     assert make_client().get("/qr?code=WHAT").status_code == 404
+
+
+# ---- ฟังเสียงที่เซิร์ฟเวอร์ (Chromium บน Pi ใช้ Web Speech ของ Google ไม่ได้) ----
+@pytest.fixture
+def stt_env(monkeypatch):
+    set_valid_key(monkeypatch)
+    calls = []
+
+    def fake_transcribe(audio, mime, lang):
+        calls.append((audio, mime, lang))
+        return "ห้องสมุดอยู่ไหน"
+    monkeypatch.setattr(server, "transcribe", fake_transcribe)
+    return calls
+
+
+def test_stt_returns_text(stt_env):
+    r = make_client().post("/stt?lang=th", data=b"webmdata", content_type="audio/webm;codecs=opus")
+    assert r.status_code == 200 and r.get_json() == {"text": "ห้องสมุดอยู่ไหน"}
+    assert stt_env == [(b"webmdata", "audio/webm", "th")]
+
+
+def test_stt_rejects_empty_or_too_big(stt_env):
+    c = make_client()
+    assert c.post("/stt", data=b"", content_type="audio/webm").status_code == 400
+    big = b"x" * (server.STT_MAX_BYTES + 1)
+    assert c.post("/stt", data=big, content_type="audio/webm").status_code == 413
+    assert stt_env == []
+
+
+def test_stt_quota_error_is_friendly(stt_env, monkeypatch):
+    def boom(audio, mime, lang):
+        raise RuntimeError("429 RESOURCE_EXHAUSTED")
+    monkeypatch.setattr(server, "transcribe", boom)
+    r = make_client().post("/stt", data=b"a", content_type="audio/webm")
+    assert r.status_code == 503 and r.get_json()["error"]
+
+
+def test_transcribe_sends_audio_and_cleans_no_speech(monkeypatch):
+    import ai
+    seen = []
+
+    class Models:
+        def __init__(self, reply): self.reply = reply
+        def generate_content(self, model, contents, config):
+            seen.append(contents)
+            return type("R", (), {"text": self.reply})()
+    monkeypatch.setattr(ai, "_keys_in_order", lambda: [(0, "k")])
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models(" ห้องสมุดอยู่ไหน \n")})())
+    assert ai.transcribe(b"aud", "audio/webm", "th") == "ห้องสมุดอยู่ไหน"
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models("ห้อง สมุด อยู่ ไหน ครับ ห้อง 301")})())
+    assert ai.transcribe(b"aud", "audio/webm", "th") == "ห้องสมุดอยู่ไหนครับห้อง 301"
+    part = seen[0][0]
+    assert part.inline_data.data == b"aud" and part.inline_data.mime_type == "audio/webm"
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: type("Cl", (), {"models": Models("[NO_SPEECH]")})())
+    assert ai.transcribe(b"aud", "audio/webm", "th") == ""
+
+
+# ---- โฟลเดอร์ข้อมูลถาวร (แฟลชไดรฟ์บน Pi) ----
+def test_stats_db_lives_in_data_dir():
+    # (fixture แทน server.stats ด้วยฐานชั่วคราว — เช็กไฟล์จริงที่สร้างตอน import แทน)
+    assert server.DATA.path("stats.db").is_file()
+
+
+def test_config_defaults_for_kiosk():
+    assert server.config.IDLE_VIDEO_SECONDS == 180
+    assert hasattr(server.config, "ADMIN_PASSWORD")
+
+
+# ---- ข่าวประชาสัมพันธ์ + หน้าครู ----
+JPEG = b"\xff\xd8\xff\xe0" + b"0" * 100
+
+
+@pytest.fixture
+def news_env(tmp_path, monkeypatch):
+    from news import NewsStore
+    store = NewsStore(tmp_path)
+    monkeypatch.setattr(server, "news", store)
+    monkeypatch.setattr(server.config, "ADMIN_PASSWORD", "ครู1234")
+    server._admin_tokens.clear()
+    return store
+
+
+def login(c, pw="ครู1234"):
+    return c.post("/admin/login", json={"password": pw})
+
+
+def news_form(**kw):
+    d = {"category": "event", "title": "งานเปิดบ้าน", "subtitle": "20 ธ.ค.", "detail": "มีกิจกรรม"}
+    d.update(kw)
+    return d
+
+
+def test_admin_login_wrong_and_right(news_env):
+    c = make_client()
+    assert login(c, "ผิด").status_code == 401
+    r = login(c)
+    assert r.status_code == 200 and "tlbot_admin=" in r.headers.get("Set-Cookie", "")
+    assert c.get("/admin/news").status_code == 200
+
+
+def test_admin_disabled_without_password(news_env, monkeypatch):
+    monkeypatch.setattr(server.config, "ADMIN_PASSWORD", "")
+    assert login(make_client(), "").status_code == 403
+
+
+def test_admin_needs_login(news_env):
+    c = make_client()
+    assert c.get("/admin/news").status_code == 401
+    assert c.post("/admin/news", data=news_form()).status_code == 401
+    assert c.delete("/admin/news/abc").status_code == 401
+
+
+def test_add_news_with_image_shows_on_screen(news_env):
+    import io
+    c = make_client(); login(c)
+    r = c.post("/admin/news", data={**news_form(), "image": (io.BytesIO(JPEG), "a.jpg")},
+               content_type="multipart/form-data")
+    assert r.status_code == 201
+    pub = make_client().get("/news").get_json()
+    item = pub["items"][0]
+    assert item["title"] == "งานเปิดบ้าน" and item["image_url"].startswith("/news/img/")
+    assert make_client().get(item["image_url"]).data == JPEG
+    assert pub["version"]
+
+
+def test_add_news_rejects_non_image(news_env):
+    import io
+    c = make_client(); login(c)
+    r = c.post("/admin/news", data={**news_form(), "image": (io.BytesIO(b"hello"), "a.txt")},
+               content_type="multipart/form-data")
+    assert r.status_code == 400 and r.get_json()["error"]
+
+
+def test_add_news_rejects_huge_upload(news_env):
+    import io
+    c = make_client(); login(c)
+    big = b"\xff\xd8\xff" + b"0" * (5 * 1024 * 1024)
+    r = c.post("/admin/news", data={**news_form(), "image": (io.BytesIO(big), "a.jpg")},
+               content_type="multipart/form-data")
+    assert r.status_code == 413
+
+
+def test_edit_delete_and_order(news_env):
+    c = make_client(); login(c)
+    a = c.post("/admin/news", data=news_form(title="A")).get_json()
+    b = c.post("/admin/news", data=news_form(title="B")).get_json()
+    assert c.post(f"/admin/news/{a['id']}", data={"title": "A2"}).get_json()["title"] == "A2"
+    assert c.post("/admin/news/order", json={"ids": [a["id"], b["id"]]}).status_code == 200
+    assert [n["title"] for n in c.get("/news").get_json()["items"]] == ["A2", "B"]
+    assert c.delete(f"/admin/news/{a['id']}").status_code == 200
+    assert c.delete(f"/admin/news/{a['id']}").status_code == 404
+    assert c.post("/admin/news/nope", data={"title": "x"}).status_code == 404
+
+
+def test_admin_news_reports_storage(news_env):
+    c = make_client(); login(c)
+    st = c.get("/admin/news").get_json()["storage"]
+    assert set(st) == {"persistent", "path"}
+
+
+def test_news_image_bad_name_404(news_env):
+    assert make_client().get("/news/img/..%2Fnews.json").status_code == 404
+
+
+def test_news_reaches_ai_and_resets_cache(news_env, monkeypatch):
+    import ai
+    seen = []
+    monkeypatch.setattr(server, "ask_ai_stream", lambda q, c, s, lang="th": (seen.append(ai.extra_context()) or iter(["ตอบ"])))
+    monkeypatch.setattr(server.config, "GEMINI_API_KEY", "k")
+    monkeypatch.setattr(server.config, "AI_PROVIDER", "gemini")
+    c = make_client()
+    c.post("/ask/stream", json={"question": "มีงานอะไรบ้าง"}).get_data()
+    login(c); c.post("/admin/news", data=news_form(title="งานเปิดบ้าน"))
+    c.post("/ask/stream", json={"question": "มีงานอะไรบ้าง"}).get_data()
+    assert len(seen) == 2 and "งานเปิดบ้าน" in seen[1]
+
+
+def fake_weather(monkeypatch, payload=None, fail=False):
+    import json as _json
+
+    class R:
+        def __init__(self, b): self.b = b
+        def read(self): return self.b
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def opener(url, timeout=None):
+        if fail:
+            raise OSError("no internet")
+        return R(_json.dumps(payload).encode())
+    monkeypatch.setattr(server, "urlopen", opener)
+
+
+WX = {"current": {"temperature_2m": 33.4, "weather_code": 2},
+      "daily": {"temperature_2m_max": [35.1], "temperature_2m_min": [24.2], "precipitation_probability_max": [40]}}
+
+
+def test_weather_ok(monkeypatch):
+    monkeypatch.setattr(server, "_weather_cache", {"at": 0, "data": None})
+    fake_weather(monkeypatch, WX)
+    d = make_client().get("/weather").get_json()
+    assert d["temp"] == 33 and d["text_th"] == "แดดสลับเมฆ" and d["high"] == 35 and d["low"] == 24 and d["rain"] == 40
+
+
+def test_weather_offline_without_cache_503(monkeypatch):
+    monkeypatch.setattr(server, "_weather_cache", {"at": 0, "data": None})
+    fake_weather(monkeypatch, fail=True)
+    assert make_client().get("/weather").status_code == 503
+
+
+def test_weather_offline_uses_recent_cache(monkeypatch):
+    import time
+    monkeypatch.setattr(server, "_weather_cache", {"at": time.time() - 3600, "data": {"temp": 30}})
+    fake_weather(monkeypatch, fail=True)
+    assert make_client().get("/weather").get_json()["temp"] == 30
+
+
+def test_stats_page_has_news_admin():
+    html = make_client().get("/stats").get_data(as_text=True)
+    for needle in ('id="newsTab"', 'id="newsForm"', 'id="newsList"', 'id="loginBox"', "function shrinkImage",
+                   'fetch("/stats.json")', "/admin/news", 'id="storageWarn"'):
+        assert needle in html, needle
+    for cat in ("admission", "event", "scholarship", "award", "general"):
+        assert f'value="{cat}"' in html, cat
+
+
+
+# ---- จอ 1920 แบบใหม่ (ข่าว + แชท) ----
+def test_new_screen_layout():
+    html = make_client().get("/screen").get_data(as_text=True)
+    for needle in ('id="app"', 'id="home"', 'id="board"', 'id="newsGrid"', 'id="clock"', 'id="weather"',
+                   'id="chat"', 'id="mic"', 'id="composer"', 'id="dockQs"', 'data-action="allMenu"', 'id="allMenuTpl"',
+                   'class="osk-host', 'id="stopTalk"', 'id="attract"', 'id="tourView"', 'id="announce"'):
+        assert needle in html, needle
+    assert "<aside" not in html and 'id="welcomeSlot"' not in html
+    assert html.index("/static/vendor/qrcode.js") < html.index("/static/news.js") < html.index("/static/screen.js") < html.index("/static/osk.js")
+
+
+def test_dock_chips_and_all_menu():
+    html = make_client().get("/screen").get_data(as_text=True)
+    dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
+    assert 'data-action="showMap"' in dock and 'data-menu="trips"' in dock
+    assert "สมัครเรียน" in dock and "หลักสูตร" in dock
+    tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"'):
+        assert needle in tpl, needle
+
+
+def test_news_js_drives_left_side():
+    js = make_client().get("/static/news.js").get_data(as_text=True)
+    for needle in ('fetch("/news")', 'fetch("/weather")', "window.Board", "news-read", "news-refresh", "th-TH"):
+        assert needle in js, needle
+
+
+def test_screen_preview_mode_is_silent():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    assert "const PREVIEW" in js and "if (PREVIEW) return" in js
+    assert "Board.show" in js and "news-read" in js
+
+
+def test_news_version_changes_at_midnight(news_env, monkeypatch):
+    from datetime import datetime
+    monkeypatch.setattr(server, "_now", lambda: datetime(2026, 11, 10, 23, 59))
+    v1 = make_client().get("/news").get_json()["version"]
+    monkeypatch.setattr(server, "_now", lambda: datetime(2026, 11, 11, 0, 1))
+    assert make_client().get("/news").get_json()["version"] != v1
+
+
+def test_news_save_failure_is_503(news_env, monkeypatch):
+    c = make_client(); login(c)
+
+    def boom(items):
+        raise OSError("drive gone")
+    monkeypatch.setattr(news_env, "_save_items", boom)
+    r = c.post("/admin/news", data=news_form())
+    assert r.status_code == 503 and r.get_json()["error"]
+
+
+def test_admin_news_rechecks_storage(news_env, monkeypatch):
+    c = make_client(); login(c)
+    monkeypatch.setattr(server.DATA, "persistent", True)
+    monkeypatch.setattr(server, "_writable", lambda p: False)
+    assert c.get("/admin/news").get_json()["storage"]["persistent"] is False
+
+
+def test_news_read_aloud_in_thai():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    block = js[js.index('window.addEventListener("news-read"'):]
+    block = block[:block.index("});")]
+    assert 'speakAnswer(text, "th")' in block   # ข่าวที่ครูเขียนเป็นภาษาไทย อ่านด้วยเสียงไทยเสมอ
+
+
+def test_news_layout_reaches_screen(news_env):
+    c = make_client(); login(c)
+    c.post("/admin/news", data=news_form(layout="portrait"))
+    assert make_client().get("/news").get_json()["items"][0]["layout"] == "portrait"
+
+
+def test_four_equal_news_blocks():
+    js = make_client().get("/static/news.js").get_data(as_text=True)
+    assert "PER_PAGE = 4" in js and "portrait" in js and "landscape" in js
+    html = make_client().get("/stats").get_data(as_text=True)
+    assert 'name="layout" value="portrait"' in html.replace("  ", " ") or 'value="portrait"' in html
+    assert 'value="landscape"' in html
+
+
+def test_news_tap_shows_picture_big():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    block = js[js.index('window.addEventListener("news-read"'):]
+    block = block[:block.index("});")]
+    assert "image_url" in block and "showPictures" in block   # แตะข่าวมีรูป → รูปขึ้นใหญ่ฝั่งซ้าย
+
+
+def test_map_offers_3d_tour():
+    js = make_client().get("/static/screen.js").get_data(as_text=True).replace(chr(13), "")
+    assert "เยี่ยมชม" in js and "3D" in js
+    show = js[js.index("function showPictures"):]
+    show = show[:show.index("\n}\n")]
+    assert 'data-action="campusTour"' in show   # บนแผนผังมีปุ่มเปิดทัวร์ 3D
+
+
+def test_screen_js_texts_are_single_line():
+    """ข้อความในตาราง T ต้องอยู่ในบรรทัดเดียว (เคยมีการขึ้นบรรทัดจริงในสตริง → JS พังทั้งไฟล์ จอขาว)"""
+    js = make_client().get("/static/screen.js").get_data(as_text=True).replace(chr(13), "")
+    table = js[js.index("const T = {"):js.index("\n};", js.index("const T = {"))]
+    for line in table.split("\n"):
+        assert line.replace('\\"', "").count('"') % 2 == 0, line[:60]

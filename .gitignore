@@ -37,3 +37,5 @@ robot/tts_cache/
 
 # วิดีโอต้นฉบับขนาดใหญ่ในแบบร่าง (เกิน 100 MB ขึ้น GitHub ไม่ได้)
 แบบร่าง/*.mp4
+.superpowers/
+robot/data/

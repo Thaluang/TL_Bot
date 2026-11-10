@@ -30,11 +30,11 @@ def build(out: Path) -> None:
         shutil.copy2(STATIC / f, out / "static" / f)
     shutil.copytree(STATIC / "places", out / "static" / "places", dirs_exist_ok=True)
     shutil.copytree(STATIC / "vendor", out / "static" / "vendor", dirs_exist_ok=True)   # qrcode.js (QR ของลิงก์ในคำตอบ)
-    for js in ("screen.js", "face.js"):
+    for js in ("screen.js", "face.js", "news.js", "osk.js"):
         (out / "static" / js).write_text(_relative((STATIC / js).read_text(encoding="utf-8")), encoding="utf-8")
 
     # 3 หน้า: จอแชท (index.html), หน้าหุ่น, สถิติ — ทุกหน้าโหลด demo.js ก่อน (แทน fetch ไปเซิร์ฟเวอร์)
-    for src, dest, first_script in (("screen.html", "index.html", '<script src="static/screen.js"></script>'),
+    for src, dest, first_script in (("screen.html", "index.html", "<script>"),
                                     ("face.html", "face.html", '<script src="static/face.js"></script>'),
                                     ("stats.html", "stats.html", "<script>")):
         html = _relative((STATIC / src).read_text(encoding="utf-8"))

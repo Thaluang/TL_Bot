@@ -8,6 +8,8 @@ SIMULATOR_MODE = True
 
 # --- API Keys (เก็บใน .env ไม่ hardcode) ---
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+# รหัสเข้าหน้าครู (ลงข่าวประชาสัมพันธ์ใน /stats) — ว่าง = ปิดการแก้ข่าว
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
 
 
 def _key_list(*raw: str) -> list:
@@ -82,10 +84,10 @@ GREET_IDLE_SECONDS = 60   # ไม่มีใครใช้นานเท่�
 
 # --- โหมดรอ: เปิดวิดีโอวนตอนไม่มีคน ---
 # วางไฟล์วิดีโอ (.mp4/.webm) ไว้ที่ robot/web/static/videos/ — มีหลายไฟล์จะเล่นต่อกันวนไปเรื่อยๆ
-IDLE_VIDEO_SECONDS = 90   # ไม่มีใครแตะจอนานเท่านี้ (วินาที) → เริ่มเปิดวิดีโอ (แตะจอเพื่อกลับมาหน้าถามตอบ)
+IDLE_VIDEO_SECONDS = 180  # ไม่มีใครแตะจอนานเท่านี้ (วินาที) → แทรกวิดีโอ 1 คลิป แล้วกลับหน้าข่าว
 
 # --- สถิติ (คำถาม + ดาว 1–5) และประกาศตามเวลา ---
-STATS_DB_PATH = "stats.db"                    # ไฟล์ SQLite ใน robot/ (ไม่ขึ้น git)
+# สถิติ (stats.db) เก็บในโฟลเดอร์ข้อมูลถาวร — ดู datadir.py
 QR_CODES_PATH = "qr_codes.json"               # รหัส QR → คำถาม/คำตอบ แก้ไฟล์นี้แล้วมีผลเลย
 ANNOUNCEMENTS_PATH = "announcements.json"     # รายการประกาศ แก้ไฟล์นี้แล้วมีผลเลย
 

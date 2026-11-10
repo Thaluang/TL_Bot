@@ -236,7 +236,7 @@
   body.speaking .stop-talk{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 
   .dock{flex:none;padding:14px 28px 28px;display:flex;flex-direction:column;gap:14px}
-  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .chip{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:24px;
     font:500 19px var(--head);background:#fff;border:1.5px solid #efe9ff;box-shadow:0 6px 16px -10px #4c1d9540;text-align:center}
   .chip:active,.talk:active,.menu-open:active{transform:scale(.97)}
@@ -376,9 +376,8 @@
     <div class="dock">
       <div class="chips" id="dockQs">
         <button type="button" class="chip" data-q="สมัครเรียนต้องทำอย่างไร มีคุณสมบัติอะไรบ้าง" data-q-en="How do I apply, and what are the requirements?"><em class="k-admission">🎓</em><span data-t="cApply">สมัครเรียน</span></button>
-        <button type="button" class="chip" data-q="เปิดสอนสาขาอะไรบ้าง" data-q-en="What programs does the college offer?"><em class="k-event">📚</em><span data-t="cPrograms">หลักสูตร</span></button>
-        <button type="button" class="chip" data-action="showMap"><em class="k-scholarship">🗺️</em><span data-t="cMapShort">แผนผัง</span></button>
         <button type="button" class="chip" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em class="k-award">🏞️</em><span data-t="cTripsShort">ที่เที่ยว</span></button>
+        <button type="button" class="chip" data-action="showMap"><em class="k-scholarship">🗺️</em><span data-t="cMapShort">แผนผัง</span></button>
       </div>
       <div class="inrow">
         <form class="composer" id="composer">

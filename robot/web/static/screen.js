@@ -1,5 +1,9 @@
-// จอเนื้อหา: คุมไมค์ (STT) + พิมพ์ → เรียก /ask → แสดงคำตอบ + พูด (TTS) + แจ้ง /state
-// รองรับ 2 ภาษา (th/en) และโหมดมืด/สว่าง — ภาษาที่เลือกส่งไปเซิร์ฟเวอร์ด้วย ให้จอใบหน้าและ AI ใช้ตาม
+// จอ 1920 ฝั่งขวา (แชท): คุมไมค์ (STT) + พิมพ์ → เรียก /ask → แสดงคำตอบ + พูด (TTS) + แจ้ง /state
+// ฝั่งซ้าย (ข่าว/แผนผัง/รูป/เมนู) อยู่ใน news.js — ส่งของไปโชว์ด้วย Board.show(...)
+// รองรับ 2 ภาษา (th/en) — ภาษาที่เลือกส่งไปเซิร์ฟเวอร์ด้วย ให้จอใบหน้าและ AI ใช้ตาม
+// ?preview=1 = จอตัวอย่างในหน้าครู: ไม่พูด ไม่ทัก ไม่ส่งสถานะไปหุ่น ไม่เล่นวิดีโอ
+const PREVIEW = /[?&]preview=1/.test(location.search);
+if (PREVIEW) document.body.classList.add("preview");
 
 // ---- ข้อความทุกภาษา ----
 const T = {
@@ -10,25 +14,33 @@ const T = {
     phone: "โทร 0-3628-1295", phoneNote: "ข้อมูลไม่ครบ ติดต่อเจ้าหน้าที่ได้เลยครับ",
     hello: "อยากรู้อะไรเกี่ยวกับ<em>ท่าหลวงฯ</em>ดี?",
     sub: "แตะไมค์เพื่อพูด หรือพิมพ์ถามได้เลยครับ 😊", subNoMic: "พิมพ์คำถามด้านล่างได้เลยครับ 😊",
-    placeholder: "ถามอะไรก็ได้เกี่ยวกับวิทยาลัย…", listening: "กำลังฟัง… พูดได้เลยครับ (แตะไมค์เพื่อหยุด)",
+    placeholder: "แตะเพื่อพิมพ์คำถาม…", listening: "กำลังฟัง… พูดได้เลยครับ (แตะไมค์เพื่อหยุด)",
     send: "ส่ง", mic: "กดเพื่อพูด", replay: "ฟังอีกครั้ง", theme: "สลับโหมดมืด/สว่าง",
-    cMap: "แผนผังวิทยาลัย", cPrograms: "สาขาที่เปิดสอน", cApply: "คุณสมบัติผู้สมัคร",
+    cMap: "แผนผังวิทยาลัย", cPrograms: "หลักสูตร", cApply: "สมัครเรียน",
     cContact: "ช่องทางติดต่อ", cTrips: "ที่เที่ยวสระบุรี", cSouvenir: "ของฝากสระบุรี",
-    cTour: "แนะนำสถานที่วิทยาลัย", openLink: "แตะเพื่อเปิด", scanQr: "📱 สแกนเปิดในโทรศัพท์", closeTour: "ปิด กลับหน้าถามตอบ",
+    cMapShort: "แผนผัง", cTripsShort: "ที่เที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
+    cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
+    cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
+    botName: "น้องทานตะวัน", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
+    backNews: "กลับหน้าข่าว", allMenu: "เมนูทั้งหมด", allMenuTitle: "เมนูทั้งหมด", allMenuSub: "แตะเลือกได้เลยครับ",
+    talk: "แตะเพื่อพูด", talkSub: "หุ่นฟังจนคุณพูดจบเอง", listenTalk: "กำลังฟัง…", listenSub: "แตะอีกครั้งเมื่อพูดจบ",
+    intro: "สวัสดีครับ 👋 วันนี้มาติดต่อเรื่องอะไรครับ แตะปุ่มด้านล่างแล้วพูดได้เลย หรือแตะข่าวทางซ้ายให้ผมอ่านให้ฟังก็ได้ครับ",
+    seeLeft: "ดูรูปใหญ่ทางซ้าย 👈", photosTitle: "รูปสถานที่", newsTag: "📰 ข่าว",
+    cTour: "ทัวร์ 3 มิติ", openLink: "แตะเพื่อเปิด", scanQr: "📱 สแกนเปิดในโทรศัพท์", closeTour: "ปิด กลับหน้าถามตอบ",
     hint: "หุ่นยนต์ตอบจากข้อมูลของวิทยาลัย ถ้าไม่แน่ใจ สอบถามเจ้าหน้าที่ได้นะครับ",
     spoken: "🎤 พูด", mapAlt: "แผนผังวิทยาลัย",
-    mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ แตะที่รูปเพื่อขยายดูได้เลย",
+    mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ ดูทางซ้ายได้เลย แตะที่รูปเพื่อขยาย",
     sysErr: "ขออภัยครับ ระบบขัดข้อง ลองใหม่อีกครั้งนะครับ",
     noHear: "ไม่ได้ยินครับ ลองพูดใหม่ หรือพิมพ์คำถามดูนะครับ 🙏",
     menuPick: "เลือกหมวดได้เลยครับ 👇", menuItems: "แตะดูรายละเอียดได้เลยครับ 👇",
     back: "ย้อนกลับ", home: "หน้าแรก", districtPre: "อ.",
-    greet: "สวัสดีครับ ผมชื่อทีแอลบอท มีอะไรให้ช่วยไหมครับ",
+    greet: "สวัสดีครับ ผมชื่อน้องทานตะวัน มีอะไรให้ช่วยไหมครับ",
     rateAsk: "คำตอบนี้ช่วยได้ไหมครับ?", rateThanks: "ขอบคุณที่ให้คะแนนครับ 🙏", starUnit: "ดาว",
-    attractSub: "สวัสดีครับ ผมชื่อทีแอลบอท ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
+    attractSub: "สวัสดีครับ ผมชื่อน้องทานตะวัน ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
     announceTag: "ประกาศ",
     scanned: "📷 สแกน QR", qrUnknown: "ยังไม่รู้จัก QR นี้ครับ 🙏 ลองถามด้วยเสียงหรือพิมพ์ดูนะครับ",
     stopTalk: "⏹ หยุดพูด", seeScreen: "รายละเอียดเพิ่มเติมดูบนจอได้เลยครับ",
-    states: { idle: "พร้อมรับคำถาม", greeting: "สวัสดีครับ 👋", listening: "กำลังฟัง…", thinking: "กำลังคิด…", answering: "กำลังตอบ", error: "เกิดข้อผิดพลาด" },
+    states: { idle: "พร้อมคุย", greeting: "สวัสดีครับ 👋", listening: "กำลังฟัง…", thinking: "กำลังคิด…", answering: "กำลังตอบ", error: "เกิดข้อผิดพลาด" },
     speech: "th-TH",
   },
   en: {
@@ -38,21 +50,29 @@ const T = {
     phone: "Tel. 0-3628-1295", phoneNote: "Need more info? Our staff are happy to help.",
     hello: "What would you like to know about <em>Tha Luang</em>?",
     sub: "Tap the mic to speak, or type your question 😊", subNoMic: "Type your question below 😊",
-    placeholder: "Ask anything about the college…", listening: "Listening… go ahead (tap the mic to stop)",
+    placeholder: "Tap to type a question…", listening: "Listening… go ahead (tap the mic to stop)",
     send: "Send", mic: "Tap to speak", replay: "Play again", theme: "Switch dark/light mode",
-    cMap: "Campus map", cPrograms: "Programs offered", cApply: "Admission requirements",
+    cMap: "Campus map", cPrograms: "Programs", cApply: "Apply",
     cContact: "Contact us", cTrips: "Places to visit", cSouvenir: "Local souvenirs",
-    cTour: "Campus tour (3D)", openLink: "Tap to open", scanQr: "📱 Scan to open on your phone", closeTour: "Close",
+    cMapShort: "Map", cTripsShort: "Visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
+    cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
+    cSouvenirSub: "OTOP and local food", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
+    botName: "Nong Tantawan", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
+    backNews: "Back to news", allMenu: "All menus", allMenuTitle: "All menus", allMenuSub: "Tap to choose",
+    talk: "Tap to speak", talkSub: "I'll listen until you finish", listenTalk: "Listening…", listenSub: "Tap again when done",
+    intro: "Hi! 👋 How can I help you today? Tap the button below and speak, or tap a news card on the left and I'll read it to you.",
+    seeLeft: "See the large picture on the left 👈", photosTitle: "Photos", newsTag: "📰 News",
+    cTour: "3D campus tour", openLink: "Tap to open", scanQr: "📱 Scan to open on your phone", closeTour: "Close",
     hint: "Answers come from the college's own information. When in doubt, please ask our staff.",
     spoken: "🎤 Spoken", mapAlt: "Campus map",
-    mapMsg: "Here's the campus map 🗺️ Tap the image to zoom in.",
+    mapMsg: "Here's the campus map 🗺️ It's on the left — tap it to zoom in.",
     sysErr: "Sorry, something went wrong. Please try again.",
     noHear: "Sorry, I didn't catch that. Try speaking again or type your question 🙏",
     menuPick: "Pick a category 👇", menuItems: "Tap one to see more 👇",
     back: "Back", home: "Home", districtPre: "",
-    greet: "Hi! I'm TL-Bot. How can I help you today?",
+    greet: "Hi! I'm Nong Tantawan. How can I help you today?",
     rateAsk: "Was this answer helpful?", rateThanks: "Thanks for rating! 🙏", starUnit: "stars",
-    attractSub: "Hi! I'm TL-Bot, the college's question assistant.", attractTap: "👆 Tap the screen to ask the robot",
+    attractSub: "Hi! I'm Nong Tantawan, the college's question assistant.", attractTap: "👆 Tap the screen to ask the robot",
     announceTag: "Announcement",
     scanned: "📷 QR scan", qrUnknown: "Sorry, I don't recognise this QR code 🙏 Try asking by voice or typing.",
     stopTalk: "⏹ Stop", seeScreen: "More details are on the screen.",
@@ -81,6 +101,7 @@ function setState(s) {
   state = s; idleSince = Date.now();
   body.className = body.className.replace(/\bstate-\S+/, "state-" + s);
   if (ledText) ledText.textContent = t().states[s] || s;
+  if (PREVIEW) return;   // จอตัวอย่างในหน้าครู ไม่บังคับหน้าหุ่น
   fetch("/state", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state: s, lang }),
@@ -88,13 +109,6 @@ function setState(s) {
 }
 // กำลังอ่านคำตอบออกเสียง (ไม่ใช่กำลังพิมพ์คำตอบ) ไม่นับว่ายุ่ง — ถามข้อใหม่/กดไมค์แล้วเสียงเก่าหยุดเอง
 const busy = () => state === "thinking" || (state === "answering" && !answerTalking);
-
-// ---- หน้าแรก ↔ หน้าคุย: ย้ายช่องถามจากกลางจอลงล่าง ----
-function setView(v) {
-  body.classList.toggle("v-welcome", v === "welcome");
-  body.classList.toggle("v-thread", v === "thread");
-  (v === "welcome" ? $("welcomeSlot") : $("dockSlot")).appendChild(composer);
-}
 
 // ---- ภาษา ----
 function applyLang(l) {
@@ -104,17 +118,10 @@ function applyLang(l) {
   document.querySelectorAll("[data-ph]").forEach((e) => { e.placeholder = t()[e.dataset.ph]; });
   document.querySelectorAll("[data-title]").forEach((e) => { e.title = t()[e.dataset.title]; });
   document.querySelectorAll("#langSeg button").forEach((b) => b.classList.toggle("on", b.dataset.lang === l));
-  $("themeBtn").title = t().theme;
-  if (!SR) $("welcomeSub").textContent = t().subNoMic;
   if (recog) recog.lang = t().speech;
   setState(state);   // อัปเดตป้ายสถานะ + บอกเซิร์ฟเวอร์ว่าเปลี่ยนภาษา
+  window.dispatchEvent(new Event("lang-change"));   // news.js วาดฝั่งซ้ายใหม่ตามภาษา
 }
-
-// ---- โหมดมืด/สว่าง ----
-$("themeBtn").addEventListener("click", () => {
-  const next = root.dataset.theme === "light" ? "dark" : "light";
-  root.dataset.theme = next; store.set("theme", next);
-});
 
 // ---- ข้อความ ----
 function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
@@ -207,7 +214,6 @@ function scrollDown() { requestAnimationFrame(() => { scroller.scrollTop = scrol
 function nearBottom() { return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80; }
 
 function addMsg(role, text, opts = {}) {
-  setView("thread");
   const m = document.createElement("div");
   m.className = "msg " + role;
   if (role === "user") {
@@ -231,11 +237,15 @@ function renderBot(m, text, opts = {}) {
     box.innerHTML = html;
     return;
   }
-  const img = opts.image ? `<img class="map-thumb" src="${opts.image}" alt="${t().mapAlt}">` : "";
+  // แผนผัง/รูปสถานที่ขึ้นใหญ่ทางซ้าย (Board) — ในแชทเหลือรูปย่อไว้แตะเปิดซ้ำ
+  const pics = opts.image ? [{ src: opts.image, name: t().mapAlt, map: true }] : (opts.photos || []);
+  if (pics.length) showPictures(pics);
+  const img = pics.length ? `<button type="button" class="see-left" data-pics="${escapeHtml(JSON.stringify(pics)).replace(/"/g, "&quot;")}">` +
+    `<img src="${pics[0].src}" alt="">${t().seeLeft}</button>` : "";
   const tools = opts.warn ? "" :
     `<div class="tools"><button type="button" class="replay" title="${t().replay}">${REPLAY_ICON}</button></div>`;
   const follow = nearBottom();
-  box.innerHTML = html + img + photosHtml(opts.photos) + tools + (opts.rateQ ? rateHtml(opts.rateQ) : "");
+  box.innerHTML = html + img + tools + (opts.rateQ ? rateHtml(opts.rateQ) : "");
   // รูปโหลดเสร็จทีหลัง ความสูงเพิ่ม — เลื่อนตามถ้าผู้ใช้อยู่ท้ายแชท ไม่งั้นรูปโดนตัดขอบล่าง
   if (follow) box.querySelectorAll("img").forEach((i) => i.addEventListener("load", scrollDown, { once: true }));
   const r = box.querySelector(".replay");
@@ -264,13 +274,16 @@ function sendRating(btn) {
   row.querySelector("span").outerHTML = `<span class="thanks">${t().rateThanks}</span>`;
 }
 
-// รูปสถานที่ใต้คำตอบ: รูปเดียวโชว์ใหญ่, หลายรูปเรียงเป็นแถวรูปเล็ก (แตะขยายได้)
-function photosHtml(photos) {
-  if (!photos || !photos.length) return "";
+// รูปสถานที่/แผนผังขึ้นเต็มฝั่งซ้าย: แผนผัง = รูปเดียวเต็มกรอบ, รูปสถานที่ = แกลเลอรี (แตะขยายได้)
+function showPictures(pics) {
+  if (pics[0].map) {
+    Board.show("map", `<img class="board-img" src="${pics[0].src}" alt="${escapeHtml(pics[0].name)}">`, t().cMap, "", "🗺️");
+    return;
+  }
   const fig = (p) => `<figure><img class="place-photo" src="${p.src}" alt="${escapeHtml(p.name)}">` +
-    `<figcaption>${escapeHtml(p.name)}${p.caption ? " · " + t().districtPre + escapeHtml(p.caption) : ""}</figcaption></figure>`;
-  return photos.length === 1 ? `<div class="photo-one">${fig(photos[0])}</div>`
-    : `<div class="photo-row">${photos.map(fig).join("")}</div>`;
+    `<figcaption>${escapeHtml(p.name)}${p.caption ? ` <small>· ${t().districtPre}${escapeHtml(p.caption)}</small>` : ""}</figcaption></figure>`;
+  Board.show("photos", `<div class="gallery${pics.length === 1 ? " one" : ""}">${pics.map(fig).join("")}</div>`,
+    pics.length === 1 ? pics[0].name : t().photosTitle, pics.length > 1 ? pics.map((p) => p.name).join(" · ") : "", "📷");
 }
 
 // ---- พิมพ์คำตอบแบบค่อย ๆ ไหล: รับข้อความเข้ามาเป็นก้อน แต่โชว์ไล่ตามทีละนิดให้ลื่น ----
@@ -307,7 +320,7 @@ function typing(on) {
   let el = $("typing");
   if (on && !el) {
     el = document.createElement("div"); el.id = "typing"; el.className = "msg bot typing";
-    el.innerHTML = AVA + '<div class="shimmer"><i></i><i></i><i></i></div>';
+    el.innerHTML = AVA + '<div class="a-body"><i></i><i></i><i></i></div>';
     chat.appendChild(el); scrollDown();
   } else if (!on && el) { el.remove(); }
 }
@@ -323,6 +336,7 @@ const ttsUrl = (text, lng) => "/tts?lang=" + lng + "&text=" + encodeURIComponent
 // ให้เซิร์ฟเวอร์สร้างเสียงเก็บไว้ล่วงหน้า (คำทักทาย/ประกาศ) ตอนพูดจริงจะได้ทันที
 const warmed = new Set();
 function warmTts(text, lng) {
+  if (PREVIEW) return;
   const url = ttsUrl(text, lng);
   if (warmed.has(url) || !window.fetch) return;
   warmed.add(url);
@@ -336,6 +350,7 @@ loadVoices();
 if ("speechSynthesis" in window) window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
 
 function speak(text, speakLang, onEnd) {
+  if (PREVIEW) { if (onEnd) setTimeout(onEnd, 0); return; }
   stopSpeech();   // พูดได้ทีละอัน — อันเก่าจบ (เรียก onEnd ของมัน) ก่อนเริ่มอันใหม่
   const job = { ended: false, audio: null };
   job.finish = () => {
@@ -479,7 +494,7 @@ let greeting = null;               // Promise ระหว่างกำลั�
 setTimeout(() => warmTts(T.th.greet, "th"), 2000);
 
 function greet() {
-  if (greeting || busy() || listening) return;
+  if (PREVIEW || greeting || busy() || listening) return;
   lastActive = Date.now();
   setState("greeting");
   fetch("/greet", { method: "POST" }).catch(() => {});
@@ -604,8 +619,8 @@ if (SR) {
   };
   recog.onend = () => { if (!useServerStt) { listening = false; if (state === "listening") setState("idle"); } };
 }
-if (SR || CAN_RECORD) mic.addEventListener("click", toggleMic);
-else mic.style.display = "none";
+if ((SR || CAN_RECORD) && !PREVIEW) mic.addEventListener("click", toggleMic);
+else if (!PREVIEW) mic.style.display = "none";
 
 // ---- พิมพ์ ----
 composer.addEventListener("submit", (e) => {
@@ -670,18 +685,16 @@ function onScan(code) {
     .catch(() => addMsg("bot", t().sysErr, { warn: true }));
 }
 
-// ---- คำถามยอดนิยม: ต้นฉบับอยู่ใน #quickQs คัดลอกไปแถบซ้ายและแถวเหนือช่องถาม ----
-document.querySelectorAll("#quickQs .chip").forEach((chip) => {
-  const side = chip.cloneNode(true); side.className = "nav"; $("sideQs").appendChild(side);
-  $("dockQs").appendChild(chip.cloneNode(true));
-});
-
+// เริ่มคุยใหม่: ล้างแชท (คนต่อไปไม่เห็นบทสนทนาคนก่อน) ฝั่งซ้ายกลับหน้าข่าว แล้วขึ้นคำทักทายของหุ่น (ไม่พูด)
 function newChat() {
   cancelMic();
   stopSpeech();
   convo++;
   chat.innerHTML = "";
-  setView("welcome");
+  Board.home();
+  const intro = addMsg("bot", t().intro);
+  const tools = intro.querySelector(".tools");
+  if (tools) tools.remove();
   setState("idle");
 }
 
@@ -692,16 +705,10 @@ loadMenu();
 const pick = (o) => (o && (o[lang] || o.th)) || "";   // ชื่อตามภาษา (ไม่มีอังกฤษ → ไทย)
 const L = (o) => escapeHtml(pick(o));
 
-// ต่อเมนูเป็นข้อความในแชท: บับเบิลผู้ใช้ = ปุ่มที่แตะ (ข้อความดิบ addMsg escape ให้), บับเบิลหุ่น = ตัวเลือกชั้นถัดไป
-function menuStep(label, html, back) {
-  addMsg("user", label);
-  const m = document.createElement("div");
-  m.className = "msg bot";
-  m.innerHTML = AVA + '<div class="a-body">' + html + '<div class="menu-nav">' +
-    (back ? `<button type="button" class="menu-btn" ${back}>← ${t().back}</button>` : "") +
-    `<button type="button" class="menu-btn" data-action="newChat">🏠 ${t().home}</button></div></div>`;
-  chat.appendChild(m); scrollDown();
-  m.querySelectorAll("img").forEach((i) => i.addEventListener("load", scrollDown, { once: true }));
+// เมนูขึ้นที่แผงซ้าย: หมวด → รายชื่อ → รายละเอียด (ปุ่มย้อนกลับอยู่ท้ายแผง)
+function menuStep(label, html, back, sub) {
+  Board.show("menu", html + (back ? `<div class="menu-nav"><button type="button" class="back" ${back}>← ${t().back}</button></div>` : ""),
+    label, sub || "", "☰");
 }
 const district = (d) => (d ? `📍 ${t().districtPre}${escapeHtml(d)}` : "");
 
@@ -710,25 +717,25 @@ function openMenu(b) {
   const s = menuData && menuData[sec];
   if (!s || !s.categories.length) return false;
   if (i === undefined) {
-    menuStep(pick(s.label), `<p class="md-p">${t().menuPick}</p><div class="menu-grid">` +
-      s.categories.map((c, k) => `<button type="button" class="menu-btn" data-menu-cat="${sec}:${k}">${c.icon} ${L(c.label)}</button>`).join("") +
-      "</div>");
+    menuStep(pick(s.label), '<div class="menu-grid">' +
+      s.categories.map((c, k) => `<button type="button" class="menu-btn" data-menu-cat="${sec}:${k}"><em>${c.icon}</em><span>${L(c.label)}</span></button>`).join("") +
+      "</div>", 'data-action="allMenu"', t().menuPick);
     return true;
   }
   const c = s.categories[i];
   if (j === undefined) {
-    menuStep(`${c.icon} ${pick(c.label)}`, `<p class="md-p">${t().menuItems}</p><div class="menu-list">` +
+    menuStep(`${c.icon} ${pick(c.label)}`, '<div class="menu-list">' +
       c.items.map((it, k) => `<button type="button" class="menu-item" data-menu-item="${sec}:${i}:${k}">` +
         (it.photo ? `<img src="${it.photo}" alt="">` : `<span class="m-icon">${c.icon}</span>`) +
         `<span><b>${L(it.name)}</b><small>${district(it.district)}</small></span></button>`).join("") +
-      "</div>", `data-menu="${sec}"`);
+      "</div>", `data-menu="${sec}"`, t().menuItems);
     return true;
   }
   const it = c.items[j];
   menuStep(pick(it.name), '<div class="place-card">' +
     (it.photo ? `<img class="place-photo" src="${it.photo}" alt="${L(it.name)}">` : `<div class="m-icon">${c.icon}</div>`) +
-    `<h3>${L(it.name)}</h3><small>${district(it.district)}</small>` +
-    (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") + "</div>", `data-menu-cat="${sec}:${i}"`);
+    `<div><h3>${L(it.name)}</h3><small>${district(it.district)}</small>` +
+    (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") + "</div></div>", `data-menu-cat="${sec}:${i}"`, pick(c.label));
   return true;
 }
 
@@ -738,6 +745,8 @@ document.addEventListener("click", (e) => {
   const action = b.dataset.action;
   if (action === "newChat") { newChat(); return; }
   if (action === "closeTour") { closeTour(); return; }
+  if (action === "boardHome") { Board.home(); return; }
+  if (action === "allMenu") { showAllMenu(); return; }
   if (busy()) return;   // กันแตะรัวระหว่างหุ่นกำลังคิด/พูด
   if (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem) {
     // เมนูยังไม่มา (โหลดไม่ทัน/เคยพัง) → ลองโหลดใหม่ก่อน ถ้ายังไม่ได้จริง ๆ ชิปค่อยตกไปถาม AI แบบเดิม
@@ -750,6 +759,10 @@ document.addEventListener("click", (e) => {
   if (action === "campusTour") { openTour(); return; }
   askChip(b);
 });
+function showAllMenu() {
+  Board.show("menu", $("allMenuTpl").innerHTML, t().allMenuTitle, t().allMenuSub, "☰");
+  $("boardBody").querySelectorAll("[data-t]").forEach((e) => { if (t()[e.dataset.t]) e.innerHTML = t()[e.dataset.t]; });
+}
 function askChip(b) {
   const q = (lang === "en" && b.dataset.qEn) || b.dataset.q || b.textContent.trim();
   ask(q, { voice: false });   // data-q = คำถามเต็ม, ป้ายบนปุ่มย่อให้สั้น
@@ -796,17 +809,34 @@ chat.addEventListener("click", (e) => {
   if (link) { e.preventDefault(); openTour(link.dataset.openUrl); return; }
   const star = e.target.closest("[data-stars]");
   if (star) { sendRating(star); return; }
-  if (e.target.classList.contains("map-thumb") || e.target.classList.contains("place-photo")) {
+  const see = e.target.closest("[data-pics]");
+  if (see) { try { showPictures(JSON.parse(see.dataset.pics)); } catch (err) {} }
+});
+$("boardBody").addEventListener("click", (e) => {
+  if (e.target.matches(".board-img, .place-photo")) {
     lightbox.querySelector("img").src = e.target.src;
     lightbox.classList.add("open");
   }
 });
 
-setView("welcome");
+// แตะการ์ดข่าว (news.js) → หุ่นอ่านหัวข้อ + รายละเอียด และขึ้นในแชทด้วย
+window.addEventListener("news-read", (e) => {
+  const n = e.detail;
+  if (!n || busy() || announcing) return;
+  cancelMic();
+  stopAnswer();
+  const text = `**${n.title}**` + (n.subtitle ? "\n" + n.subtitle : "") + (n.detail ? "\n" + n.detail : "") +
+    (n.link ? "\n[" + t().openLink + "](" + n.link + ")" : "");
+  addMsg("user", t().newsTag + " " + n.title);
+  addMsg("bot", text);
+  setState("answering");
+  speakAnswer(text, lang);
+});
+
 applyLang(lang);   // ตั้งภาษา + ส่งสถานะ idle ไปเซิร์ฟเวอร์
 
 // ---- GPIO button via SSE ----
-const evtSrc = new EventSource("/events");
+const evtSrc = PREVIEW ? {} : new EventSource("/events");
 evtSrc.onmessage = (e) => {
   if (e.data === "mic-start" && !listening && !busy()) { stopAttract(); closeTour(); onActivity(); toggleMic(); }
   if (e.data === "greet") { stopAttract(); greet(); }   // เซนเซอร์เจอคนเดินมา
@@ -816,26 +846,27 @@ evtSrc.onmessage = (e) => {
 // วิดีโอมาจาก /attract (ไฟล์ใน web/static/videos/) ไม่มีวิดีโอ = โชว์ตราวิทยาลัยแทน
 const attractEl = $("attract"), video = attractEl.querySelector("video");
 let attractCfg = { videos: [], after: 90 }, attractOn = false, vidIdx = 0, vidFails = 0;
-fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {})
-  .then(() => startAttract());   // เปิดหน้าเว็บมา เริ่มที่โหมดรอเลย
+fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {});
 
+// หน้าข่าวคือหน้าหลัก — วิดีโอแทรกทีละ 1 คลิป (คลิปถัดไปรอบหน้า) จบแล้วกลับหน้าข่าว
 function playVideo() {
   const list = attractCfg.videos || [];
-  attractEl.classList.toggle("no-video", !list.length || vidFails >= list.length);
-  if (attractEl.classList.contains("no-video")) return;
+  if (!list.length || vidFails >= list.length) { stopAttract(); return; }
   video.src = list[vidIdx % list.length];
-  video.loop = list.length === 1;
+  video.loop = false;
   video.muted = false;
   // เบราว์เซอร์บางตัวห้ามเล่นมีเสียงเอง (บน Pi ตั้ง kiosk ให้เล่นได้แล้ว) → ลองแบบเงียบแทน
   video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
 }
-video.addEventListener("ended", () => { vidIdx++; playVideo(); });
+video.addEventListener("ended", () => { vidIdx++; stopAttract(); });
+video.addEventListener("timeupdate", () => {
+  if (video.duration) $("vidProg").style.width = (100 * video.currentTime / video.duration) + "%";
+});
 video.addEventListener("error", () => { if (!attractOn) return; vidFails++; vidIdx++; playVideo(); });
 video.addEventListener("playing", () => { vidFails = 0; });
 
 function startAttract() {
-  if (attractOn) return;
-  newChat();   // คนต่อไปเริ่มหน้าใหม่ ไม่เห็นบทสนทนาของคนก่อน
+  if (attractOn || PREVIEW || !(attractCfg.videos || []).length) return;
   attractOn = true; vidFails = 0;
   attractEl.classList.add("open");
   playVideo();
@@ -851,11 +882,17 @@ function stopAttract() {
 attractEl.addEventListener("click", stopAttract);
 document.addEventListener("pointerdown", () => { idleSince = Date.now(); }, true);
 document.addEventListener("keydown", () => { idleSince = Date.now(); }, true);
+let cleared = true;   // คุยแล้วว่างนาน → ล้างแชทครั้งเดียว (ไม่ล้างซ้ำทุก 2 วิ)
+document.addEventListener("pointerdown", () => { cleared = false; }, true);
 setInterval(() => {
   if (attractOn || state !== "idle" || listening || greeting || announcing) return;
-  // เปิดทัวร์ทิ้งไว้: ให้เวลานานกว่าปกติ (ทัวร์อัตโนมัติยาว ~3-4 นาที) แล้วค่อยปิดเข้าโหมดรอ
-  const after = (attractCfg.after || 90) * 1000, limit = tourOpen ? Math.max(after, tourIdleMs) : after;
-  if (Date.now() - idleSince > limit) { closeTour(); startAttract(); }
+  // เปิดทัวร์ทิ้งไว้: ให้เวลานานกว่าปกติ (ทัวร์อัตโนมัติยาว ~3-4 นาที) แล้วค่อยปิด
+  const after = (attractCfg.after || 180) * 1000, limit = tourOpen ? Math.max(after, tourIdleMs) : after;
+  if (Date.now() - idleSince > limit) {
+    closeTour();
+    if (!cleared) { newChat(); cleared = true; }   // คนต่อไปเริ่มหน้าใหม่ ไม่เห็นบทสนทนาของคนก่อน
+    startAttract();
+  }
 }, 2000);
 
 // ---- ประกาศตามเวลา: ถามเซิร์ฟเวอร์ทุก 15 วิ ว่ามีประกาศถึงเวลาไหม (ตั้งใน robot/announcements.json) ----
@@ -868,6 +905,7 @@ const annQueue = [];
 let announcing = false;
 
 function pollAnnouncements() {
+  if (PREVIEW) return;
   fetch("/announcements/due").then((r) => (r.ok ? r.json() : null)).then((d) => {
     for (const a of (d && d.due) || []) {
       if (annDone.has(a.id) || annQueue.some((q) => q.id === a.id)) continue;
@@ -903,3 +941,5 @@ function runAnnouncements() {
 }
 pollAnnouncements();
 setInterval(pollAnnouncements, 15000);
+
+newChat();   // เปิดหน้ามา: แชทมีคำทักทาย ฝั่งซ้ายเป็นหน้าข่าว

@@ -66,3 +66,11 @@ def test_demo_includes_idle_videos(tmp_path):
         assert (tmp_path / "static" / "videos" / name).is_file(), name
         assert f'"static/videos/{name}"' in js, name
     assert "videos: []" not in js
+
+
+def test_demo_shim_loads_before_news_js(tmp_path):
+    # news.js ดึง /news กับ /weather ทันทีที่โหลด — demo.js ต้องมาก่อน ไม่งั้นยิงไปเซิร์ฟเวอร์ที่ไม่มีจริง
+    build(tmp_path)
+    html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert html.index('src="demo.js"') < html.index('src="static/news.js"')
+    assert (tmp_path / "static" / "news.js").is_file() and (tmp_path / "static" / "osk.js").is_file()

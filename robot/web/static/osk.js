@@ -1,10 +1,10 @@
 // คีย์บอร์ดบนจอ (ไทย/อังกฤษ) ในหน้าเว็บเอง — หน้าแชทเปิดแบบเต็มจอ (kiosk) คีย์บอร์ดของระบบโดนบัง
 // ขึ้นเมื่อแตะช่องพิมพ์ด้วยนิ้ว (คลิกเมาส์บนคอมไม่ขึ้น) หรือเปิดหน้าด้วย ?osk=1 ให้ขึ้นทุกครั้ง
-// อยู่ท้าย .stage (flex column) → ตอนเปิด พื้นที่แชทหดขึ้นเอง ช่องพิมพ์ไม่โดนบัง
+// อยู่ใน .osk-host (แถวล่างสุดของจอ เต็มความกว้าง) → ตอนเปิด แชทกับฝั่งซ้ายหดขึ้นเอง ช่องพิมพ์ไม่โดนบัง
 (() => {
   const input = document.getElementById("q");
   const composer = document.getElementById("composer");
-  const stage = document.querySelector(".stage");
+  const stage = document.querySelector(".osk-host") || document.querySelector(".stage");
   if (!input || !composer || !stage) return;
 
   const ALWAYS = /[?&]osk=1/.test(location.search);

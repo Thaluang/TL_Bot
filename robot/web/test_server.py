@@ -132,12 +132,12 @@ def test_screen_has_onscreen_keyboard():
 
 
 def test_campus_tour_only_in_sidebar():
-    """ปุ่มแนะนำสถานที่วิทยาลัยอยู่แถบซ้ายเท่านั้น และหน้าทัวร์ 3 มิติเปิดได้จริง"""
+    """ปุ่มแนะนำสถานที่วิทยาลัย (ทัวร์ 3 มิติ) อยู่ในเมนูทั้งหมดที่เดียว และหน้าทัวร์เปิดได้จริง"""
     c = make_client()
     html = c.get("/screen").get_data(as_text=True)
-    aside = html[html.index("<aside>"):html.index("</aside>")]
-    assert 'data-action="campusTour"' in aside
-    assert html.count('data-action="campusTour"') == 1     # ไม่ไปโผล่ในชิปหน้าแรก/แถวล่าง
+    allmenu = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    assert 'data-action="campusTour"' in allmenu
+    assert html.count('data-action="campusTour"') == 1
     r = c.get("/static/campus_tour.html")
     assert r.status_code == 200 and "Campus Tour" in r.get_data(as_text=True)
 
@@ -148,9 +148,8 @@ def test_screen_has_quick_questions():
     screen = c.get("/screen")
     assert screen.status_code == 200
     html = screen.data.decode("utf-8")
-    assert 'id="quickQs"' in html
-    assert "คำถามยอดนิยม" in html
-    assert html.count('class="chip"') >= 3      # มีปุ่มคำถามอย่างน้อย 3 ปุ่ม
+    dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
+    assert dock.count('class="chip') >= 4      # ชิปใต้แชท 4 ปุ่ม (สมัครเรียน/หลักสูตร/แผนผัง/ที่เที่ยว)
 
 
 # ---------- wayfinding ----------
@@ -306,7 +305,7 @@ def test_wants_map_english_questions():
 def test_screen_has_language_and_theme_switches():
     html = make_client().get("/screen").data.decode("utf-8")
     assert 'data-lang="en"' in html
-    assert 'id="themeBtn"' in html
+    assert 'id="themeBtn"' not in html   # ดีไซน์ใหม่มีโหมดสว่างอย่างเดียว
     assert 'data-q-en="What are the places to visit in Saraburi?"' in html
 
 
@@ -501,10 +500,10 @@ def test_face_shows_waving_hand_when_greeting():
     assert "body.state-greeting .hand" in html
 
 
-def test_screen_greets_as_male_tl_bot():
+def test_screen_greets_as_male_tantawan():
     c = make_client()
     js = c.get("/static/screen.js").data.decode("utf-8")
-    assert "ผมชื่อทีแอลบอท" in js
+    assert "ผมชื่อน้องทานตะวัน" in js and "ทีแอลบอท" not in js
     assert "หนู" not in js and "ค่ะ" not in js
     assert "/greet" in js
 
@@ -656,7 +655,7 @@ def test_gemini_voice_gets_only_the_text(monkeypatch):
 def test_screen_uses_ai_voice_with_local_fallback():
     js = make_client().get("/static/screen.js").data.decode("utf-8")
     assert "/tts?lang=" in js and "localSpeak" in js and "TTS_TIMEOUT_MS" in js
-    assert "startAttract()" in js   # เปิดหน้าเว็บมาเข้าโหมดรอ
+    assert "startAttract()" in js and "STARTS_IN_ATTRACT" not in js   # วิดีโอแทรกเมื่อว่างนาน (ไม่เริ่มที่วิดีโอ)
 
 
 # ---- จำคำตอบ: ถามซ้ำตอบได้ทันที ไม่ถาม AI ใหม่ ----
@@ -942,3 +941,37 @@ def test_stats_page_has_news_admin():
         assert needle in html, needle
     for cat in ("admission", "event", "scholarship", "award", "general"):
         assert f'value="{cat}"' in html, cat
+
+
+
+# ---- จอ 1920 แบบใหม่ (ข่าว + แชท) ----
+def test_new_screen_layout():
+    html = make_client().get("/screen").get_data(as_text=True)
+    for needle in ('id="app"', 'id="home"', 'id="board"', 'id="newsGrid"', 'id="clock"', 'id="weather"',
+                   'id="chat"', 'id="mic"', 'id="composer"', 'id="dockQs"', 'data-action="allMenu"', 'id="allMenuTpl"',
+                   'class="osk-host', 'id="stopTalk"', 'id="attract"', 'id="tourView"', 'id="announce"'):
+        assert needle in html, needle
+    assert "<aside" not in html and 'id="welcomeSlot"' not in html
+    assert html.index("/static/vendor/qrcode.js") < html.index("/static/news.js") < html.index("/static/screen.js") < html.index("/static/osk.js")
+
+
+def test_dock_chips_and_all_menu():
+    html = make_client().get("/screen").get_data(as_text=True)
+    dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
+    assert 'data-action="showMap"' in dock and 'data-menu="trips"' in dock
+    assert "สมัครเรียน" in dock and "หลักสูตร" in dock
+    tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"'):
+        assert needle in tpl, needle
+
+
+def test_news_js_drives_left_side():
+    js = make_client().get("/static/news.js").get_data(as_text=True)
+    for needle in ('fetch("/news")', 'fetch("/weather")', "window.Board", "news-read", "news-refresh", "th-TH"):
+        assert needle in js, needle
+
+
+def test_screen_preview_mode_is_silent():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    assert "const PREVIEW" in js and "if (PREVIEW) return" in js
+    assert "Board.show" in js and "news-read" in js

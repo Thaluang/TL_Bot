@@ -5,7 +5,9 @@
 ทั้งสองเจ้าใช้ system prompt กันตอบมั่วตัวเดียวกัน + แนบข้อมูลวิทยาลัยและสระบุรีทุกครั้ง
 """
 
+import queue
 import re
+import threading
 from config import (
     AI_PROVIDER,
     AI_MAX_TOKENS,
@@ -146,7 +148,52 @@ def _cooldown_for(e: Exception) -> float:
     return DAILY_QUOTA_COOLDOWN if "PerDay" in str(e) else QUOTA_COOLDOWN
 
 
-def _try_gemini(call, models=None):
+# Gemini บางครั้งค้างนาน (เคยเจอ 26 วิ) — ยังไม่ได้คำแรกภายในเวลานี้ ข้ามไปโมเดลถัดไปเลย
+FIRST_TOKEN_SECONDS = 8
+
+
+def _first_within(gen, seconds):
+    """ส่งต่อผลจาก gen แต่ถ้าคำแรกไม่มาภายใน seconds วิ → TimeoutError (นับเป็น "ค้าง" ลองโมเดลถัดไป)
+    รันใน thread แยก เพราะไลบรารีรอคำแรกแบบบล็อก — thread ที่ค้างปล่อยทิ้งไว้ ผลที่มาทีหลังไม่มีใครใช้"""
+    if not seconds:
+        yield from gen
+        return
+    q = queue.Queue()
+
+    def run():
+        try:
+            for x in gen:
+                q.put(("v", x))
+            q.put(("end", None))
+        except Exception as e:
+            q.put(("err", e))
+
+    threading.Thread(target=run, daemon=True).start()
+    try:
+        kind, val = q.get(timeout=seconds)
+    except queue.Empty:
+        raise TimeoutError(f"first token timeout after {seconds}s")
+    while True:
+        if kind == "v":
+            yield val
+        elif kind == "end":
+            return
+        else:
+            raise val
+        kind, val = q.get()
+
+
+def warm_up() -> None:
+    """เรียกตอนเปิดเซิร์ฟเวอร์ (thread แยก): โหลดไลบรารี Gemini + สร้าง client ไว้ก่อน
+    บน Pi import google.genai ใช้ ~5 วิ — คนแรกหลังเปิดเครื่องจะไม่ต้องรอ (ไม่ยิงคำถาม ไม่กินโควตา)"""
+    try:
+        _, key = next(_keys_in_order())
+        _gemini_client(key)
+    except Exception as e:
+        print("warm up:", str(e)[:120])
+
+
+def _try_gemini(call, models=None, first_timeout=None):
     """ลองถาม Gemini แบบไม่ยอมแพ้ง่าย ๆ:
     - โควตา key หมด / key ใช้โมเดลนี้ไม่ได้ → ลอง key ถัดไป (และจำไว้ ข้ามไปช่วงหนึ่ง)
     - โมเดลล่มหรือคนใช้เยอะ (ทุก key เจอเหมือนกัน) → ข้ามไปโมเดลสำรอง
@@ -159,7 +206,7 @@ def _try_gemini(call, models=None):
                 continue
             started = False
             try:
-                for piece in call(_gemini_client(key), model, idx):
+                for piece in _first_within(call(_gemini_client(key), model, idx), first_timeout or FIRST_TOKEN_SECONDS):
                     started = True
                     yield piece
                 return
@@ -207,6 +254,7 @@ def _stream_gemini(question: str, college_data: dict, saraburi_data: dict, lang:
 # ---- ฟังเสียง: Gemini ถอดเสียงพูด → ข้อความ ----
 # ใช้แทน Web Speech API ของเบราว์เซอร์ — Chromium บน Pi ไม่มีคีย์บริการเสียงของ Google เลยฟังไม่ได้
 NO_SPEECH = "[NO_SPEECH]"
+STT_FIRST_TOKEN_SECONDS = 15   # ถอดเสียงไม่สตรีม (รอทั้งก้อน) + อัปโหลดเสียง — ให้เวลามากกว่าคำตอบ
 _STT_PROMPT = {
     "th": "ถอดเสียงพูดในไฟล์เสียงนี้เป็นข้อความภาษาไทยตามที่ได้ยินเท่านั้น ห้ามตอบคำถาม ห้ามอธิบาย "
           f"ห้ามใส่เครื่องหมายคำพูด ถ้าไม่มีเสียงคนพูด ให้ตอบว่า {NO_SPEECH}",
@@ -227,7 +275,7 @@ def transcribe(audio: bytes, mime: str, lang: str = "th") -> str:
         yield (response.text or "").strip().strip('"“”')
 
     models = [*GEMINI_FALLBACK_MODELS[:1], GEMINI_MODEL, *GEMINI_FALLBACK_MODELS[1:]]
-    text = "".join(_try_gemini(call, models)).strip()
+    text = "".join(_try_gemini(call, models, first_timeout=STT_FIRST_TOKEN_SECONDS)).strip()
     if NO_SPEECH in text:
         return ""
     # บางรุ่นเว้นวรรคทุกคำ ("ห้อง สมุด อยู่ ไหน") — ภาษาไทยไม่เว้นวรรคระหว่างคำ ตัดออกให้อ่านเหมือนคนพิมพ์

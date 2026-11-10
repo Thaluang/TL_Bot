@@ -113,3 +113,44 @@ def test_all_keys_cooling_down_raises_quota(fake, monkeypatch):
     monkeypatch.setattr(ai, "_skip_until", {(m, k): time.time() + 60 for m in ("main", "backup") for k in ("k1", "k2", "k3")})
     with pytest.raises(RuntimeError, match="RESOURCE_EXHAUSTED"):
         ai._ask_gemini("q", {}, {})
+
+
+# ---- ตอบไวขึ้น: Gemini ค้างนานเกินกำหนดก่อนได้คำแรก → ข้ามไปโมเดลถัดไปทันที ----
+SLOW = set()
+
+
+def test_slow_first_token_switches_model(fake, monkeypatch):
+    import time
+    log, _ = fake
+    monkeypatch.setattr(ai, "FIRST_TOKEN_SECONDS", 0.2)
+    real = FakeModels.generate_content_stream
+
+    def stream(self, model, **kw):
+        if model == "main":
+            time.sleep(1.0)            # ค้าง ไม่ได้คำแรกภายใน 0.2 วิ
+        yield from real(self, model, **kw)
+    monkeypatch.setattr(FakeModels, "generate_content_stream", stream)
+    t = time.time()
+    out = "".join(ai._stream_gemini("ถาม", {}, {}, "th"))
+    assert out == "ตอบจาก k1" and time.time() - t < 0.9   # ได้จาก backup โดยไม่รอ main ครบ 1 วิ
+
+
+def test_fast_stream_unaffected_by_timeout(fake, monkeypatch):
+    monkeypatch.setattr(ai, "FIRST_TOKEN_SECONDS", 5)
+    assert "".join(ai._stream_gemini("ถาม", {}, {}, "th")) == "ตอบจาก k1"
+
+
+def test_warm_up_prepares_client_without_request(monkeypatch):
+    made = []
+    monkeypatch.setattr(ai, "GEMINI_API_KEYS", ["k1", "k2"])
+    monkeypatch.setattr(ai, "_gemini_idx", 1)
+    monkeypatch.setattr(ai, "_gemini_client", lambda key: made.append(key))
+    ai.warm_up()
+    assert made == ["k2"]   # สร้าง client ของ key ที่ใช้อยู่ (ไม่ยิงคำถาม ไม่กินโควตา)
+
+
+def test_transcribe_gets_longer_first_token_wait(monkeypatch):
+    seen = []
+    monkeypatch.setattr(ai, "_try_gemini", lambda call, models=None, first_timeout=None: (seen.append(first_timeout) or iter(["ok"])))
+    ai.transcribe(b"x", "audio/webm", "th")
+    assert seen and seen[0] >= 15   # อัปโหลดเสียง + ถอดใช้เวลานานกว่าคำแรกของคำตอบ

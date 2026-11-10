@@ -212,6 +212,15 @@ function speechSummary(text, lng) {
   return cut ? say + " " + T[lng].seeScreen : say;
 }
 
+// เริ่มพูดได้ก่อนคำตอบไหลจบ: ใช้เฉพาะบรรทัดที่มาครบแล้ว — ถ้าตัวย่อเสียงตัดจบในนั้นแล้ว (เจอหัวข้อ/รายการ
+// หรือยาวพอ) ส่วนที่จะอ่านก็ครบแล้ว คืนข้อความช่วงนั้นให้ speakAnswer เลย ไม่ต้องรออีก 1–3 วิ / ยังไม่ครบ คืน null
+function earlySpeech(text, lng) {
+  const nl = text.lastIndexOf("\n");
+  if (nl < 0) return null;
+  const done = text.slice(0, nl);
+  return speechSummary(done, lng).endsWith(T[lng].seeScreen) ? done : null;
+}
+
 const AVA = '<div class="ava"><div class="face"><i></i><i></i></div></div>';
 const REPLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
 
@@ -461,7 +470,7 @@ async function ask(question, opts = {}) {
     }
     // อ่านคำตอบทีละบรรทัด JSON: {"t": ท่อนใหม่} … {"done": true, "image": …} หรือ {"error": …}
     const reader = r.body.getReader(), dec = new TextDecoder();
-    let buf = "", tw = null, end = null;
+    let buf = "", tw = null, end = null, spokeEarly = false;
     while (!end) {
       const { value, done } = await reader.read();
       if (stale()) { reader.cancel().catch(() => {}); return; }
@@ -480,15 +489,19 @@ async function ask(question, opts = {}) {
             chat.appendChild(m); tw = typewriter(m);
           }
           tw.push(msg.t);
+          if (!spokeEarly) {   // ได้ช่วงต้นที่จะอ่านครบแล้ว → พูดเลยระหว่างตัวหนังสือยังไหล
+            const early = earlySpeech(tw.text, askLang);
+            if (early) { spokeEarly = true; speakAnswer(early, askLang); }
+          }
         } else if (msg.done || msg.error) { end = msg; break; }
       }
     }
     if (!tw) { fail(end && end.error); return; }          // พังก่อนได้สักคำ
-    if (!(end && end.error)) speakAnswer(tw.text, askLang);
+    if (!(end && end.error) && !spokeEarly) speakAnswer(tw.text, askLang);
     const ok = !(end && end.error);   // ตอบไม่จบ ไม่ต้องขอดาว
     tw.finish({ image: (end && end.image) || null, photos: (end && end.photos) || [], rateQ: ok ? question : "" }, () => {
       if (stale()) return;
-      if (end && end.error) { addMsg("bot", t().sysErr, { warn: true }); speakAnswer(tw.text, askLang); }   // ขาดกลางทาง: อ่านส่วนที่ได้
+      if (end && end.error) { addMsg("bot", t().sysErr, { warn: true }); if (!spokeEarly) speakAnswer(tw.text, askLang); }   // ขาดกลางทาง: อ่านส่วนที่ได้
     });
   } catch (e) {
     fail();
@@ -879,17 +892,17 @@ const attractEl = $("attract"), video = attractEl.querySelector("video");
 let attractCfg = { videos: [], after: 90 }, attractOn = false, vidIdx = 0, vidFails = 0;
 fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {});
 
-// หน้าข่าวคือหน้าหลัก — วิดีโอแทรกทีละ 1 คลิป (คลิปถัดไปรอบหน้า) จบแล้วกลับหน้าข่าว
+// จอว่างนาน → วิดีโอหน้ารอเล่นวน (หลายคลิปเล่นต่อกัน) จนกว่าจะมีคนแตะจอ
 function playVideo() {
   const list = attractCfg.videos || [];
   if (!list.length || vidFails >= list.length) { stopAttract(); return; }
   video.src = list[vidIdx % list.length];
-  video.loop = false;
+  video.loop = list.length === 1;
   video.muted = false;
   // เบราว์เซอร์บางตัวห้ามเล่นมีเสียงเอง (บน Pi ตั้ง kiosk ให้เล่นได้แล้ว) → ลองแบบเงียบแทน
   video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
 }
-video.addEventListener("ended", () => { vidIdx++; stopAttract(); });
+video.addEventListener("ended", () => { vidIdx++; playVideo(); });
 video.addEventListener("timeupdate", () => {
   if (video.duration) $("vidProg").style.width = (100 * video.currentTime / video.duration) + "%";
 });

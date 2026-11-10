@@ -3,7 +3,7 @@
 
 เก็บในโฟลเดอร์ข้อมูลถาวร (ดู datadir.py):  news.json + news/<id>.jpg|png|webp
 ข่าวหนึ่งรายการ:
-  {"id", "category", "title", "subtitle", "detail", "link", "image",
+  {"id", "category", "title", "subtitle", "detail", "link", "image", "layout": "portrait" | "landscape",
    "start": "YYYY-MM-DD" | "", "end": "YYYY-MM-DD" | "", "hidden": bool, "order": int}
 """
 import json
@@ -15,6 +15,7 @@ from datetime import date
 from pathlib import Path
 
 CATEGORIES = ("admission", "event", "scholarship", "award", "general")
+LAYOUTS = ("landscape", "portrait")   # รูปแนวนอน = รูปบน ข้อความล่าง / แนวตั้ง (โปสเตอร์) = รูปซ้าย ข้อความขวา
 CATEGORY_NAMES = {"admission": "รับสมัคร", "event": "กิจกรรม", "scholarship": "ทุนการศึกษา",
                   "award": "ผลงาน", "general": "ประกาศทั่วไป"}
 LIMITS = {"title": 80, "subtitle": 80, "detail": 1000, "link": 500}
@@ -102,13 +103,16 @@ class NewsStore:
     # ---- ตรวจข้อมูล ----
     def _clean(self, fields: dict, current: dict) -> dict:
         out = dict(current)
-        for key in ("category", "title", "subtitle", "detail", "link", "start", "end"):
+        for key in ("category", "title", "subtitle", "detail", "link", "start", "end", "layout"):
             if key in fields:
                 out[key] = str(fields[key] if fields[key] is not None else "").strip()
         if "hidden" in fields:
             out["hidden"] = fields["hidden"] in (True, 1, "1", "true", "on")
         if out.get("category") not in CATEGORIES:
             raise NewsError("เลือกหมวดข่าวก่อน")
+        out["layout"] = out.get("layout") or "landscape"
+        if out["layout"] not in LAYOUTS:
+            raise NewsError("เลือกรูปแบบข่าว แนวตั้ง หรือ แนวนอน")
         for key, n in LIMITS.items():
             out[key] = (out.get(key) or "")[:n]
         if not out["title"]:
@@ -136,7 +140,7 @@ class NewsStore:
 
     def add(self, fields: dict, image) -> dict:
         blank = {"id": uuid.uuid4().hex[:12], "category": "", "title": "", "subtitle": "", "detail": "",
-                 "link": "", "image": "", "start": "", "end": "", "hidden": False}
+                 "link": "", "image": "", "start": "", "end": "", "hidden": False, "layout": "landscape"}
         item = self._clean(fields, blank)
         if image:
             item["image"] = self._write_image(item["id"], image)

@@ -57,37 +57,37 @@
   }
 
   // ---------------- ข่าว ----------------
-  const PER_PAGE = 3, ROTATE_MS = 10000;
+  const PER_PAGE = 4, ROTATE_MS = 12000;   // ชุดละ 4 ข่าว (2×2) มีมากกว่านั้นสลับชุดเอง
   let items = [], version = "", page = 0;
   function qr(url) {
     if (typeof qrcode !== "function" || !url) return "";
     try { const q = qrcode(0, "M"); q.addData(url); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ""; }
   }
-  function card(n, kind) {
+  // การ์ดข่าว 4 ช่องเท่ากัน (2×2) — รูปโชว์เต็มไม่ตัด (โปสเตอร์มีตัวหนังสือในรูปเยอะ)
+  // แนวตั้ง (portrait): รูปซ้าย ข้อความขวา / แนวนอน (landscape): รูปบน ข้อความล่าง / ไม่มีรูป: การ์ดตัวหนังสือ
+  function card(n) {
     const tag = `<span class="tag k-${esc(n.category)}">${esc(w().cats[n.category] || "")}</span>`;
     const when = n.subtitle ? `<div class="when">${CAL}<span>${esc(n.subtitle)}</span></div>` : "";
+    const code = qr(n.link);
+    const qrBox = code ? `<span class="qr-mini">${code}<small>${esc(w().scan)}</small></span>` : "";
     const data = `data-news="${esc(n.id)}"`;
-    if (kind === "feat") {
-      const code = qr(n.link);
-      return `<button type="button" class="nc feat${n.image_url ? "" : " noimg"}" ${data}` +
-        (n.image_url ? ` style="--img:url('${esc(n.image_url)}')"` : "") + ">" +
-        (code ? `<span class="qr">${code}${esc(w().scan)}</span>` : "") +
-        `${tag}<h4>${esc(n.title)}</h4>${n.detail ? `<p>${esc(n.detail)}</p>` : ""}${when}</button>`;
-    }
     if (n.image_url) {
-      return `<button type="button" class="nc side glass" ${data} style="--img:url('${esc(n.image_url)}')"><span class="ph"></span>` +
-        `<span class="tx">${tag}<h4>${esc(n.title)}</h4>${when}</span>${SPEAKER}</button>`;
+      const img = esc(n.image_url);
+      const layout = n.layout === "portrait" ? "portrait" : "landscape";
+      return `<button type="button" class="nc glass ${layout}" ${data}>` +
+        `<span class="pic" style="--img:url('${img}')"><img src="${img}" alt=""></span>` +
+        `<span class="tx">${tag}<h4>${esc(n.title)}</h4>${when}${qrBox}</span>${SPEAKER}</button>`;
     }
     const big = { admission: "🎓", event: "✦", scholarship: "฿", award: "★", general: "📢" }[n.category] || "✦";
     return `<button type="button" class="nc textonly glass k-${esc(n.category)}" ${data} style="background:var(--glass)">` +
-      `<span class="tx">${tag}<h4>${esc(n.title)}</h4>${when}</span><span class="big">${big}</span>${SPEAKER}</button>`;
+      `<span class="tx">${tag}<h4>${esc(n.title)}</h4>${when}${qrBox}</span><span class="big">${big}</span>${SPEAKER}</button>`;
   }
   function renderNews(animate) {
     const grid = $("newsGrid"), pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
     page = page % pages;
     const show = items.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
-    grid.className = "news n" + Math.max(1, show.length) + (animate ? " fade" : "");
-    grid.innerHTML = show.length ? show.map((n, i) => card(n, i === 0 ? "feat" : "side")).join("")
+    grid.className = "news" + (animate ? " fade" : "");
+    grid.innerHTML = show.length ? show.map(card).join("")
       : `<div class="nc invite glass"><b>${w().inviteA}</b><p>${w().inviteB}</p></div>`;
     $("pager").innerHTML = pages > 1 ? `${w().set} ${page + 1}/${pages} ` + Array.from({ length: pages }, (_, i) => `<i class="${i === page ? "on" : ""}"></i>`).join("") : "";
   }

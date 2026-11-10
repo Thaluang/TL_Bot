@@ -303,10 +303,12 @@ def test_wants_map_english_questions():
 
 
 def test_screen_has_language_and_theme_switches():
+    """จอหน้าวิทยาลัยใช้ภาษาไทยอย่างเดียว (เจ้าของสั่งเอาภาษาอังกฤษออก)"""
     html = make_client().get("/screen").data.decode("utf-8")
-    assert 'data-lang="en"' in html
+    assert 'data-lang="en"' not in html and 'id="langSeg"' not in html
+    js = make_client().get("/static/screen.js").data.decode("utf-8")
+    assert 'let lang = "th"' in js
     assert 'id="themeBtn"' not in html   # ดีไซน์ใหม่มีโหมดสว่างอย่างเดียว
-    assert 'data-q-en="What are the places to visit in Saraburi?"' in html
 
 
 # ---------- คำตอบแบบทยอยไหล (/ask/stream) ----------
@@ -1007,3 +1009,17 @@ def test_news_read_aloud_in_thai():
     block = js[js.index('window.addEventListener("news-read"'):]
     block = block[:block.index("});")]
     assert 'speakAnswer(text, "th")' in block   # ข่าวที่ครูเขียนเป็นภาษาไทย อ่านด้วยเสียงไทยเสมอ
+
+
+def test_news_layout_reaches_screen(news_env):
+    c = make_client(); login(c)
+    c.post("/admin/news", data=news_form(layout="portrait"))
+    assert make_client().get("/news").get_json()["items"][0]["layout"] == "portrait"
+
+
+def test_four_equal_news_blocks():
+    js = make_client().get("/static/news.js").get_data(as_text=True)
+    assert "PER_PAGE = 4" in js and "portrait" in js and "landscape" in js
+    html = make_client().get("/stats").get_data(as_text=True)
+    assert 'name="layout" value="portrait"' in html.replace("  ", " ") or 'value="portrait"' in html
+    assert 'value="landscape"' in html

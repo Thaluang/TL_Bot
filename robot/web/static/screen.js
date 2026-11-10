@@ -90,7 +90,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
 };
 
-let lang = T[store.get("lang")] ? store.get("lang") : "th";
+let lang = "th";   // จอหน้าวิทยาลัยใช้ภาษาไทยอย่างเดียว (ตาราง T.en เก็บไว้เผื่อเปิดใช้ภายหลัง)
 let convo = 0;   // เพิ่มทุกครั้งที่กด "คุยใหม่" — คำตอบของบทสนทนาเก่าที่ยังไหลอยู่จะหยุดเอง
 let state = "idle";
 const t = () => T[lang];
@@ -768,7 +768,6 @@ function askChip(b) {
   ask(q, { voice: false });   // data-q = คำถามเต็ม, ป้ายบนปุ่มย่อให้สั้น
 }
 
-document.querySelectorAll("#langSeg button").forEach((b) => b.addEventListener("click", () => applyLang(b.dataset.lang)));
 
 // ---- แนะนำสถานที่วิทยาลัย: ทัวร์ 3 มิติ (static/campus_tour.html) เต็มจอ — โหลดตอนเปิด ปิดแล้วทิ้ง (คืนหน่วยความจำ WebGL) ----
 const TOUR_SRC = "/static/campus_tour.html", TOUR_IDLE_MS = 5 * 60 * 1000;

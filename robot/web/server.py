@@ -369,6 +369,7 @@ _admin_tokens: set = set()          # token ของเบราว์เซอ
 
 def _public_news(item: dict) -> dict:
     out = {k: item.get(k, "") for k in ("id", "category", "title", "subtitle", "detail", "link")}
+    out["layout"] = item.get("layout") or "landscape"
     out["image_url"] = f"/news/img/{item['image']}" if item.get("image") else ""
     return out
 

@@ -93,6 +93,7 @@
   .segs input{position:absolute;opacity:0;pointer-events:none}
   .segs label{cursor:pointer;font-family:Kanit,sans-serif;font-size:.9rem;border-radius:999px;padding:6px 14px;border:2px solid transparent;display:inline-flex;gap:7px;align-items:center}
   .segs label::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+  .segs.layout label::before{display:none}
   .segs input:checked+label{border-color:currentColor;box-shadow:0 4px 12px -6px currentColor}
   .k-admission{background:var(--c1b);color:var(--c1)}.k-event{background:var(--c2b);color:var(--c2)}
   .k-scholarship{background:var(--c3b);color:var(--c3)}.k-award{background:var(--c4b);color:var(--c4)}.k-general{background:var(--c5b);color:var(--c5)}
@@ -179,6 +180,10 @@
           <input type="radio" name="category" id="c-scholarship" value="scholarship"><label for="c-scholarship" class="k-scholarship">ทุนการศึกษา</label>
           <input type="radio" name="category" id="c-award" value="award"><label for="c-award" class="k-award">ผลงาน</label>
           <input type="radio" name="category" id="c-general" value="general"><label for="c-general" class="k-general">ประกาศทั่วไป</label>
+        </div></div>
+        <div class="f"><span class="lbl">รูปแบบบนจอ <small>(เลือกให้อัตโนมัติตามรูปที่ใส่ — เปลี่ยนเองได้)</small></span><div class="segs layout">
+          <input type="radio" name="layout" id="l-landscape" value="landscape" checked><label for="l-landscape" class="k-general">▭ แนวนอน · รูปบน ข้อความล่าง</label>
+          <input type="radio" name="layout" id="l-portrait" value="portrait"><label for="l-portrait" class="k-general">▯ แนวตั้ง · โปสเตอร์ รูปซ้าย ข้อความขวา</label>
         </div></div>
         <div class="f"><label for="f-title">หัวข้อ <small>(สั้น ๆ ไม่เกิน 80 ตัวอักษร)</small></label><input class="inp" id="f-title" name="title" maxlength="80" required></div>
         <div class="f"><label for="f-subtitle">บรรทัดล่าง <small>(วันที่ / สถานที่)</small></label><input class="inp" id="f-subtitle" name="subtitle" maxlength="80" placeholder="เช่น 20 ธ.ค. · หอประชุมวิทยาลัย"></div>
@@ -305,7 +310,7 @@ function renderList() {
     `<div><b>${st.filter((s) => s[0] === "wait").length}</b>รอขึ้น</div><div><b>${st.filter((s) => s[0] === "off").length}</b>ซ่อน/หมดอายุ</div>`;
   $("newsList").innerHTML = items.length ? items.map((n, i) => {
     const [cls, label] = st[i];
-    const when = [CAT_NAME[n.category], n.end ? "ถึง " + thDate(n.end) : "", n.link ? "มี QR" : ""].filter(Boolean).join(" · ");
+    const when = [CAT_NAME[n.category], n.layout === "portrait" ? "แนวตั้ง" : "แนวนอน", n.end ? "ถึง " + thDate(n.end) : "", n.link ? "มี QR" : ""].filter(Boolean).join(" · ");
     return `<div class="it${editing === n.id ? " editing" : ""}" data-id="${esc(n.id)}">` +
       `<div class="move"><button type="button" data-act="up" title="เลื่อนขึ้น" ${i ? "" : "disabled"}>↑</button><button type="button" data-act="down" title="เลื่อนลง" ${i < items.length - 1 ? "" : "disabled"}>↓</button></div>` +
       `<div class="th" style="${n.image_url ? `background-image:url('${esc(n.image_url)}')` : ""}">${n.image_url ? "" : "Aa"}</div>` +
@@ -356,6 +361,7 @@ function startEdit(n) {
   const r = document.querySelector(`input[name=category][value="${n.category}"]`); if (r) r.checked = true;
   for (const k of ["title", "subtitle", "detail", "link", "start", "end"]) $("f-" + k).value = n[k] || "";
   $("f-hidden").checked = !!n.hidden;
+  setLayout(n.layout || "landscape");
   showImage(n.image_url, n.image_url ? "รูปเดิม" : "");
   renderList();
   $("newsForm").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -379,18 +385,20 @@ function shrinkImage(file) {
       c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
       const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
-      c.toBlob((b) => (b ? resolve(b) : reject(new Error("ย่อรูปไม่ได้"))), "image/jpeg", QUALITY);
+      c.toBlob((b) => { if (!b) return reject(new Error("ย่อรูปไม่ได้")); b.w = c.width; b.h = c.height; resolve(b); }, "image/jpeg", QUALITY);
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("เปิดรูปนี้ไม่ได้ ลองไฟล์ JPG หรือ PNG")); };
     img.src = url;
   });
 }
+function setLayout(v) { const r = document.querySelector(`input[name=layout][value="${v}"]`); if (r) r.checked = true; }
 function pickFile(file) {
   if (!file) return;
   if (!/^image\//.test(file.type)) { $("formMsg").className = "msg bad"; $("formMsg").textContent = "เลือกไฟล์รูปเท่านั้น"; return; }
   $("formMsg").textContent = "กำลังย่อรูป…"; $("formMsg").className = "msg";
   shrinkImage(file).then((blob) => {
     pickedImage = blob; removeImage = false;
+    setLayout(blob.h > blob.w * 1.1 ? "portrait" : "landscape");   // รูปสูงกว่ากว้าง = โปสเตอร์แนวตั้ง
     showImage(URL.createObjectURL(blob), file.name, "ย่อเหลือ " + Math.round(blob.size / 1024) + " KB แล้ว");
     $("formMsg").textContent = "";
   }).catch((e) => { $("formMsg").className = "msg bad"; $("formMsg").textContent = e.message; });
@@ -408,6 +416,7 @@ $("newsForm").addEventListener("submit", (e) => {
   fd.append("category", (document.querySelector("input[name=category]:checked") || {}).value || "");
   for (const k of ["title", "subtitle", "detail", "link", "start", "end"]) fd.append(k, $("f-" + k).value.trim());
   fd.append("hidden", $("f-hidden").checked ? "1" : "0");
+  fd.append("layout", (document.querySelector("input[name=layout]:checked") || {}).value || "landscape");
   if (pickedImage) fd.append("image", pickedImage, "news.jpg");
   if (removeImage) fd.append("remove_image", "1");
   const btn = $("saveBtn"); btn.setAttribute("aria-busy", "true");

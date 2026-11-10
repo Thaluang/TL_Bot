@@ -140,3 +140,13 @@ def test_save_flushes_to_disk(tmp_path, monkeypatch):
     monkeypatch.setattr(news_mod.os, "fsync", lambda fd: synced.append(fd))
     make(tmp_path).add(base(), None)
     assert synced, "ต้อง fsync ก่อน rename (ไฟดับกลางเขียนบน FAT แล้วไฟล์ว่าง)"
+
+
+def test_layout_portrait_or_landscape(tmp_path):
+    s = make(tmp_path)
+    assert s.add(base(), None)["layout"] == "landscape"          # ไม่เลือก = แนวนอน
+    n = s.add(base(layout="portrait"), JPEG)
+    assert n["layout"] == "portrait"
+    assert s.update(n["id"], {"layout": "landscape"}, None)["layout"] == "landscape"
+    with pytest.raises(NewsError):
+        s.add(base(layout="diagonal"), None)

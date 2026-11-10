@@ -58,14 +58,14 @@
   .clock .t span{font-weight:300;opacity:.55}
   .clock .d{font-size:23px;color:var(--ink2)}
   .clock .logo{position:absolute;right:30px;top:30px;width:84px;height:84px;border-radius:50%;background:#fff url(/static/logo.jpg) center/78% no-repeat;box-shadow:0 8px 24px #4c1d9522}
-  .weather{border-radius:40px;padding:32px 40px;color:#fff;position:relative;overflow:hidden;
+  .weather{border-radius:40px;padding:26px 40px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;
     background:linear-gradient(140deg,#ffb36b 0%,#ff7d9c 55%,#d65bd9 100%);box-shadow:0 22px 50px -18px #e2557f99}
   .weather.rain{background:linear-gradient(140deg,#60a5fa 0%,#818cf8 55%,#a78bfa 100%);box-shadow:0 22px 50px -18px #6366f199}
   .weather::after{content:"";position:absolute;right:-80px;bottom:-120px;width:320px;height:320px;border-radius:50%;background:radial-gradient(#ffffff40,transparent 70%)}
   .weather small{font-size:21px;opacity:.92}
-  .weather .t{font-family:var(--head);font-weight:500;font-size:112px;line-height:1;margin:12px 0 10px;letter-spacing:-2px}
-  .weather .t sup{font-size:56px;font-weight:300;vertical-align:top;position:relative;top:10px}
-  .weather .d{font-size:21px;opacity:.95;position:relative;z-index:1}
+  .weather .t{font-family:var(--head);font-weight:500;font-size:96px;line-height:1;margin:8px 0 8px;letter-spacing:-2px}
+  .weather .t sup{font-size:48px;font-weight:300;vertical-align:top;position:relative;top:10px}
+  .weather .d{font-size:21px;opacity:.95;position:relative;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:120px}
   .weather .ic{position:absolute;right:34px;top:30px;width:118px;height:118px;filter:drop-shadow(0 8px 18px #b4235a55)}
 
   .head{display:flex;justify-content:space-between;align-items:center;padding:0 6px}

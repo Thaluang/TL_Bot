@@ -49,3 +49,18 @@ Wayland ไม่ฟัง `--window-position` จึงตั้ง `--class=tl
 4. `rm -rf /dev/shm/tlbot` แล้วรีบูต (หรือรัน `start.sh` ใหม่)
 
 log อยู่ที่ `/dev/shm/tlbot.log`
+
+## คีย์บอร์ด
+
+- คีย์บอร์ดบนจอใช้ของในหน้าเว็บ (`robot/web/static/osk.js`) — squeekboard ของระบบโดนหน้าต่าง kiosk เต็มจอบัง
+- คีย์บอร์ดจริงสลับไทย/อังกฤษด้วย Alt+Shift (`~/.config/labwc/environment` → symlink ไป `/boot/firmware/tlbot/labwc/environment`
+  ซึ่งตั้ง `DCONF_PROFILE=/boot/firmware/tlbot/dconf/profile` ไว้ด้วย: dconf อ่านอย่างเดียวที่เพิ่มภาษาไทยให้ squeekboard)
+
+## อัปเดตโค้ดบน Pi
+
+1. สร้าง `app.tar.gz` ใหม่ (คำสั่งด้านบน) แล้ว `scp` ไปที่ Pi
+2. `sudo cp app.tar.gz /boot/firmware/tlbot/ && sync`
+3. ตรวจว่าเขียนลงการ์ดถูก: `sudo sh -c "echo 3 > /proc/sys/vm/drop_caches"` แล้ว `cmp` กับต้นฉบับ
+4. `rm -rf /dev/shm/tlbot` แล้วรีบูต (หรือรัน `start.sh` ใหม่)
+
+log อยู่ที่ `/dev/shm/tlbot.log`

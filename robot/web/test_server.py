@@ -149,7 +149,7 @@ def test_screen_has_quick_questions():
     assert screen.status_code == 200
     html = screen.data.decode("utf-8")
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
-    assert dock.count('class="chip') >= 4      # ชิปใต้แชท 4 ปุ่ม (สมัครเรียน/หลักสูตร/แผนผัง/ที่เที่ยว)
+    assert dock.count('class="chip') == 3      # ชิปแนะนำ 3 ปุ่ม (สมัครเรียน/ที่เที่ยว/แผนผัง) — หลักสูตรอยู่ในเมนูทั้งหมด
 
 
 # ---------- wayfinding ----------
@@ -961,9 +961,12 @@ def test_dock_chips_and_all_menu():
     html = make_client().get("/screen").get_data(as_text=True)
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
     assert 'data-action="showMap"' in dock and 'data-menu="trips"' in dock
-    assert "สมัครเรียน" in dock and "หลักสูตร" in dock
+    assert "สมัครเรียน" in dock and "หลักสูตร" not in dock
+    # ลำดับ: สมัครเรียน → ที่เที่ยว → แผนผัง
+    assert dock.index("สมัครเรียน") < dock.index('data-menu="trips"') < dock.index('data-action="showMap"')
     tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
-    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"'):
+    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"',
+                   'data-q="เปิดสอนสาขาอะไรบ้าง"'):   # หลักสูตรยังอยู่ในเมนูทั้งหมด
         assert needle in tpl, needle
 
 

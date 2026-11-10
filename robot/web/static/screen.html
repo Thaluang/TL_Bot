@@ -58,14 +58,14 @@
   .clock .t span{font-weight:300;opacity:.55}
   .clock .d{font-size:23px;color:var(--ink2)}
   .clock .logo{position:absolute;right:30px;top:30px;width:84px;height:84px;border-radius:50%;background:#fff url(/static/logo.jpg) center/78% no-repeat;box-shadow:0 8px 24px #4c1d9522}
-  .weather{border-radius:40px;padding:32px 40px;color:#fff;position:relative;overflow:hidden;
+  .weather{border-radius:40px;padding:26px 40px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;
     background:linear-gradient(140deg,#ffb36b 0%,#ff7d9c 55%,#d65bd9 100%);box-shadow:0 22px 50px -18px #e2557f99}
   .weather.rain{background:linear-gradient(140deg,#60a5fa 0%,#818cf8 55%,#a78bfa 100%);box-shadow:0 22px 50px -18px #6366f199}
   .weather::after{content:"";position:absolute;right:-80px;bottom:-120px;width:320px;height:320px;border-radius:50%;background:radial-gradient(#ffffff40,transparent 70%)}
   .weather small{font-size:21px;opacity:.92}
-  .weather .t{font-family:var(--head);font-weight:500;font-size:112px;line-height:1;margin:12px 0 10px;letter-spacing:-2px}
-  .weather .t sup{font-size:56px;font-weight:300;vertical-align:top;position:relative;top:10px}
-  .weather .d{font-size:21px;opacity:.95;position:relative;z-index:1}
+  .weather .t{font-family:var(--head);font-weight:500;font-size:96px;line-height:1;margin:8px 0 8px;letter-spacing:-2px}
+  .weather .t sup{font-size:48px;font-weight:300;vertical-align:top;position:relative;top:10px}
+  .weather .d{font-size:21px;opacity:.95;position:relative;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:120px}
   .weather .ic{position:absolute;right:34px;top:30px;width:118px;height:118px;filter:drop-shadow(0 8px 18px #b4235a55)}
 
   .head{display:flex;justify-content:space-between;align-items:center;padding:0 6px}
@@ -181,7 +181,7 @@
   body.state-thinking .face i{animation:think 1.2s ease-in-out infinite}
   .ch h2{font:600 38px var(--head);line-height:1.1}
   .ch p{font-size:20px;opacity:.9;margin-top:6px}
-  .ch .side{margin-left:auto;align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+  .ch .side{margin-left:auto;align-self:center;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
   .led{display:flex;align-items:center;gap:8px;font-size:17px;background:#ffffff26;border:1px solid #ffffff40;border-radius:999px;padding:7px 16px;white-space:nowrap}
   .led .d{width:9px;height:9px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px #4ade8040}
   body.state-listening .led .d{background:#f472b6;box-shadow:0 0 0 4px #f472b640;animation:blink .7s infinite}
@@ -236,7 +236,7 @@
   body.speaking .stop-talk{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 
   .dock{flex:none;padding:14px 28px 28px;display:flex;flex-direction:column;gap:14px}
-  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .chip{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:24px;
     font:500 19px var(--head);background:#fff;border:1.5px solid #efe9ff;box-shadow:0 6px 16px -10px #4c1d9540;text-align:center}
   .chip:active,.talk:active,.menu-open:active{transform:scale(.97)}
@@ -376,9 +376,8 @@
     <div class="dock">
       <div class="chips" id="dockQs">
         <button type="button" class="chip" data-q="สมัครเรียนต้องทำอย่างไร มีคุณสมบัติอะไรบ้าง" data-q-en="How do I apply, and what are the requirements?"><em class="k-admission">🎓</em><span data-t="cApply">สมัครเรียน</span></button>
-        <button type="button" class="chip" data-q="เปิดสอนสาขาอะไรบ้าง" data-q-en="What programs does the college offer?"><em class="k-event">📚</em><span data-t="cPrograms">หลักสูตร</span></button>
-        <button type="button" class="chip" data-action="showMap"><em class="k-scholarship">🗺️</em><span data-t="cMapShort">แผนผัง</span></button>
         <button type="button" class="chip" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em class="k-award">🏞️</em><span data-t="cTripsShort">ที่เที่ยว</span></button>
+        <button type="button" class="chip" data-action="showMap"><em class="k-scholarship">🗺️</em><span data-t="cMapShort">แผนผัง</span></button>
       </div>
       <div class="inrow">
         <form class="composer" id="composer">

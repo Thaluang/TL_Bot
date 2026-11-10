@@ -8,6 +8,8 @@ LOG=/dev/shm/tlbot.log
 URL="http://localhost:5000"
 
 exec >>"$LOG" 2>&1
+# เริ่มจากโฮมเสมอ — ถ้าถูกสั่งจากโฟลเดอร์ที่ถูกลบไปแล้ว Chromium โหลดค่าฟอนต์ไม่ได้ (อีโมจิกลายเป็นกล่องสี่เหลี่ยม)
+cd "$HOME" || cd /
 echo "=== start $(date) ==="
 
 if [ ! -f "$APP/robot/web/server.py" ]; then

@@ -49,3 +49,30 @@
 | `cowboyhat_bailan.jpg` | หมวกคาวบอยใบลาน |
 | `phatho_thaiyuan.jpg` | ผ้าทอพื้นเมืองชาวไทยวน |
 | `lukprakhop_svherb.jpg` | ลูกประคบสมุนไพร เอสวีเฮิร์บ |
+
+## รูปที่พักใกล้วิทยาลัย (ผู้ดูแลโครงการจัดหามา)
+
+| ไฟล์ | รูปของ |
+|---|---|
+| `stay_thangam.jpg` | ท่างามเพลช |
+| `stay_palmspring.jpg` | ปาล์ม สปริง รีสอร์ท |
+| `stay_kruakhuntim.jpg` | รีสอร์ท ครัวคุณติ๋ม |
+| `stay_nabanmo.jpg` | ณ บ้านหมอ |
+| `stay_ruanrak.jpg` | Ruanrak Resort |
+
+## รูปร้านอาหาร คาเฟ่ ตลาดใกล้วิทยาลัย (ผู้ดูแลโครงการจัดหามา)
+
+| ไฟล์ | รูปของ |
+|---|---|
+| `food_lungtong.jpg` | ก๋วยเตี๋ยวเรือลุงต๋อง |
+| `food_chokman.jpg` | โชคหมานหมูกะทะ |
+| `food_kwanta.jpg` | ขวัญตา ก๋วยเตี๋ยวเรือและข้าวมันไก่ |
+| `food_up2you.jpg` | UP 2 YOU อาหารตามสั่ง |
+| `cafe_phluesin.jpg` | พลูศีลป์ ระบายสี art&workshop |
+| `cafe_sum.jpg` | Sum Espresso Bar what's up cafe |
+| `cafe_teehouse.jpg` | TEE HOUSE |
+| `cafe_bansuat.jpg` | บ้านสรวจ |
+| `cafe_sipabreak.jpg` | Sip a break |
+| `market_saphan12.jpg` | ตลาดนัดสะพาน 12 |
+| `market_banmo.jpg` | ตลาดสดบ้านหมอ |
+| `market_suwan.jpg` | ตลาดสุวรรณเกลียวทอง สาขาท่าเรือ |

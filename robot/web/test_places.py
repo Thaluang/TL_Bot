@@ -4,7 +4,7 @@
 """
 import pytest
 
-from places import photos_for, menu_tree
+from places import photos_for, menu_tree, map_link
 
 DATA = {
     "ท่องเที่ยวสระบุรี": {
@@ -83,7 +83,7 @@ def test_english_answer_case_insensitive_and_caption_lang(DIR):
 
 def test_menu_tree_shape(DIR):
     m = menu_tree(DATA, places_dir=DIR)
-    assert set(m) == {"trips", "souvenirs"}
+    assert set(m) == {"trips", "souvenirs", "stay", "food", "cafe", "market"}
     assert [c["key"] for c in m["trips"]["categories"]] == list(DATA["ท่องเที่ยวสระบุรี"])
     item = m["trips"]["categories"][0]["items"][0]
     assert item["name"] == {"th": "น้ำตกเจ็ดสาวน้อย", "en": "Jet Sao Noi Waterfall"}
@@ -95,7 +95,11 @@ def test_menu_tree_shape(DIR):
 def test_menu_tree_empty_data(DIR):
     assert menu_tree({}, places_dir=DIR) == {
         "trips": {"label": {"th": "ที่เที่ยวสระบุรี", "en": "Places to visit"}, "categories": []},
-        "souvenirs": {"label": {"th": "ของฝากสระบุรี", "en": "Souvenirs"}, "categories": []}}
+        "souvenirs": {"label": {"th": "ของฝากสระบุรี", "en": "Souvenirs"}, "categories": []},
+        "stay": {"label": {"th": "ที่พักใกล้วิทยาลัย", "en": "Places to stay"}, "categories": []},
+        "food": {"label": {"th": "ร้านอาหารใกล้วิทยาลัย", "en": "Places to eat"}, "categories": []},
+        "cafe": {"label": {"th": "คาเฟ่แนะนำ", "en": "Cafés"}, "categories": []},
+        "market": {"label": {"th": "ตลาดใกล้วิทยาลัย", "en": "Markets"}, "categories": []}}
 
 
 def test_refusal_answer_shows_no_photo_of_other_place(DIR):
@@ -130,6 +134,31 @@ def test_trip_full_name_and_distance_for_speech(DIR):
     assert item["distance"] == "ประมาณ 40 กม."
 
 
+def test_stay_has_map_and_distance(DIR):
+    data = {"ที่พักใกล้วิทยาลัย": {"ใกล้วิทยาลัย": [{"ชื่อ": "ที่พักทดสอบ", "ระยะทางจากวิทยาลัย": "2.6 กิโลเมตร"}]}}
+    cat = menu_tree(data, places_dir=DIR)["stay"]["categories"][0]
+    assert cat["icon"] == "🏨"
+    assert cat["items"][0]["distance"] == "2.6 กิโลเมตร" and cat["items"][0]["map"].startswith("https://")
+
+
+def test_food_cafe_market_have_map_and_contact_info(DIR):
+    """ร้านอาหาร/คาเฟ่/ตลาด เป็นสถานที่จริง: QR นำทาง + ระยะทาง และส่งที่อยู่ โทร เวลาเปิด ไปให้การ์ด"""
+    data = {
+        "ร้านอาหารใกล้วิทยาลัย": {"ร้านอาหาร": [{"ชื่อ": "ร้านทดสอบ", "ที่อยู่": "111 หมู่ 3 ต.บ้านครัว",
+                                              "โทร": "081-851-8848", "เวลาเปิด": "08:00–20:30 น."}]},
+        "คาเฟ่แนะนำ": {"คาเฟ่": [{"ชื่อ": "คาเฟ่ทดสอบ", "ระยะทางจากวิทยาลัย": "350 เมตร"}]},
+        "ตลาดใกล้วิทยาลัย": {"ตลาด": [{"ชื่อ": "ตลาดทดสอบ"}]},
+    }
+    m = menu_tree(data, places_dir=DIR)
+    icons = {k: m[k]["categories"][0]["icon"] for k in ("food", "cafe", "market")}
+    assert icons == {"food": "🍜", "cafe": "☕", "market": "🛒"}
+    food = m["food"]["categories"][0]["items"][0]
+    assert food["map"].startswith("https://")
+    assert (food["address"], food["phone"], food["hours"]) == ("111 หมู่ 3 ต.บ้านครัว", "081-851-8848", "08:00–20:30 น.")
+    cafe = m["cafe"]["categories"][0]["items"][0]
+    assert cafe["distance"] == "350 เมตร" and "phone" not in cafe   # ไม่มีข้อมูล = ไม่ส่งช่องนั้น
+
+
 def test_souvenirs_have_no_map(DIR):
     m = menu_tree(DATA, places_dir=DIR)
     assert "map" not in m["souvenirs"]["categories"][0]["items"][0]
@@ -143,3 +172,12 @@ def test_place_card_speaks_and_shows_map_qr():
     assert "it.map" in card and "qrSvg(it.map)" in card       # QR เปิด Google Maps
     assert "speakPlace(" in card                               # หุ่นพูดชื่อ + จุดเด่น
     assert "function speakPlace" in js
+
+
+def test_map_link_other_province():
+    """ที่เที่ยวนอกสระบุรี (เช่น อยุธยา) ใส่ "จังหวัด" → ค้นแผนที่ด้วยจังหวัดนั้น ไม่ต่อท้ายสระบุรี"""
+    url = map_link({"ชื่อ": "วัดตะโก", "อำเภอ": "ท่าเรือ", "จังหวัด": "พระนครศรีอยุธยา"})
+    from urllib.parse import unquote_plus
+    q = unquote_plus(url)
+    assert "พระนครศรีอยุธยา" in q and "สระบุรี" not in q and "อำเภอท่าเรือ" in q
+    assert "สระบุรี" in unquote_plus(map_link({"ชื่อ": "น้ำตก"}))   # ไม่ใส่ = สระบุรีเหมือนเดิม

@@ -36,7 +36,8 @@ for p in $(pgrep -f "[t]lbot/start.sh"); do [ "$p" != "$$" ] && kill "$p" 2>/dev
 pkill -f "[p]ython3 server.py" 2>/dev/null
 pkill -f "[k]iosk-screen|[k]iosk-face" 2>/dev/null
 sleep 1
-( cd "$APP/robot/web" && while true; do python3 server.py; echo "server exited $?"; sleep 3; done ) &
+# PYTHONUNBUFFERED: log ของเซิร์ฟเวอร์ (เช่น [แขน] ...) ลงไฟล์ทันที ไม่ค้างในบัฟเฟอร์
+( cd "$APP/robot/web" && while true; do PYTHONUNBUFFERED=1 python3 server.py; echo "server exited $?"; sleep 3; done ) &
 
 for _ in $(seq 1 60); do
   curl -s -o /dev/null "$URL/state" && break
@@ -59,7 +60,13 @@ sleep 4
 
 # Wayland ไม่ฟัง --window-position → ใช้ --class เป็น app_id แล้วให้ labwc ย้ายจอ
 # (กฎอยู่ใน /boot/firmware/tlbot/labwc/rc.xml: tlbot-screen → HDMI-A-2 จอสัมผัส 1920, tlbot-face → HDMI-A-1)
-OUTS=$(wlr-randr 2>/dev/null | grep -c '^[A-Z]')
+# รอจอหน้าหุ่นพร้อม (สูงสุด 30 วิ) — นับจอเร็วไปเจอจอเดียว หน้า face จะไม่ถูกเปิดเลย
+for _ in $(seq 1 30); do
+  OUTS=$(wlr-randr 2>/dev/null | grep -c '^[A-Z]')
+  [ "${OUTS:-0}" -ge 2 ] && break
+  sleep 1
+done
+echo "จอ: ${OUTS:-0}"
 "$BROWSER" $FLAGS --class=tlbot-screen --user-data-dir=/dev/shm/kiosk-screen "$URL/screen" &
 if [ "${OUTS:-1}" -ge 2 ]; then
   sleep 3

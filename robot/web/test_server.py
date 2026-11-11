@@ -149,7 +149,7 @@ def test_screen_has_quick_questions():
     assert screen.status_code == 200
     html = screen.data.decode("utf-8")
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
-    assert dock.count('class="chip') == 3      # ชิปแนะนำ 3 ปุ่ม (สมัครเรียน/ที่เที่ยว/แผนผัง) — หลักสูตรอยู่ในเมนูทั้งหมด
+    assert dock.count('class="chip') == 4      # ชิปแนะนำ 4 ปุ่ม (จุดเด่นวิทยาลัย/สมัครเรียน/สถานที่ท่องเที่ยว/แผนผัง) — หลักสูตรอยู่ในเมนูทั้งหมด
 
 
 # ---------- wayfinding ----------
@@ -430,14 +430,14 @@ def test_menu_endpoint_returns_tree_without_ai(monkeypatch):
     r = make_client().get("/menu")
     assert r.status_code == 200
     m = r.get_json()
-    assert set(m) == {"trips", "souvenirs"}
+    assert set(m) == {"trips", "souvenirs", "stay", "food", "cafe", "market"}
     assert [c["key"] for c in m["trips"]["categories"]] == list(server.saraburi_data["ท่องเที่ยวสระบุรี"])
 
 
 def test_menu_endpoint_with_empty_data(monkeypatch):
     monkeypatch.setattr(server, "saraburi_data", {})
     m = make_client().get("/menu").get_json()
-    assert m["trips"]["categories"] == [] and m["souvenirs"]["categories"] == []
+    assert m["trips"]["categories"] == [] and m["souvenirs"]["categories"] == [] and m["stay"]["categories"] == []
 
 
 def test_screen_trip_and_souvenir_chips_open_menu():
@@ -452,13 +452,19 @@ def test_screen_js_uses_menu_and_photos():
     assert 'fetch("/menu")' in js and "photos" in js and "place-photo" in js
 
 
+def test_place_card_shows_hours_phone_address():
+    js = make_client().get("/static/screen.js").get_data(as_text=True)
+    for needle in ("it.hours", "it.phone", "it.address"):
+        assert needle in js, needle
+
+
 # ---- ทักทาย: แขนโบก + หน้าหุ่น + คำทัก ----
 class FakeArm:
     def __init__(self, ok=True):
         self.calls = 0
         self.ok = ok
 
-    def wave(self):
+    def wave_async(self):          # แขนสเต็ปเปอร์ผ่าน ESP32 (stepper.StepperArms)
         self.calls += 1
         return self.ok
 
@@ -508,6 +514,13 @@ def test_screen_greets_as_male_tantawan():
     assert "ผมชื่อน้องทานตะวัน-Bot" in js and "ทีแอลบอท" not in js
     assert "หนู" not in js and "ค่ะ" not in js
     assert "/greet" in js
+
+
+def test_tapping_attract_video_always_greets():
+    """แตะคลิปหน้ารอ ("แตะจอเพื่อถามหุ่นยนต์") → แขนโบกทักทุกครั้ง ไม่ต้องรอครบเวลาเงียบ"""
+    c = make_client()
+    js = c.get("/static/screen.js").data.decode("utf-8")
+    assert "if (quiet || attractOn) greet();" in js
 
 
 # ---- สถิติ: เก็บคำถาม + ให้ดาว ----
@@ -783,7 +796,8 @@ def test_stats_db_lives_in_data_dir():
 
 
 def test_config_defaults_for_kiosk():
-    assert server.config.IDLE_VIDEO_SECONDS == 180
+    assert server.config.IDLE_VIDEO_SECONDS == 60          # เท่ากับ GREET_IDLE_SECONDS: คลิปขึ้นพร้อมจังหวะที่แขนพร้อมโบกทัก
+    assert server.config.IDLE_VIDEO_SECONDS == server.config.GREET_IDLE_SECONDS
     assert hasattr(server.config, "ADMIN_PASSWORD")
 
 
@@ -961,11 +975,13 @@ def test_dock_chips_and_all_menu():
     html = make_client().get("/screen").get_data(as_text=True)
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
     assert 'data-action="showMap"' in dock and 'data-menu="trips"' in dock
-    assert "สมัครเรียน" in dock and "หลักสูตร" not in dock
-    # ลำดับ: สมัครเรียน → ที่เที่ยว → แผนผัง
-    assert dock.index("สมัครเรียน") < dock.index('data-menu="trips"') < dock.index('data-action="showMap"')
+    assert "สมัครเรียน" in dock and "หลักสูตร" not in dock and "สถานที่ท่องเที่ยว" in dock
+    # ลำดับ: จุดเด่นวิทยาลัย → สมัครเรียน → สถานที่ท่องเที่ยว → แผนผัง
+    assert (dock.index("จุดเด่นวิทยาลัย") < dock.index("สมัครเรียน") < dock.index('data-menu="trips"')
+            < dock.index('data-action="showMap"'))
     tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
-    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"',
+    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-menu="stay"', 'data-menu="food"', 'data-menu="cafe"', 'data-menu="market"',
+                   'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"',
                    'data-q="เปิดสอนสาขาอะไรบ้าง"'):   # หลักสูตรยังอยู่ในเมนูทั้งหมด
         assert needle in tpl, needle
 
@@ -1068,3 +1084,26 @@ def test_idle_video_loops_until_tap():
     play = js[js.index("function playVideo()"):js.index("function startAttract()")]
     assert "stopAttract()" not in play.split('video.addEventListener("ended"')[1].split("\n")[0]
     assert 'video.addEventListener("ended", () => { vidIdx++; playVideo(); });' in js
+
+
+def test_new_chat_button_under_ready_led():
+    """ปุ่มคุยใหม่อยู่หัวแชท ใต้ป้าย "พร้อมคุย" — ไม่ซ่อนในเมนูทั้งหมดแล้ว ช่องนั้นเป็นจุดเด่นวิทยาลัยแทน"""
+    html = make_client().get("/screen").get_data(as_text=True)
+    head = html[html.index('class="chat-panel'):html.index('id="scroll"')]
+    assert head.index('class="led"') < head.index('data-action="newChat"')
+    tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    assert 'data-action="newChat"' not in tpl
+    assert 'data-q="วิทยาลัยมีจุดเด่นอะไรบ้าง"' in tpl
+
+
+def test_admission_link_is_real_not_demo():
+    import json
+    adm = json.loads((server.ROBOT_DIR / "college_data.json").read_text(encoding="utf-8"))["การรับสมัคร"]
+    text = json.dumps(adm, ensure_ascii=False)
+    assert "ทดลอง" not in text and "demo" not in text.lower()
+    assert adm["สมัครเรียนออนไลน์"]["ลิงก์"].startswith("https://")
+
+
+def test_wat_tako_and_crocodile_farm_in_trips():
+    names = [e["ชื่อ"] for cat in server.saraburi_data["ท่องเที่ยวสระบุรี"].values() for e in cat]
+    assert "วัดตะโก" in names and "ฟาร์มจระเข้ศรีอยุธยา" in names

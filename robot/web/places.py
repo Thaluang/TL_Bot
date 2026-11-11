@@ -12,7 +12,14 @@ _REFUSALS = ("ยังไม่มีข้อมูล", "don't have that info
 _SECTIONS = {   # คีย์ในเมนู → (ส่วนในไฟล์ข้อมูล, ป้ายชื่อ)
     "trips": ("ท่องเที่ยวสระบุรี", {"th": "ที่เที่ยวสระบุรี", "en": "Places to visit"}),
     "souvenirs": ("OTOP_สระบุรี", {"th": "ของฝากสระบุรี", "en": "Souvenirs"}),
+    "stay": ("ที่พักใกล้วิทยาลัย", {"th": "ที่พักใกล้วิทยาลัย", "en": "Places to stay"}),
+    "food": ("ร้านอาหารใกล้วิทยาลัย", {"th": "ร้านอาหารใกล้วิทยาลัย", "en": "Places to eat"}),
+    "cafe": ("คาเฟ่แนะนำ", {"th": "คาเฟ่แนะนำ", "en": "Cafés"}),
+    "market": ("ตลาดใกล้วิทยาลัย", {"th": "ตลาดใกล้วิทยาลัย", "en": "Markets"}),
 }
+_LOCATED = ("trips", "stay", "food", "cafe", "market")   # เมนูที่เป็นสถานที่จริง → มี QR นำทาง + ระยะทาง
+# ช่องข้อมูลติดต่อ (มีเฉพาะบางร้าน) → ส่งให้การ์ดรายละเอียดเท่าที่มี
+_CONTACT = {"address": "ที่อยู่", "phone": "โทร", "hours": "เวลาเปิด"}
 
 # ป้ายหมวดแบบสั้นให้พอดีปุ่มบนจอ (หมวดที่ไม่อยู่ในนี้ใช้ชื่อคีย์เดิม)
 _CATEGORIES = {
@@ -24,6 +31,10 @@ _CATEGORIES = {
     "อาหารและขนม": ("อาหาร-ขนม", "Food & snacks", "🍯"),
     "งานหัตถกรรม": ("หัตถกรรม", "Handicrafts", "🧺"),
     "สมุนไพรและสุขภาพ": ("สมุนไพร", "Herbal", "🌿"),
+    "ใกล้วิทยาลัย": ("ที่พัก", "Places to stay", "🏨"),
+    "ร้านอาหาร": ("ร้านอาหาร", "Places to eat", "🍜"),
+    "คาเฟ่": ("คาเฟ่", "Cafés", "☕"),
+    "ตลาด": ("ตลาด", "Markets", "🛒"),
 }
 
 
@@ -95,17 +106,19 @@ MAPS_URL = "https://www.google.com/maps/search/?api=1&query="
 
 def map_link(entry: dict) -> str:
     """ลิงก์ Google Maps ของสถานที่ (หน้าจอทำเป็น QR ให้สแกนแล้วกดนำทางในมือถือ)
-    มีช่อง "พิกัด" ("ละติจูด, ลองจิจูด") = ปักหมุดตรงจุด / ไม่มี = ค้นจาก ชื่อเต็ม + อำเภอ + สระบุรี"""
+    มีช่อง "พิกัด" ("ละติจูด, ลองจิจูด") = ปักหมุดตรงจุด / ไม่มี = ค้นจาก ชื่อเต็ม + อำเภอ + จังหวัด
+    (ไม่ใส่ "จังหวัด" = สระบุรี — ที่เที่ยวนอกจังหวัด เช่น อยุธยา ต้องใส่ ไม่งั้นแผนที่ค้นผิดที่)"""
     coords = str(entry.get("พิกัด") or "").replace(" ", "")
     if coords:
         return MAPS_URL + quote_plus(coords)
     name = entry.get("ชื่อเต็ม") or entry["ชื่อ"]
     district = entry.get("อำเภอ", "")
-    return MAPS_URL + quote_plus(" ".join(x for x in (name, f"อำเภอ{district}" if district else "", "สระบุรี") if x))
+    province = entry.get("จังหวัด") or "สระบุรี"
+    return MAPS_URL + quote_plus(" ".join(x for x in (name, f"อำเภอ{district}" if district else "", province) if x))
 
 
 def menu_tree(saraburi_data: dict, places_dir: Path = PLACES_DIR) -> dict:
-    """โครงเมนู ที่เที่ยว/ของฝาก → หมวด → รายการ ให้หน้าจอโหลดครั้งเดียว"""
+    """โครงเมนู ที่เที่ยว/ของฝาก/ที่พัก/ร้านอาหาร/คาเฟ่/ตลาด → หมวด → รายการ ให้หน้าจอโหลดครั้งเดียว"""
     tree = {}
     for key, (section, label) in _SECTIONS.items():
         cats = []
@@ -118,8 +131,9 @@ def menu_tree(saraburi_data: dict, places_dir: Path = PLACES_DIR) -> dict:
                     "district": e.get("อำเภอ", ""),
                     "highlight": e.get("จุดเด่น", ""),
                     "photo": _photo_src(e, places_dir),
-                    # ที่เที่ยว/วัด: QR นำทาง + ระยะทาง (หุ่นพูดตอนเปิดรายละเอียด) — ของฝากไม่ใช่สถานที่ ไม่มี
-                    **({"map": map_link(e), "distance": e.get("ระยะทางจากวิทยาลัย", "")} if key == "trips" else {}),
+                    # ที่เที่ยว/ที่พัก: QR นำทาง + ระยะทาง (หุ่นพูดตอนเปิดรายละเอียด) — ของฝากไม่ใช่สถานที่ ไม่มี
+                    **({"map": map_link(e), "distance": e.get("ระยะทางจากวิทยาลัย", "")} if key in _LOCATED else {}),
+                    **{k: e[f] for k, f in _CONTACT.items() if e.get(f)},
                 } for e in items if e.get("ชื่อ")],
             })
         tree[key] = {"label": label, "categories": cats}

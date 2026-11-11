@@ -1,0 +1,4 @@
+[Desktop Entry]
+Type=Application
+Name=Robot Kiosk
+Exec=bash /home/pi/robot-briefing/robot/pi/start.sh

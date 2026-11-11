@@ -184,6 +184,8 @@
   .ch .side{margin-left:auto;align-self:center;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
   .led{display:flex;align-items:center;gap:8px;font-size:17px;background:#ffffff26;border:1px solid #ffffff40;border-radius:999px;padding:7px 16px;white-space:nowrap}
   .led .d{width:9px;height:9px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px #4ade8040}
+  .new-chat{all:unset;cursor:pointer;box-sizing:border-box;font-size:17px;color:#fff;background:#ffffff1f;border:1px solid #ffffff59;border-radius:999px;padding:7px 18px;white-space:nowrap}
+  .new-chat:active{transform:scale(.96);background:#ffffff40}
   body.state-listening .led .d{background:#f472b6;box-shadow:0 0 0 4px #f472b640;animation:blink .7s infinite}
   body.state-thinking .led .d{background:#fde047;animation:blink 1s infinite}
   body.state-answering .led .d{background:#93c5fd;animation:blink 1.4s infinite}
@@ -236,9 +238,9 @@
   body.speaking .stop-talk{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 
   .dock{flex:none;padding:14px 28px 28px;display:flex;flex-direction:column;gap:14px}
-  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   .chip{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:24px;
-    font:500 19px var(--head);background:#fff;border:1.5px solid #efe9ff;box-shadow:0 6px 16px -10px #4c1d9540;text-align:center}
+    font:500 17px var(--head);line-height:1.25;background:#fff;border:1.5px solid #efe9ff;box-shadow:0 6px 16px -10px #4c1d9540;text-align:center}
   .chip:active,.talk:active,.menu-open:active{transform:scale(.97)}
   .chip em{font-style:normal;width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:24px}
   .inrow{display:grid;grid-template-columns:1fr 112px;gap:14px}
@@ -366,6 +368,7 @@
         <div><h2 data-t="botName">น้องทานตะวัน-Bot</h2><p data-t="botSub">ถามอะไรก็ได้ ยินดีช่วยเสมอครับ</p></div>
         <div class="side">
           <div class="led"><span class="d"></span><span class="led-text">พร้อมคุย</span></div>
+          <button type="button" class="new-chat" data-action="newChat">✏️ <span data-t="newShort">คุยใหม่</span></button>
         </div>
       </div>
     </div>
@@ -375,8 +378,9 @@
 
     <div class="dock">
       <div class="chips" id="dockQs">
+        <button type="button" class="chip" data-q="วิทยาลัยมีจุดเด่นอะไรบ้าง" data-q-en="What makes the college stand out?"><em class="k-event">⭐</em><span data-t="cHighlight">จุดเด่นวิทยาลัย</span></button>
         <button type="button" class="chip" data-q="สมัครเรียนต้องทำอย่างไร มีคุณสมบัติอะไรบ้าง" data-q-en="How do I apply, and what are the requirements?"><em class="k-admission">🎓</em><span data-t="cApply">สมัครเรียน</span></button>
-        <button type="button" class="chip" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em class="k-award">🏞️</em><span data-t="cTripsShort">ที่เที่ยว</span></button>
+        <button type="button" class="chip" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em class="k-award">🏞️</em><span data-t="cTripsShort">สถานที่ท่องเที่ยว</span></button>
         <button type="button" class="chip" data-action="showMap"><em class="k-scholarship">🗺️</em><span data-t="cMapShort">แผนผัง</span></button>
       </div>
       <div class="inrow">
@@ -410,8 +414,11 @@
       <button type="button" class="menu-btn" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em>🏞️</em><span><span data-t="cTrips">ที่เที่ยวสระบุรี</span><small data-t="cTripsSub">วัด น้ำตก ธรรมชาติ</small></span></button>
       <button type="button" class="menu-btn" data-menu="souvenirs" data-q="ของฝากขึ้นชื่อของสระบุรีมีอะไรบ้าง" data-q-en="What are the famous souvenirs from Saraburi?"><em>🛍️</em><span><span data-t="cSouvenir">ของฝากสระบุรี</span><small data-t="cSouvenirSub">OTOP ของกินขึ้นชื่อ</small></span></button>
       <button type="button" class="menu-btn" data-menu="stay" data-q="ที่พักใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Where can I stay near the college?"><em>🏨</em><span><span data-t="cStay">ที่พักใกล้วิทยาลัย</span><small data-t="cStaySub">รีสอร์ท ห้องพัก 5 แห่ง</small></span></button>
+      <button type="button" class="menu-btn" data-menu="food" data-q="ร้านอาหารใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Where can I eat near the college?"><em>🍜</em><span><span data-t="cFood">ร้านอาหาร</span><small data-t="cFoodSub">ก๋วยเตี๋ยว หมูกระทะ ตามสั่ง</small></span></button>
+      <button type="button" class="menu-btn" data-menu="cafe" data-q="คาเฟ่ใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Are there cafés near the college?"><em>☕</em><span><span data-t="cCafe">คาเฟ่แนะนำ</span><small data-t="cCafeSub">กาแฟ ระบายสี 5 ร้าน</small></span></button>
+      <button type="button" class="menu-btn" data-menu="market" data-q="ตลาดใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Are there markets near the college?"><em>🛒</em><span><span data-t="cMarket">ตลาด</span><small data-t="cMarketSub">ตลาดนัด ตลาดสด</small></span></button>
       <button type="button" class="menu-btn" data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง" data-q-en="How can I contact the college?"><em>📞</em><span><span data-t="cContact">ช่องทางติดต่อ</span><small data-t="cContactSub">โทร 0-3628-1295</small></span></button>
-      <button type="button" class="menu-btn" data-action="newChat"><em>✏️</em><span><span data-t="newChat">เริ่มคุยใหม่</span><small data-t="newChatSub">ล้างบทสนทนา</small></span></button>
+      <button type="button" class="menu-btn" data-q="วิทยาลัยมีจุดเด่นอะไรบ้าง" data-q-en="What makes the college stand out?"><em>⭐</em><span><span data-t="cHighlight">จุดเด่นวิทยาลัย</span><small data-t="cHighlightSub">อัตลักษณ์ รางวัล ทวิภาคี</small></span></button>
     </div>
   </template>
 

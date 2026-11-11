@@ -18,9 +18,11 @@ const T = {
     send: "ส่ง", mic: "กดเพื่อพูด", replay: "ฟังอีกครั้ง", theme: "สลับโหมดมืด/สว่าง",
     cMap: "แผนผังวิทยาลัย", cPrograms: "หลักสูตร", cApply: "สมัครเรียน",
     cContact: "ช่องทางติดต่อ", cTrips: "ที่เที่ยวสระบุรี", cSouvenir: "ของฝากสระบุรี",
-    cMapShort: "แผนผัง", cTripsShort: "ที่เที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
+    cMapShort: "แผนผัง", cTripsShort: "สถานที่ท่องเที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
     cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
-    cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
+    cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง",
+    cFood: "ร้านอาหาร", cFoodSub: "ก๋วยเตี๋ยว หมูกระทะ ตามสั่ง", cCafe: "คาเฟ่แนะนำ", cCafeSub: "กาแฟ ระบายสี 5 ร้าน",
+    cMarket: "ตลาด", cMarketSub: "ตลาดนัด ตลาดสด", cHighlight: "จุดเด่นวิทยาลัย", cHighlightSub: "อัตลักษณ์ รางวัล ทวิภาคี", openHours: "เวลาเปิด", tel: "โทร", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
     botName: "น้องทานตะวัน-Bot", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
     backNews: "กลับหน้าข่าว", allMenu: "เมนูทั้งหมด", allMenuTitle: "เมนูทั้งหมด", allMenuSub: "แตะเลือกได้เลยครับ",
     talk: "แตะเพื่อพูด", talkSub: "หุ่นฟังจนคุณพูดจบเอง", listenTalk: "กำลังฟัง…", listenSub: "แตะอีกครั้งเมื่อพูดจบ",
@@ -57,9 +59,11 @@ const T = {
     send: "Send", mic: "Tap to speak", replay: "Play again", theme: "Switch dark/light mode",
     cMap: "Campus map", cPrograms: "Programs", cApply: "Apply",
     cContact: "Contact us", cTrips: "Places to visit", cSouvenir: "Local souvenirs",
-    cMapShort: "Map", cTripsShort: "Visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
+    cMapShort: "Map", cTripsShort: "Places to visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
     cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
-    cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
+    cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby",
+    cFood: "Places to eat", cFoodSub: "Noodles, mookata, made-to-order", cCafe: "Cafés", cCafeSub: "Coffee and painting, 5 spots",
+    cMarket: "Markets", cMarketSub: "Evening and fresh markets", cHighlight: "College highlights", cHighlightSub: "Identity, awards, dual system", openHours: "Open", tel: "Tel.", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
     botName: "Nong Tantawan-Bot", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
     backNews: "Back to news", allMenu: "All menus", allMenuTitle: "All menus", allMenuSub: "Tap to choose",
     talk: "Tap to speak", talkSub: "I'll listen until you finish", listenTalk: "Listening…", listenSub: "Tap again when done",
@@ -746,6 +750,7 @@ function speakPlace(it) {
   if (!lastPlace) return;
   const p = lastPlace;
   const text = [pick(p.name), p.district ? `อำเภอ${p.district}` : "", p.highlight,
+    p.hours ? `เปิด ${p.hours}` : "",
     p.distance ? `${t().fromCollege} ${p.distance}` : "", p.map ? t().scanMapSay : ""].filter(Boolean).join(" ");
   setState("answering");
   speakAnswer(text, "th");
@@ -779,6 +784,10 @@ function openMenu(b) {
     `<div><h3>${L(it.name)}</h3><small>${district(it.district)}</small>` +
     (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") +
     (it.distance ? `<p class="dist">🚗 ${t().fromCollege} ${escapeHtml(it.distance)}</p>` : "") +
+    // ร้านอาหาร/ตลาด: เวลาเปิด โทร ที่อยู่ (มีเท่าไหร่โชว์เท่านั้น)
+    (it.hours ? `<p class="dist">⏰ ${t().openHours} ${escapeHtml(it.hours)}</p>` : "") +
+    (it.phone ? `<p class="dist">📞 ${t().tel} ${escapeHtml(it.phone)}</p>` : "") +
+    (it.address ? `<p class="dist">🏠 ${escapeHtml(it.address)}</p>` : "") +
     (code ? `<div class="place-qr">${code}<span><b>${t().scanMap}</b><small>${t().scanMapSub}</small></span></div>` : "") +
     `<button type="button" class="tour-btn" data-action="placeSpeak">🔊 ${t().replay}</button>` +
     "</div></div>", `data-menu-cat="${sec}:${i}"`, pick(c.label));

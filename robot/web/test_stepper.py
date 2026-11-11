@@ -158,3 +158,66 @@ def test_sync_flushes_boot_junk_with_blank_line():
     a.link.sync()
     assert esp.sent[0] == ""
     assert a.status()["connected"] is True
+
+
+# ---- เสียบ ESP32 ทีหลัง / สายหลุด: ต่อเองตอนจะโบก ไม่ต้องรีสตาร์ทเซิร์ฟเวอร์ ----
+class Opener:
+    """แทน EspLink.open: ครั้งแรก ๆ ยังไม่เสียบ (โยน error) จนกว่าจะตั้ง plugged=True"""
+
+    def __init__(self):
+        self.plugged, self.calls, self.esp = False, 0, None
+
+    def __call__(self):
+        self.calls += 1
+        if not self.plugged:
+            raise ArmError("NO_PORT", "ยังไม่เสียบ")
+        self.esp = FakeEsp()
+        return EspLink(self.esp, heartbeat=0.1)
+
+
+def test_plug_in_later_connects_on_next_wave():
+    op = Opener()
+    a = StepperArms(None, opener=op)
+    a.RETRY = 0
+    a.wave()                                   # ยังไม่เสียบ: ข้ามท่า ไม่ค้าง ไม่โยน error
+    assert a.link is None and op.calls == 1
+    op.plugged = True
+    a.wave()                                   # เสียบแล้ว: ต่อเองแล้วโบกจริง
+    assert a.link is not None
+    assert any(" MOVE " in s for s in op.esp.sent) and op.esp.sent[-1].endswith("PARK")
+
+
+def test_retry_is_rate_limited():
+    op = Opener()
+    a = StepperArms(None, opener=op)           # RETRY ค่าเริ่มต้น: ไม่ลองเปิดพอร์ตรัว ๆ ทุกครั้งที่แตะจอ
+    a.wave(); a.wave(); a.wave()
+    assert op.calls == 1
+
+
+def test_unplugged_mid_use_reconnects():
+    op = Opener(); op.plugged = True
+    a = StepperArms(None, opener=op)
+    a.RETRY = 0
+    a.wave()
+    first = a.link
+
+    def broken(_data):
+        raise OSError("device disconnected")   # ถอดสาย: pyserial โยน SerialException (= OSError)
+    first.ser.write = broken
+    a.wave()                                   # โยนทิ้งการเชื่อมต่อเดิม ไม่ crash
+    assert a.link is None
+    a.wave()                                   # ครั้งต่อไปต่อใหม่เอง
+    assert a.link is not None and a.link is not first
+
+
+def test_silent_board_timeout_drops_link():
+    """บอร์ดค้าง/สายหลวมแบบไม่มี error — ไม่ตอบจนหมดเวลา → ทิ้งการเชื่อมต่อ รอบหน้าต่อใหม่"""
+    op = Opener(); op.plugged = True
+    a = StepperArms(None, opener=op)
+    a.RETRY = 0
+    a._ensure_link()
+    a.link.timeout = 0.2
+    op.esp.silent = True
+    with pytest.raises(ArmError):
+        a.wave()
+    assert a.link is None

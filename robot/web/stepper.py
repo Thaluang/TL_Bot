@@ -159,27 +159,53 @@ class EspLink:
 
 
 class StepperArms:
-    """สั่งแขน/คอเป็นองศา + ท่าทางสำเร็จรูป — link=None คือโหมดจำลอง"""
+    """สั่งแขน/คอเป็นองศา + ท่าทางสำเร็จรูป
+    link=None + opener=None คือโหมดจำลอง (เทสต์/คอม) · มี opener = ยังไม่เจอบอร์ด แต่จะลองต่อเองตอนจะโบก"""
 
     WAVE_UP, WAVE_A, WAVE_B, WAVE_TIMES = 150, 120, 165, 3   # แขนขวา: ยก แล้วโบกไปมา
     SPEED, WAVE_SPEED = 60, 120                               # องศา/วินาที
+    RETRY = 5.0                                               # ไม่เจอบอร์ด: ลองหาใหม่ห่างกันอย่างน้อยกี่วินาที
 
-    def __init__(self, link):
+    def __init__(self, link, opener=None):
         self.link = link
+        self._opener = opener               # ฟังก์ชันเปิดพอร์ต → EspLink (None = ไม่ลองต่อเอง)
+        self._next_try = 0.0
         self._gesture = threading.Lock()    # ทีละท่า (ทักทายซ้อนกันไม่ได้)
 
     @classmethod
     def connect(cls, port=None):
+        """ต่อ ESP32 ตอนเปิดเซิร์ฟเวอร์ — ไม่เจอก็ไม่เป็นไร: เสียบทีหลัง/สายหลุด จะต่อเองตอนจะโบกครั้งถัดไป"""
+        arms = cls(None, opener=lambda: EspLink.open(port))
+        arms._ensure_link()
+        return arms
+
+    def _ensure_link(self):
+        """คืน link ที่ใช้ได้ — ยังไม่มีแล้วมี opener: ลองเปิดพอร์ต (ไม่ถี่กว่า RETRY วินาที)"""
+        if self.link is not None or self._opener is None:
+            return self.link
+        now = time.monotonic()
+        if now < self._next_try:
+            return None
+        self._next_try = now + self.RETRY
         try:
-            arms = cls(EspLink.open(port))
+            self.link = self._opener()
         except Exception as e:
-            print(f"[แขน] ไม่ได้ต่อ ESP32 ({e}) — ใช้โหมดจำลอง", flush=True)
-            return cls(None)
-        st = arms.status()
+            print(f"[แขน] ยังไม่เจอ ESP32 ({e}) — เสียบเมื่อไรจะต่อเองตอนโบกครั้งถัดไป", flush=True)
+            return None
+        st = self.status()
         print(f"[แขน] ต่อ ESP32 แล้ว: {st}", flush=True)
         if st.get("connected") and not st.get("homed"):
             print("[แขน] ⚠ ESP32 ไม่รู้ตำแหน่งแขน (ไม่ได้ PARK ก่อนปิด) — โบกไม่ได้จนกว่าจะจัดแขนห้อยตรงแล้วส่ง ZERO", flush=True)
-        return arms
+        return self.link
+
+    def _drop_link(self, err):
+        """สายหลุด/บอร์ดหาย: ปิดการเชื่อมต่อเดิม รอบหน้าค่อยลองต่อใหม่"""
+        print(f"[แขน] ESP32 หลุด ({err}) — จะลองต่อใหม่ตอนโบกครั้งถัดไป", flush=True)
+        link, self.link, self._next_try = self.link, None, 0.0
+        try:
+            link.close()
+        except Exception:
+            pass
 
     # ---- คำสั่งพื้นฐาน ----
     def move(self, L=None, R=None, N=None, speed=None, wait=True):
@@ -233,13 +259,22 @@ class StepperArms:
     def wave(self):
         """โบกมือขวา: ยกแขน → โบกไปมา → วางแขนลง"""
         with self._gesture:
-            self.move(R=self.WAVE_UP, speed=self.SPEED)
-            for _ in range(self.WAVE_TIMES):
-                self.move(R=self.WAVE_A, speed=self.WAVE_SPEED)
-                self.move(R=self.WAVE_B, speed=self.WAVE_SPEED)
-            # จบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) ไม่ใช่แค่ MOVE R=0:
-            # เซิร์ฟเวอร์เปิดพอร์ตใหม่เมื่อไร ESP32 รีเซ็ต ถ้าไม่ได้จอดไว้จะลืมตำแหน่ง แล้วตอบ NOT_PARKED ทุกท่า
-            self.park()
+            if self._ensure_link() is None and self._opener is not None:
+                return                      # ยังไม่ได้เสียบบอร์ด: ข้ามท่า (หน้าจอทักทายต่อได้ตามปกติ)
+            try:
+                self.move(R=self.WAVE_UP, speed=self.SPEED)
+                for _ in range(self.WAVE_TIMES):
+                    self.move(R=self.WAVE_A, speed=self.WAVE_SPEED)
+                    self.move(R=self.WAVE_B, speed=self.WAVE_SPEED)
+                # จบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) ไม่ใช่แค่ MOVE R=0:
+                # เซิร์ฟเวอร์เปิดพอร์ตใหม่เมื่อไร ESP32 รีเซ็ต ถ้าไม่ได้จอดไว้จะลืมตำแหน่ง แล้วตอบ NOT_PARKED ทุกท่า
+                self.park()
+            except OSError as e:            # ถอดสาย USB ระหว่างใช้ (pyserial โยน SerialException = OSError)
+                self._drop_link(e)
+            except ArmError as e:
+                if e.code == "TIMEOUT":     # บอร์ดเงียบ (ค้าง/สายหลวม) → ต่อใหม่รอบหน้า
+                    self._drop_link(e)
+                raise
 
     def look(self, deg: float):
         """หันคอ (+ ซ้าย / − ขวา ตามทิศที่ติดตั้ง)"""

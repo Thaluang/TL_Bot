@@ -83,7 +83,7 @@ def test_english_answer_case_insensitive_and_caption_lang(DIR):
 
 def test_menu_tree_shape(DIR):
     m = menu_tree(DATA, places_dir=DIR)
-    assert set(m) == {"trips", "souvenirs"}
+    assert set(m) == {"trips", "souvenirs", "stay"}
     assert [c["key"] for c in m["trips"]["categories"]] == list(DATA["ท่องเที่ยวสระบุรี"])
     item = m["trips"]["categories"][0]["items"][0]
     assert item["name"] == {"th": "น้ำตกเจ็ดสาวน้อย", "en": "Jet Sao Noi Waterfall"}
@@ -95,7 +95,8 @@ def test_menu_tree_shape(DIR):
 def test_menu_tree_empty_data(DIR):
     assert menu_tree({}, places_dir=DIR) == {
         "trips": {"label": {"th": "ที่เที่ยวสระบุรี", "en": "Places to visit"}, "categories": []},
-        "souvenirs": {"label": {"th": "ของฝากสระบุรี", "en": "Souvenirs"}, "categories": []}}
+        "souvenirs": {"label": {"th": "ของฝากสระบุรี", "en": "Souvenirs"}, "categories": []},
+        "stay": {"label": {"th": "ที่พักใกล้วิทยาลัย", "en": "Places to stay"}, "categories": []}}
 
 
 def test_refusal_answer_shows_no_photo_of_other_place(DIR):
@@ -128,6 +129,13 @@ def test_trip_full_name_and_distance_for_speech(DIR):
     item = menu_tree(data, places_dir=DIR)["trips"]["categories"][0]["items"][0]
     assert "อุทยานแห่งชาติน้ำตกสามหลั่น" in item["map"].replace("+", " ") or "%" in item["map"]
     assert item["distance"] == "ประมาณ 40 กม."
+
+
+def test_stay_has_map_and_distance(DIR):
+    data = {"ที่พักใกล้วิทยาลัย": {"ใกล้วิทยาลัย": [{"ชื่อ": "ที่พักทดสอบ", "ระยะทางจากวิทยาลัย": "2.6 กิโลเมตร"}]}}
+    cat = menu_tree(data, places_dir=DIR)["stay"]["categories"][0]
+    assert cat["icon"] == "🏨"
+    assert cat["items"][0]["distance"] == "2.6 กิโลเมตร" and cat["items"][0]["map"].startswith("https://")
 
 
 def test_souvenirs_have_no_map(DIR):

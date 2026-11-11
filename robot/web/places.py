@@ -12,7 +12,9 @@ _REFUSALS = ("ยังไม่มีข้อมูล", "don't have that info
 _SECTIONS = {   # คีย์ในเมนู → (ส่วนในไฟล์ข้อมูล, ป้ายชื่อ)
     "trips": ("ท่องเที่ยวสระบุรี", {"th": "ที่เที่ยวสระบุรี", "en": "Places to visit"}),
     "souvenirs": ("OTOP_สระบุรี", {"th": "ของฝากสระบุรี", "en": "Souvenirs"}),
+    "stay": ("ที่พักใกล้วิทยาลัย", {"th": "ที่พักใกล้วิทยาลัย", "en": "Places to stay"}),
 }
+_LOCATED = ("trips", "stay")   # เมนูที่เป็นสถานที่จริง → มี QR นำทาง + ระยะทาง
 
 # ป้ายหมวดแบบสั้นให้พอดีปุ่มบนจอ (หมวดที่ไม่อยู่ในนี้ใช้ชื่อคีย์เดิม)
 _CATEGORIES = {
@@ -24,6 +26,7 @@ _CATEGORIES = {
     "อาหารและขนม": ("อาหาร-ขนม", "Food & snacks", "🍯"),
     "งานหัตถกรรม": ("หัตถกรรม", "Handicrafts", "🧺"),
     "สมุนไพรและสุขภาพ": ("สมุนไพร", "Herbal", "🌿"),
+    "ใกล้วิทยาลัย": ("ที่พัก", "Places to stay", "🏨"),
 }
 
 
@@ -105,7 +108,7 @@ def map_link(entry: dict) -> str:
 
 
 def menu_tree(saraburi_data: dict, places_dir: Path = PLACES_DIR) -> dict:
-    """โครงเมนู ที่เที่ยว/ของฝาก → หมวด → รายการ ให้หน้าจอโหลดครั้งเดียว"""
+    """โครงเมนู ที่เที่ยว/ของฝาก/ที่พัก → หมวด → รายการ ให้หน้าจอโหลดครั้งเดียว"""
     tree = {}
     for key, (section, label) in _SECTIONS.items():
         cats = []
@@ -118,8 +121,8 @@ def menu_tree(saraburi_data: dict, places_dir: Path = PLACES_DIR) -> dict:
                     "district": e.get("อำเภอ", ""),
                     "highlight": e.get("จุดเด่น", ""),
                     "photo": _photo_src(e, places_dir),
-                    # ที่เที่ยว/วัด: QR นำทาง + ระยะทาง (หุ่นพูดตอนเปิดรายละเอียด) — ของฝากไม่ใช่สถานที่ ไม่มี
-                    **({"map": map_link(e), "distance": e.get("ระยะทางจากวิทยาลัย", "")} if key == "trips" else {}),
+                    # ที่เที่ยว/ที่พัก: QR นำทาง + ระยะทาง (หุ่นพูดตอนเปิดรายละเอียด) — ของฝากไม่ใช่สถานที่ ไม่มี
+                    **({"map": map_link(e), "distance": e.get("ระยะทางจากวิทยาลัย", "")} if key in _LOCATED else {}),
                 } for e in items if e.get("ชื่อ")],
             })
         tree[key] = {"label": label, "categories": cats}

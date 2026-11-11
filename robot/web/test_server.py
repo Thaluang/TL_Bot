@@ -430,14 +430,14 @@ def test_menu_endpoint_returns_tree_without_ai(monkeypatch):
     r = make_client().get("/menu")
     assert r.status_code == 200
     m = r.get_json()
-    assert set(m) == {"trips", "souvenirs"}
+    assert set(m) == {"trips", "souvenirs", "stay"}
     assert [c["key"] for c in m["trips"]["categories"]] == list(server.saraburi_data["ท่องเที่ยวสระบุรี"])
 
 
 def test_menu_endpoint_with_empty_data(monkeypatch):
     monkeypatch.setattr(server, "saraburi_data", {})
     m = make_client().get("/menu").get_json()
-    assert m["trips"]["categories"] == [] and m["souvenirs"]["categories"] == []
+    assert m["trips"]["categories"] == [] and m["souvenirs"]["categories"] == [] and m["stay"]["categories"] == []
 
 
 def test_screen_trip_and_souvenir_chips_open_menu():
@@ -965,7 +965,7 @@ def test_dock_chips_and_all_menu():
     # ลำดับ: สมัครเรียน → ที่เที่ยว → แผนผัง
     assert dock.index("สมัครเรียน") < dock.index('data-menu="trips"') < dock.index('data-action="showMap"')
     tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
-    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"',
+    for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-menu="stay"', 'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"',
                    'data-q="เปิดสอนสาขาอะไรบ้าง"'):   # หลักสูตรยังอยู่ในเมนูทั้งหมด
         assert needle in tpl, needle
 

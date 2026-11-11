@@ -49,3 +49,13 @@
 | `cowboyhat_bailan.jpg` | หมวกคาวบอยใบลาน |
 | `phatho_thaiyuan.jpg` | ผ้าทอพื้นเมืองชาวไทยวน |
 | `lukprakhop_svherb.jpg` | ลูกประคบสมุนไพร เอสวีเฮิร์บ |
+
+## รูปที่พักใกล้วิทยาลัย (ผู้ดูแลโครงการจัดหามา)
+
+| ไฟล์ | รูปของ |
+|---|---|
+| `stay_thangam.jpg` | ท่างามเพลช |
+| `stay_palmspring.jpg` | ปาล์ม สปริง รีสอร์ท |
+| `stay_kruakhuntim.jpg` | รีสอร์ท ครัวคุณติ๋ม |
+| `stay_nabanmo.jpg` | ณ บ้านหมอ |
+| `stay_ruanrak.jpg` | Ruanrak Resort |

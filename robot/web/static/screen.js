@@ -20,7 +20,7 @@ const T = {
     cContact: "ช่องทางติดต่อ", cTrips: "ที่เที่ยวสระบุรี", cSouvenir: "ของฝากสระบุรี",
     cMapShort: "แผนผัง", cTripsShort: "ที่เที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
     cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
-    cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
+    cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
     botName: "น้องทานตะวัน-Bot", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
     backNews: "กลับหน้าข่าว", allMenu: "เมนูทั้งหมด", allMenuTitle: "เมนูทั้งหมด", allMenuSub: "แตะเลือกได้เลยครับ",
     talk: "แตะเพื่อพูด", talkSub: "หุ่นฟังจนคุณพูดจบเอง", listenTalk: "กำลังฟัง…", listenSub: "แตะอีกครั้งเมื่อพูดจบ",
@@ -59,7 +59,7 @@ const T = {
     cContact: "Contact us", cTrips: "Places to visit", cSouvenir: "Local souvenirs",
     cMapShort: "Map", cTripsShort: "Visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
     cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
-    cSouvenirSub: "OTOP and local food", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
+    cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
     botName: "Nong Tantawan-Bot", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
     backNews: "Back to news", allMenu: "All menus", allMenuTitle: "All menus", allMenuSub: "Tap to choose",
     talk: "Tap to speak", talkSub: "I'll listen until you finish", listenTalk: "Listening…", listenSub: "Tap again when done",
@@ -749,9 +749,11 @@ function speakPlace(it) {
   speakAnswer(text, "th");
 }
 function openMenu(b) {
-  const [sec, i, j] = (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem).split(":");
+  let [sec, i, j] = (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem).split(":");
   const s = menuData && menuData[sec];
   if (!s || !s.categories.length) return false;
+  const single = s.categories.length === 1;   // หมวดเดียว (เช่น ที่พัก) → ข้ามหน้าเลือกหมวด ไปรายชื่อเลย
+  if (i === undefined && single) i = "0";
   if (i === undefined) {
     menuStep(pick(s.label), '<div class="menu-grid">' +
       s.categories.map((c, k) => `<button type="button" class="menu-btn" data-menu-cat="${sec}:${k}"><em>${c.icon}</em><span>${L(c.label)}</span></button>`).join("") +
@@ -760,11 +762,11 @@ function openMenu(b) {
   }
   const c = s.categories[i];
   if (j === undefined) {
-    menuStep(`${c.icon} ${pick(c.label)}`, '<div class="menu-list">' +
+    menuStep(`${c.icon} ${pick(single ? s.label : c.label)}`, '<div class="menu-list">' +
       c.items.map((it, k) => `<button type="button" class="menu-item" data-menu-item="${sec}:${i}:${k}">` +
         (it.photo ? `<img src="${it.photo}" alt="">` : `<span class="m-icon">${c.icon}</span>`) +
         `<span><b>${L(it.name)}</b><small>${district(it.district)}</small></span></button>`).join("") +
-      "</div>", `data-menu="${sec}"`, t().menuItems);
+      "</div>", single ? 'data-action="allMenu"' : `data-menu="${sec}"`, t().menuItems);
     return true;
   }
   const it = c.items[j];

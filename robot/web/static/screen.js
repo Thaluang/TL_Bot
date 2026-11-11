@@ -22,7 +22,10 @@ const T = {
     cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
     cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง",
     cFood: "ร้านอาหาร", cFoodSub: "ก๋วยเตี๋ยว หมูกระทะ ตามสั่ง", cCafe: "คาเฟ่แนะนำ", cCafeSub: "กาแฟ ระบายสี 5 ร้าน",
-    cMarket: "ตลาด", cMarketSub: "ตลาดนัด ตลาดสด", cHighlight: "จุดเด่นวิทยาลัย", cHighlightSub: "อัตลักษณ์ รางวัล ทวิภาคี", openHours: "เวลาเปิด", tel: "โทร", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
+    cMarket: "ตลาด", cMarketSub: "ตลาดนัด ตลาดสด", cHighlight: "จุดเด่นวิทยาลัย", cHighlightSub: "อัตลักษณ์ รางวัล ทวิภาคี",
+    cGuide: "คู่มือการใช้งาน", cGuideSub: "วิธีใช้หุ่นทีละขั้น", cOverview: "ภาพรวมการทำงาน", cOverviewSub: "หุ่นทำงานอย่างไร",
+    guideMsg: "นี่คือคู่มือการใช้งานหุ่นครับ 📖 ดูรูปทางซ้ายได้เลย แตะรูปเพื่อขยายเต็มจอครับ",
+    overviewMsg: "นี่คือภาพรวมการทำงานของผมครับ ⚙️ ดูรูปทางซ้ายได้เลย แตะรูปเพื่อขยายเต็มจอครับ", openHours: "เวลาเปิด", tel: "โทร", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
     botName: "น้องทานตะวัน-Bot", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
     backNews: "กลับหน้าข่าว", allMenu: "เมนูทั้งหมด", allMenuTitle: "เมนูทั้งหมด", allMenuSub: "แตะเลือกได้เลยครับ",
     talk: "แตะเพื่อพูด", talkSub: "หุ่นฟังจนคุณพูดจบเอง", listenTalk: "กำลังฟัง…", listenSub: "แตะอีกครั้งเมื่อพูดจบ",
@@ -63,7 +66,10 @@ const T = {
     cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
     cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby",
     cFood: "Places to eat", cFoodSub: "Noodles, mookata, made-to-order", cCafe: "Cafés", cCafeSub: "Coffee and painting, 5 spots",
-    cMarket: "Markets", cMarketSub: "Evening and fresh markets", cHighlight: "College highlights", cHighlightSub: "Identity, awards, dual system", openHours: "Open", tel: "Tel.", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
+    cMarket: "Markets", cMarketSub: "Evening and fresh markets", cHighlight: "College highlights", cHighlightSub: "Identity, awards, dual system",
+    cGuide: "User guide", cGuideSub: "How to use me, step by step", cOverview: "How I work", cOverviewSub: "System overview",
+    guideMsg: "Here is my user guide 📖 See the picture on the left — tap it to view full screen.",
+    overviewMsg: "Here is how I work ⚙️ See the picture on the left — tap it to view full screen.", openHours: "Open", tel: "Tel.", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
     botName: "Nong Tantawan-Bot", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
     backNews: "Back to news", allMenu: "All menus", allMenuTitle: "All menus", allMenuSub: "Tap to choose",
     talk: "Tap to speak", talkSub: "I'll listen until you finish", listenTalk: "Listening…", listenSub: "Tap again when done",
@@ -813,6 +819,7 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (action === "showMap") { showMap(); return; }
+  if (action === "showGuide") { addMsg("bot", t()[b.dataset.msg] || "", { image: b.dataset.img }); return; }   // คู่มือเป็นรูป → ขึ้นแผงซ้ายเหมือนแผนผัง
   if (action === "campusTour") { openTour(); return; }
   askChip(b);
 });

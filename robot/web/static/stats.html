@@ -45,6 +45,15 @@
   .tab{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;font-size:.95rem}
   .tab:hover{background:#ffffff12}
   .tab.on{background:linear-gradient(135deg,var(--violet),var(--violet-2));color:#fff;box-shadow:0 8px 20px -10px var(--violet-2)}
+  /* ปุ่มคู่มือผู้ดูแลระบบ (รูป) + หน้าต่างดูรูปเต็มจอ */
+  .guide{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;font-size:.95rem;
+    margin-top:10px;border:1px dashed #ffffff40}
+  .guide:hover{background:#ffffff12}
+  .lightbox{position:fixed;inset:0;z-index:50;background:#0f0a24e6;display:none;overflow:auto;padding:56px 16px 24px}
+  .lightbox.on{display:block}
+  .lightbox img{display:block;margin:0 auto;width:100%;max-width:1055px;height:auto;border-radius:14px;box-shadow:0 20px 50px -20px #000}
+  .lightbox .bar{position:fixed;top:10px;right:14px;display:flex;gap:8px}
+  .lightbox .bar a,.lightbox .bar button{all:unset;cursor:pointer;background:#fff;color:#1e1b3a;border-radius:99px;padding:8px 16px;font-size:.95rem;font-weight:500}
   .who{margin-top:auto;font-size:.8rem;opacity:.75;border-top:1px solid #ffffff1a;padding-top:14px}
   .who button{all:unset;cursor:pointer;text-decoration:underline;margin-top:4px;display:inline-block}
 
@@ -146,8 +155,15 @@
   <div class="brand"><img src="/static/logo.jpg" alt="ตราวิทยาลัย"><div><b>น้องทานตะวัน-Bot</b><small>ห้องธุรการ</small></div></div>
   <button class="tab on" id="statsTab" data-view="stats">📊 สถิติการใช้งาน</button>
   <button class="tab" id="newsTab" data-view="news">📰 ข่าวประชาสัมพันธ์</button>
+  <button class="guide" id="adminGuideBtn" type="button">📖 คู่มือผู้ดูแลระบบ</button>
   <div class="who" id="who"></div>
 </aside>
+
+<!-- คู่มือผู้ดูแลระบบ: รูปเต็มจอ เลื่อนอ่านได้ (แตะพื้นหลังหรือ ✕ เพื่อปิด) -->
+<div class="lightbox" id="adminGuide" role="dialog" aria-label="คู่มือผู้ดูแลระบบ">
+  <div class="bar"><a href="/static/guides/admin-guide.jpg" target="_blank" rel="noopener">เปิดรูปเต็ม ↗</a><button type="button" id="adminGuideClose">✕ ปิด</button></div>
+  <img src="/static/guides/admin-guide.jpg" alt="คู่มือการใช้งานหุ่นยนต์น้องทานตะวัน-Bot สำหรับผู้ดูแลระบบ" loading="lazy">
+</div>
 
 <main>
   <!-- ===== สถิติ ===== -->
@@ -454,6 +470,17 @@ function refreshPreview() {
 addEventListener("resize", fitPreview);
 
 if (location.hash === "#news") showView("news");
+
+// ---- คู่มือผู้ดูแลระบบ (รูป) ----
+(() => {
+  const box = document.getElementById("adminGuide");
+  const open = () => { box.classList.add("on"); box.scrollTop = 0; };
+  const close = () => box.classList.remove("on");
+  document.getElementById("adminGuideBtn").addEventListener("click", open);
+  document.getElementById("adminGuideClose").addEventListener("click", close);
+  box.addEventListener("click", (e) => { if (e.target === box) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+})();
 </script>
 </body>
 </html>

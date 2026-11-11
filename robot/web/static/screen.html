@@ -70,6 +70,10 @@
 
   .head{display:flex;justify-content:space-between;align-items:center;padding:0 6px}
   .head h3{font-family:var(--head);font-weight:600;font-size:40px;display:flex;align-items:center;gap:14px}
+  .head-l{display:flex;align-items:center;gap:14px}
+  .guide-chip{all:unset;cursor:pointer;box-sizing:border-box;font:500 20px var(--head);color:var(--ink);background:#fff;border:1.5px solid #e6defb;
+    border-radius:999px;padding:9px 20px;white-space:nowrap;box-shadow:0 6px 16px -10px #4c1d9540}
+  .guide-chip:active{transform:scale(.97)}
   .head h3 .spark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#a78bfa,#f472b6);color:#fff}
   .pager{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:19px}
   .pager i{width:10px;height:10px;border-radius:99px;background:#d6ccf5;transition:width .3s}
@@ -348,7 +352,11 @@
           <div class="d" id="wxText">&nbsp;</div>
         </div>
       </div>
-      <div class="head"><h3><span class="spark">✦</span><span data-t="newsHead">ข่าวเด่นวันนี้</span></h3><div class="pager" id="pager"></div></div>
+      <div class="head"><div class="head-l"><h3><span class="spark">✦</span><span data-t="newsHead">ข่าวเด่นวันนี้</span></h3>
+        <!-- คู่มือเป็นรูป: แตะแล้วขึ้นแผงซ้ายเหมือนแผนผัง (แตะรูปอีกทีขยายเต็มจอ) -->
+        <button type="button" class="guide-chip" data-action="showGuide" data-img="/static/guides/user-guide.jpg" data-msg="guideMsg">📖 <span data-t="cGuide">คู่มือการใช้งาน</span></button>
+        <button type="button" class="guide-chip" data-action="showGuide" data-img="/static/guides/overview.jpg" data-msg="overviewMsg">⚙️ <span data-t="cOverview">ภาพรวมการทำงาน</span></button>
+      </div><div class="pager" id="pager"></div></div>
       <div class="news" id="newsGrid"></div>
     </div>
 

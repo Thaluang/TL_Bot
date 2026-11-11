@@ -9,6 +9,8 @@
   test      ไล่ทีละแกน ซ้าย → ขวา → คอ (30° แล้วกลับ)
   wave      ท่าทักทายจริง (สองแขนยก + โบก + จอด)
   pos       ดูตำแหน่งที่ ESP32 นับได้      zero   ท่าตอนนี้ = 0 (จัดแขนห้อยตรงก่อน)
+  lock      ล็อกตำแหน่ง (มอเตอร์ค้างแรงบิด แขนไม่ตก)          พิมพ์ ล็อก ก็ได้
+  free      ปลดแรงบิด (หมุนแขนด้วยมือได้ — ขยับแล้วต้อง zero ใหม่)  พิมพ์ ปลด ก็ได้
   park      กลับ 0 แล้วจอด                 q      จอดแล้วออก
 """
 import sys
@@ -25,7 +27,7 @@ def run(arms: StepperArms, line: str) -> bool:
     parts = line.strip().split()
     if not parts:
         return True
-    cmd = parts[0].upper()
+    cmd = {"ล็อก": "LOCK", "ล็อค": "LOCK", "ปลด": "FREE"}.get(parts[0], parts[0].upper())
     if cmd == "Q":
         arms.park()
         return False
@@ -46,6 +48,12 @@ def run(arms: StepperArms, line: str) -> bool:
         arms.wave()
     elif cmd == "ZERO":
         arms.zero()
+    elif cmd == "LOCK":
+        arms.enable(True)
+        print("  ล็อกแล้ว — มอเตอร์ค้างแรงบิดไว้ที่ตำแหน่งนี้")
+    elif cmd == "FREE":
+        arms.enable(False)
+        print("  ปลดแรงบิดแล้ว — หมุนแขนด้วยมือได้ ถ้าขยับไปจากเดิม จัดห้อยตรงแล้วพิมพ์ zero ก่อนสั่งต่อ")
     elif cmd == "PARK":
         arms.park()
     elif cmd != "POS":

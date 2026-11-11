@@ -234,3 +234,12 @@ def test_arm_test_commands():
     assert arm_test.run(a, "all 90") is True and esp.pos == {"L": 90.0, "R": 90.0, "N": 60.0}   # คอไม่เกิน 60
     assert arm_test.run(a, "อะไรก็ไม่รู้") is True                         # คำสั่งแปลก: ไม่พัง
     assert arm_test.run(a, "q") is False and esp.parked                    # ออก = จอดก่อน
+
+
+def test_arm_test_lock_and_free():
+    import arm_test
+    a, esp = arms()
+    assert arm_test.run(a, "lock") is True and esp.sent[-2].endswith("EN 1")   # [-1] คือ POS? ที่พิมพ์ตำแหน่ง
+    assert arm_test.run(a, "free") is True and esp.sent[-2].endswith("EN 0")
+    assert arm_test.run(a, "ล็อก") is True and esp.sent[-2].endswith("EN 1")    # คำไทยก็ได้
+    assert arm_test.run(a, "ปลด") is True and esp.sent[-2].endswith("EN 0")

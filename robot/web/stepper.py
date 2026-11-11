@@ -71,7 +71,15 @@ class EspLink:
             raise ArmError("NO_PORT", "ไม่เจอ ESP32 ที่ /dev/ttyUSB* หรือ /dev/ttyACM*")
         link = cls(serial.Serial(port, BAUD, timeout=0.1), **kw)
         time.sleep(1.5)
+        link.sync()
         return link
+
+    def sync(self):
+        """ส่งบรรทัดว่างหลัง ESP32 บูตเสร็จ — ตอนรีเซ็ตอาจมีเศษไบต์ค้างในบัฟเฟอร์ของ ESP32
+        ถ้าไม่ปิดบรรทัดไว้ก่อน เศษนั้นจะไปต่อหน้าคำสั่งแรก แล้วโดนตอบ #0 ERR BAD_CMD (คำสั่งแรกเลย TIMEOUT)"""
+        with self._lock:
+            self.ser.write(b"\n")
+        time.sleep(0.05)
 
     def _next_id(self) -> int:
         n = next(self._ids)
@@ -98,7 +106,7 @@ class EspLink:
                 continue
             if msg["kind"] == "EVT":
                 self.events = (self.events + [msg["code"]])[-20:]
-                print("[แขน] ESP32:", msg["text"])
+                print("[แขน] ESP32:", msg["text"], flush=True)
                 continue
             q = self._pending.get(msg["id"])
             if q:
@@ -163,10 +171,15 @@ class StepperArms:
     @classmethod
     def connect(cls, port=None):
         try:
-            return cls(EspLink.open(port))
+            arms = cls(EspLink.open(port))
         except Exception as e:
-            print(f"[แขน] ไม่ได้ต่อ ESP32 ({e}) — ใช้โหมดจำลอง")
+            print(f"[แขน] ไม่ได้ต่อ ESP32 ({e}) — ใช้โหมดจำลอง", flush=True)
             return cls(None)
+        st = arms.status()
+        print(f"[แขน] ต่อ ESP32 แล้ว: {st}", flush=True)
+        if st.get("connected") and not st.get("homed"):
+            print("[แขน] ⚠ ESP32 ไม่รู้ตำแหน่งแขน (ไม่ได้ PARK ก่อนปิด) — โบกไม่ได้จนกว่าจะจัดแขนห้อยตรงแล้วส่ง ZERO", flush=True)
+        return arms
 
     # ---- คำสั่งพื้นฐาน ----
     def move(self, L=None, R=None, N=None, speed=None, wait=True):
@@ -224,7 +237,9 @@ class StepperArms:
             for _ in range(self.WAVE_TIMES):
                 self.move(R=self.WAVE_A, speed=self.WAVE_SPEED)
                 self.move(R=self.WAVE_B, speed=self.WAVE_SPEED)
-            self.move(R=0, speed=self.SPEED)
+            # จบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) ไม่ใช่แค่ MOVE R=0:
+            # เซิร์ฟเวอร์เปิดพอร์ตใหม่เมื่อไร ESP32 รีเซ็ต ถ้าไม่ได้จอดไว้จะลืมตำแหน่ง แล้วตอบ NOT_PARKED ทุกท่า
+            self.park()
 
     def look(self, deg: float):
         """หันคอ (+ ซ้าย / − ขวา ตามทิศที่ติดตั้ง)"""
@@ -239,6 +254,6 @@ class StepperArms:
             try:
                 self.wave()
             except ArmError as e:
-                print("[แขน] โบกไม่ได้:", e)
+                print("[แขน] โบกไม่ได้:", e, flush=True)
         threading.Thread(target=run, daemon=True).start()
         return True

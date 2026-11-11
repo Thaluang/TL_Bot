@@ -25,6 +25,8 @@ class FakeEsp:
     def write(self, data: bytes):
         line = data.decode().strip()
         self.sent.append(line)
+        if not line:                     # บรรทัดว่าง: เฟิร์มแวร์จริงข้ามไป
+            return len(data)
         if self.silent:
             return len(data)
         tag, _, rest = line.partition(" ")
@@ -125,11 +127,14 @@ def test_no_reply_times_out():
     assert e.value.code == "TIMEOUT"
 
 
-def test_wave_ends_with_arm_back_down():
+def test_wave_ends_parked():
+    """โบกจบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) — เปิดพอร์ตใหม่ ESP32 รีเซ็ต ยังรู้ตำแหน่ง ไม่ติด NOT_PARKED"""
     a, esp = arms()
     a.wave()
-    moves = [s for s in esp.sent if " MOVE " in s]
-    assert len(moves) >= 4 and moves[-1].split(" MOVE ")[1].startswith("R=0.0")
+    cmds = [s.split(" ", 1)[1] for s in esp.sent if s and "PING" not in s]
+    assert len([c for c in cmds if c.startswith("MOVE")]) >= 4
+    assert cmds[-1] == "PARK"
+    assert esp.parked and esp.pos == {"L": 0.0, "R": 0.0, "N": 0.0}
 
 
 def test_park_and_status():
@@ -145,3 +150,11 @@ def test_simulated_when_no_esp32():
     a = StepperArms(None)                 # ไม่มีบอร์ด: ทำงานต่อได้ แค่พิมพ์บอก
     a.move(L=90); a.wave(); a.park()
     assert a.status()["simulated"] is True
+
+
+def test_sync_flushes_boot_junk_with_blank_line():
+    """เปิดพอร์ตแล้ว ESP32 อาจมีเศษไบต์ค้างตอนรีเซ็ต — sync() ส่งบรรทัดว่างปิดท้ายเศษนั้นก่อนคำสั่งแรก"""
+    a, esp = arms()
+    a.link.sync()
+    assert esp.sent[0] == ""
+    assert a.status()["connected"] is True

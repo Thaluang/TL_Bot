@@ -27,7 +27,7 @@ from places import photos_for, menu_tree                       # noqa: E402
 import json                                                    # noqa: E402
 import queue                                                   # noqa: E402
 from gpio_btn import GpioButton                                # noqa: E402
-from arm import Arm                                            # noqa: E402
+from stepper import StepperArms                                # noqa: E402
 from stats import Stats                                        # noqa: E402
 from announce import load_announcements, due_announcements    # noqa: E402
 from qr import load_qr_codes, resolve as resolve_qr            # noqa: E402
@@ -52,7 +52,8 @@ LANGS = ("th", "en")                    # ภาษาที่จอเนื�
 
 button_queue: queue.Queue = queue.Queue()
 _gpio = GpioButton(button_queue)
-arm = Arm()
+# แขน 2 ข้าง + คอ (สเต็ปเปอร์ผ่าน ESP32 ทางสาย USB) — ไม่เจอบอร์ด = โหมดจำลอง (พิมพ์บอก ไม่ขยับ)
+arm = StepperArms.connect()
 # ข้อมูลที่ต้องอยู่รอดหลังรีบูต (ข่าว รูป สถิติ) — บน Pi อยู่บนแฟลชไดรฟ์ (ดู datadir.py)
 DATA = DataDir(*resolve_data_dir(os.environ, [Path("/media")], ROBOT_DIR / "data"))
 print(f"[data] เก็บข้อมูลที่ {DATA.folder}" + ("" if DATA.persistent else " (ชั่วคราว — รีบูตแล้วหาย)"))
@@ -229,8 +230,9 @@ def ask_stream():
 
 @app.post("/greet")
 def greet():
-    """โบกมือ 1 รอบ (จอเนื้อหาเป็นคนเรียก พร้อมกับพูดคำทักทายเอง)"""
-    return jsonify(ok=True, waving=arm.wave())
+    """โบกมือ 1 รอบ (จอเนื้อหาเป็นคนเรียก พร้อมกับพูดคำทักทายเอง) — โบกใน thread แยก ตอบจอทันที
+    waving=False: กำลังโบกอยู่แล้ว (ไม่โบกซ้อน)"""
+    return jsonify(ok=True, waving=arm.wave_async())
 
 
 # ---- เสียงพูด AI: GET /tts?lang=th&text=… → ไฟล์เสียง (หน้าจอใช้ <audio src> เล่นได้ทันทีที่ท่อนแรกมาถึง) ----

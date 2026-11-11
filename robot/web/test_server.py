@@ -458,7 +458,7 @@ class FakeArm:
         self.calls = 0
         self.ok = ok
 
-    def wave(self):
+    def wave_async(self):          # แขนสเต็ปเปอร์ผ่าน ESP32 (stepper.StepperArms)
         self.calls += 1
         return self.ok
 
@@ -508,6 +508,13 @@ def test_screen_greets_as_male_tantawan():
     assert "ผมชื่อน้องทานตะวัน-Bot" in js and "ทีแอลบอท" not in js
     assert "หนู" not in js and "ค่ะ" not in js
     assert "/greet" in js
+
+
+def test_tapping_attract_video_always_greets():
+    """แตะคลิปหน้ารอ ("แตะจอเพื่อถามหุ่นยนต์") → แขนโบกทักทุกครั้ง ไม่ต้องรอครบเวลาเงียบ"""
+    c = make_client()
+    js = c.get("/static/screen.js").data.decode("utf-8")
+    assert "if (quiet || attractOn) greet();" in js
 
 
 # ---- สถิติ: เก็บคำถาม + ให้ดาว ----
@@ -783,7 +790,8 @@ def test_stats_db_lives_in_data_dir():
 
 
 def test_config_defaults_for_kiosk():
-    assert server.config.IDLE_VIDEO_SECONDS == 180
+    assert server.config.IDLE_VIDEO_SECONDS == 60          # เท่ากับ GREET_IDLE_SECONDS: คลิปขึ้นพร้อมจังหวะที่แขนพร้อมโบกทัก
+    assert server.config.IDLE_VIDEO_SECONDS == server.config.GREET_IDLE_SECONDS
     assert hasattr(server.config, "ADMIN_PASSWORD")
 
 

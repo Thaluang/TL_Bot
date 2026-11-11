@@ -535,7 +535,9 @@ function onActivity(e) {
   const quiet = Date.now() - lastActive > GREET_IDLE_MS;
   lastActive = Date.now();
   if (e && e.target.closest && e.target.closest('[data-action="newChat"]')) return;
-  if (quiet) greet();
+  // แตะคลิปหน้ารอ ("แตะจอเพื่อถามหุ่นยนต์") = มีคนมาใหม่ → โบกทักเสมอ
+  // (ดักแบบ capture จึงทำงานก่อน stopAttract — attractOn ยังเป็น true ตอนนี้)
+  if (quiet || attractOn) greet();
 }
 document.addEventListener("pointerdown", onActivity, true);
 document.addEventListener("keydown", onActivity, true);
@@ -891,7 +893,7 @@ evtSrc.onmessage = (e) => {
 // ---- โหมดรอ: ไม่มีใครใช้นาน → เปิดวิดีโอวนเต็มจอ, แตะจอ/เซนเซอร์เจอคน → กลับหน้าถามตอบ (เริ่มคุยใหม่) ----
 // วิดีโอมาจาก /attract (ไฟล์ใน web/static/videos/) ไม่มีวิดีโอ = โชว์ตราวิทยาลัยแทน
 const attractEl = $("attract"), video = attractEl.querySelector("video");
-let attractCfg = { videos: [], after: 90 }, attractOn = false, vidIdx = 0, vidFails = 0;
+let attractCfg = { videos: [], after: 60 }, attractOn = false, vidIdx = 0, vidFails = 0;
 fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {});
 
 // จอว่างนาน → วิดีโอหน้ารอเล่นวน (หลายคลิปเล่นต่อกัน) จนกว่าจะมีคนแตะจอ
@@ -933,7 +935,7 @@ document.addEventListener("pointerdown", () => { cleared = false; }, true);
 setInterval(() => {
   if (attractOn || state !== "idle" || listening || greeting || announcing) return;
   // เปิดทัวร์ทิ้งไว้: ให้เวลานานกว่าปกติ (ทัวร์อัตโนมัติยาว ~3-4 นาที) แล้วค่อยปิด
-  const after = (attractCfg.after || 180) * 1000, limit = tourOpen ? Math.max(after, tourIdleMs) : after;
+  const after = (attractCfg.after || 60) * 1000, limit = tourOpen ? Math.max(after, tourIdleMs) : after;
   if (Date.now() - idleSince > limit) {
     closeTour();
     if (!cleared) { newChat(); cleared = true; }   // คนต่อไปเริ่มหน้าใหม่ ไม่เห็นบทสนทนาของคนก่อน

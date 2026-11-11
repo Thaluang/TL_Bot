@@ -146,6 +146,8 @@ void cmdPark(long id) {
 }
 
 void handleLine(char *line) {
+  char *hash = strchr(line, '#');                    // ข้ามเศษไบต์ที่อาจค้างหน้าคำสั่ง (เช่นตอนรีเซ็ต)
+  if (hash) line = hash;
   if (line[0] != '#') { Serial.println("#0 ERR BAD_CMD ต้องขึ้นต้นด้วย #<id>"); return; }
   char *sp = strchr(line, ' ');
   if (!sp) { Serial.println("#0 ERR BAD_CMD"); return; }

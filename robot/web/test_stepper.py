@@ -132,7 +132,9 @@ def test_wave_ends_parked():
     a, esp = arms()
     a.wave()
     cmds = [s.split(" ", 1)[1] for s in esp.sent if s and "PING" not in s]
-    assert len([c for c in cmds if c.startswith("MOVE")]) >= 4
+    moves = [c for c in cmds if c.startswith("MOVE")]
+    assert len(moves) >= 4
+    assert all("L=" in m and "R=" in m for m in moves)   # ทักทายด้วยแขนทั้งสองข้างพร้อมกัน
     assert cmds[-1] == "PARK"
     assert esp.parked and esp.pos == {"L": 0.0, "R": 0.0, "N": 0.0}
 
@@ -221,3 +223,23 @@ def test_silent_board_timeout_drops_link():
     with pytest.raises(ArmError):
         a.wave()
     assert a.link is None
+
+
+# ---- arm_test.py (สคริปต์ทดสอบแขนด้วยมือ) ----
+def test_arm_test_commands():
+    import arm_test
+    a, esp = arms()
+    assert arm_test.run(a, "L 30") is True and esp.pos["L"] == 30.0
+    assert arm_test.run(a, "n -20") is True and esp.pos["N"] == -20.0     # ตัวพิมพ์เล็กก็ได้ ติดลบได้
+    assert arm_test.run(a, "all 90") is True and esp.pos == {"L": 90.0, "R": 90.0, "N": 60.0}   # คอไม่เกิน 60
+    assert arm_test.run(a, "อะไรก็ไม่รู้") is True                         # คำสั่งแปลก: ไม่พัง
+    assert arm_test.run(a, "q") is False and esp.parked                    # ออก = จอดก่อน
+
+
+def test_arm_test_lock_and_free():
+    import arm_test
+    a, esp = arms()
+    assert arm_test.run(a, "lock") is True and esp.sent[-2].endswith("EN 1")   # [-1] คือ POS? ที่พิมพ์ตำแหน่ง
+    assert arm_test.run(a, "free") is True and esp.sent[-2].endswith("EN 0")
+    assert arm_test.run(a, "ล็อก") is True and esp.sent[-2].endswith("EN 1")    # คำไทยก็ได้
+    assert arm_test.run(a, "ปลด") is True and esp.sent[-2].endswith("EN 0")

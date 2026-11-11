@@ -1107,3 +1107,37 @@ def test_admission_link_is_real_not_demo():
 def test_wat_tako_and_crocodile_farm_in_trips():
     names = [e["ชื่อ"] for cat in server.saraburi_data["ท่องเที่ยวสระบุรี"].values() for e in cat]
     assert "วัดตะโก" in names and "ฟาร์มจระเข้ศรีอยุธยา" in names
+
+
+def test_admin_page_installable_as_app():
+    """หน้าหลังบ้าน (/stats) ติดตั้งเป็นแอปบนมือถือ/คอมได้: manifest + ไอคอน + ค่า iPhone"""
+    import json
+    c = make_client()
+    html = c.get("/stats").get_data(as_text=True)
+    assert '<link rel="manifest" href="/static/admin.webmanifest">' in html
+    assert 'name="apple-mobile-web-app-capable" content="yes"' in html
+    assert 'rel="apple-touch-icon"' in html
+    r = c.get("/static/admin.webmanifest")
+    assert r.status_code == 200
+    m = json.loads(r.get_data(as_text=True))
+    assert m["start_url"] == "/stats" and m["display"] == "standalone"
+    for icon in m["icons"]:
+        assert c.get(icon["src"]).status_code == 200, icon["src"]
+    assert {i["sizes"] for i in m["icons"]} >= {"192x192", "512x512"}
+
+
+def test_guides_for_users_and_admin():
+    """คู่มือเป็นรูป: จอหุ่นมีปุ่มคู่มือผู้ใช้ + ภาพรวมการทำงาน ข้างหัวข้อ "ข่าวเด่นวันนี้" (ไม่อยู่ในเมนู)
+    · หน้า /stats มีปุ่มคู่มือผู้ดูแลระบบ"""
+    c = make_client()
+    html = c.get("/screen").get_data(as_text=True)
+    head = html[html.index("ข่าวเด่นวันนี้"):html.index('id="newsGrid"')]
+    tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    for img in ("/static/guides/user-guide.jpg", "/static/guides/overview.jpg"):
+        assert f'data-img="{img}"' in head, img
+        assert img not in tpl, img
+        assert c.get(img).status_code == 200, img
+    assert 'action === "showGuide"' in c.get("/static/screen.js").get_data(as_text=True)
+    stats = c.get("/stats").get_data(as_text=True)
+    assert 'id="adminGuideBtn"' in stats and "/static/guides/admin-guide.jpg" in stats
+    assert c.get("/static/guides/admin-guide.jpg").status_code == 200

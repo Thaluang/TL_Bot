@@ -1107,3 +1107,20 @@ def test_admission_link_is_real_not_demo():
 def test_wat_tako_and_crocodile_farm_in_trips():
     names = [e["ชื่อ"] for cat in server.saraburi_data["ท่องเที่ยวสระบุรี"].values() for e in cat]
     assert "วัดตะโก" in names and "ฟาร์มจระเข้ศรีอยุธยา" in names
+
+
+def test_admin_page_installable_as_app():
+    """หน้าหลังบ้าน (/stats) ติดตั้งเป็นแอปบนมือถือ/คอมได้: manifest + ไอคอน + ค่า iPhone"""
+    import json
+    c = make_client()
+    html = c.get("/stats").get_data(as_text=True)
+    assert '<link rel="manifest" href="/static/admin.webmanifest">' in html
+    assert 'name="apple-mobile-web-app-capable" content="yes"' in html
+    assert 'rel="apple-touch-icon"' in html
+    r = c.get("/static/admin.webmanifest")
+    assert r.status_code == 200
+    m = json.loads(r.get_data(as_text=True))
+    assert m["start_url"] == "/stats" and m["display"] == "standalone"
+    for icon in m["icons"]:
+        assert c.get(icon["src"]).status_code == 200, icon["src"]
+    assert {i["sizes"] for i in m["icons"]} >= {"192x192", "512x512"}

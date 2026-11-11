@@ -162,7 +162,7 @@ class StepperArms:
     """สั่งแขน/คอเป็นองศา + ท่าทางสำเร็จรูป
     link=None + opener=None คือโหมดจำลอง (เทสต์/คอม) · มี opener = ยังไม่เจอบอร์ด แต่จะลองต่อเองตอนจะโบก"""
 
-    WAVE_UP, WAVE_A, WAVE_B, WAVE_TIMES = 150, 120, 165, 3   # แขนขวา: ยก แล้วโบกไปมา
+    WAVE_UP, WAVE_A, WAVE_B, WAVE_TIMES = 150, 120, 165, 3   # แขนทั้งสองข้าง: ยกขึ้นพร้อมกัน แล้วโบกไปมา
     SPEED, WAVE_SPEED = 60, 120                               # องศา/วินาที
     RETRY = 5.0                                               # ไม่เจอบอร์ด: ลองหาใหม่ห่างกันอย่างน้อยกี่วินาที
 
@@ -257,15 +257,16 @@ class StepperArms:
 
     # ---- ท่าทาง ----
     def wave(self):
-        """โบกมือขวา: ยกแขน → โบกไปมา → วางแขนลง"""
+        """ทักทายด้วยแขนทั้งสองข้าง: ยกขึ้นพร้อมกัน → โบกไปมา → จอด
+        (+ = ยกขึ้นทั้งสองข้าง เพราะเฟิร์มแวร์กลับทิศแขนขวาไว้แล้ว)"""
         with self._gesture:
             if self._ensure_link() is None and self._opener is not None:
                 return                      # ยังไม่ได้เสียบบอร์ด: ข้ามท่า (หน้าจอทักทายต่อได้ตามปกติ)
             try:
-                self.move(R=self.WAVE_UP, speed=self.SPEED)
+                self.move(L=self.WAVE_UP, R=self.WAVE_UP, speed=self.SPEED)
                 for _ in range(self.WAVE_TIMES):
-                    self.move(R=self.WAVE_A, speed=self.WAVE_SPEED)
-                    self.move(R=self.WAVE_B, speed=self.WAVE_SPEED)
+                    self.move(L=self.WAVE_A, R=self.WAVE_A, speed=self.WAVE_SPEED)
+                    self.move(L=self.WAVE_B, R=self.WAVE_B, speed=self.WAVE_SPEED)
                 # จบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) ไม่ใช่แค่ MOVE R=0:
                 # เซิร์ฟเวอร์เปิดพอร์ตใหม่เมื่อไร ESP32 รีเซ็ต ถ้าไม่ได้จอดไว้จะลืมตำแหน่ง แล้วตอบ NOT_PARKED ทุกท่า
                 self.park()

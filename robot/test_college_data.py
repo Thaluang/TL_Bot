@@ -38,3 +38,14 @@ def test_programs_follow_sar_2568():
     assert len(pvc) == 13 and len(pvs) == 13
     assert "ยานยนต์ไฟฟ้า" in pvc and "เมคคาทรอนิกส์และหุ่นยนต์" in pvs
     assert "สาขาวิชาเครื่องมือกลและซ่อมบำรุง" not in progs["ปวช"]   # ชื่อเดิมจากเว็บไซต์
+
+
+def test_presentation_document_reaches_ai_prompt():
+    """ข้อมูลจากเอกสาร นำเสนอวิทยาลัย.docx — ประวัติ จุดเด่น ผลงาน ภาคีเครือข่าย บริการชุมชน"""
+    data = load_college_data()
+    works = [w["ผลงาน"] for w in data["ผลงานและรางวัล"]["รายการ"]]
+    assert "สมาร์ทฟาร์มต้นไม้ใบด่างด้วยเทคโนโลยี IoT" in works and "ทีมเซปักตะกร้อหญิง" in works
+    assert data["ภาคีเครือข่าย"]["รวมมูลค่าการสนับสนุน"].startswith("6,320,000")
+    prompt = format_all_data(data, {}, sar_text="")
+    for text in ("ปี พ.ศ. 2527", "โรงเรียนโรงงาน", "Fix it Center", "สมาร์ทนา", "MOU"):
+        assert text in prompt

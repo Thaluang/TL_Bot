@@ -149,7 +149,7 @@ def test_screen_has_quick_questions():
     assert screen.status_code == 200
     html = screen.data.decode("utf-8")
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
-    assert dock.count('class="chip') == 4      # ชิปแนะนำ 4 ปุ่ม (จุดเด่นวิทยาลัย/สมัครเรียน/สถานที่ท่องเที่ยว/แผนผัง) — หลักสูตรอยู่ในเมนูทั้งหมด
+    assert dock.count('class="chip') == 4      # ชิปแนะนำ 4 ปุ่ม (ผลงานรางวัล/สมัครเรียน/สถานที่ท่องเที่ยว/แผนผัง) — หลักสูตรอยู่ในเมนูทั้งหมด
 
 
 # ---------- wayfinding ----------
@@ -976,8 +976,8 @@ def test_dock_chips_and_all_menu():
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
     assert 'data-action="showMap"' in dock and 'data-menu="trips"' in dock
     assert "สมัครเรียน" in dock and "หลักสูตร" not in dock and "สถานที่ท่องเที่ยว" in dock
-    # ลำดับ: จุดเด่นวิทยาลัย → สมัครเรียน → สถานที่ท่องเที่ยว → แผนผัง
-    assert (dock.index("จุดเด่นวิทยาลัย") < dock.index("สมัครเรียน") < dock.index('data-menu="trips"')
+    # ลำดับ: ผลงานรางวัล → สมัครเรียน → สถานที่ท่องเที่ยว → แผนผัง
+    assert (dock.index("ผลงานรางวัล") < dock.index("สมัครเรียน") < dock.index('data-menu="trips"')
             < dock.index('data-action="showMap"'))
     tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
     for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-menu="stay"', 'data-menu="food"', 'data-menu="cafe"', 'data-menu="market"',
@@ -1087,13 +1087,13 @@ def test_idle_video_loops_until_tap():
 
 
 def test_new_chat_button_under_ready_led():
-    """ปุ่มคุยใหม่อยู่หัวแชท ใต้ป้าย "พร้อมคุย" — ไม่ซ่อนในเมนูทั้งหมดแล้ว ช่องนั้นเป็นจุดเด่นวิทยาลัยแทน"""
+    """ปุ่มคุยใหม่อยู่หัวแชท ใต้ป้าย "พร้อมคุย" — ไม่ซ่อนในเมนูทั้งหมดแล้ว ช่องนั้นเป็นผลงานรางวัลแทน"""
     html = make_client().get("/screen").get_data(as_text=True)
     head = html[html.index('class="chat-panel'):html.index('id="scroll"')]
     assert head.index('class="led"') < head.index('data-action="newChat"')
     tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
     assert 'data-action="newChat"' not in tpl
-    assert 'data-q="วิทยาลัยมีจุดเด่นอะไรบ้าง"' in tpl
+    assert 'data-q="วิทยาลัยมีผลงานและรางวัลอะไรบ้าง"' in tpl
 
 
 def test_admission_link_is_real_not_demo():

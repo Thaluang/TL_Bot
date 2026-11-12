@@ -96,7 +96,7 @@
   .empty{color:var(--muted);font-size:.9rem;padding:8px 0}
 
   /* ---- ข่าว ---- */
-  .login{max-width:420px}
+  .login{max-width:420px;margin-bottom:16px}
   .login form{display:flex;gap:10px;margin-top:12px}
   .news-grid{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:20px;align-items:start}
   @media (max-width:1100px){.news-grid{grid-template-columns:1fr}}
@@ -123,7 +123,7 @@
   .check{display:flex;gap:8px;align-items:center;font-size:.9rem}
   .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
   .btn{all:unset;cursor:pointer;font-family:Kanit,sans-serif;font-size:1rem;border-radius:12px;padding:10px 24px;
-    background:linear-gradient(135deg,#6d28d9,var(--violet-2));color:#fff;box-shadow:0 10px 20px -12px var(--violet)}
+    background:linear-gradient(135deg,#6d28d9,var(--violet-2));color:#fff;box-shadow:0 10px 20px -12px var(--violet);white-space:nowrap}
   .btn.g{background:#fff;color:#5b21b6;border:1.5px solid #d8ccfb;box-shadow:none}
   .btn:disabled,.btn[aria-busy="true"]{opacity:.55;pointer-events:none}
   .msg{font-size:.9rem;margin-top:10px;min-height:1.4em}.msg.bad{color:var(--low)}.msg.good{color:var(--ok)}
@@ -146,6 +146,27 @@
   .st.on{background:#dcfce7;color:#15803d}.st.wait{background:#fef3c7;color:#b45309}.st.off{background:#f1f1f5;color:#80809a}
   .acts{display:flex;gap:6px}
   .it.editing{background:#faf7ff;border-radius:12px}
+  .gi{display:grid;grid-template-columns:76px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+  .gi:first-child{border-top:0}
+  .gi .dd{height:64px;border-radius:12px;background:var(--c1b);color:var(--c1);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;font-family:Kanit,sans-serif}
+  .gi .dd b{font-size:1.4rem}.gi .dd small{font-size:.75rem}
+  .gi.past{opacity:.55}.gi.editing{background:#faf7ff;border-radius:12px}
+  .gi b.t{font-family:Kanit,sans-serif;font-weight:500;display:block;overflow-wrap:anywhere}
+  .gi small.s{color:var(--muted);font-size:.8rem}
+  .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .thumbs figure{position:relative;border-radius:12px;overflow:hidden;background:#efeaff;border:1px solid var(--line)}
+  .thumbs img{display:block;width:100%;height:110px;object-fit:cover}
+  .thumbs figcaption{font-size:.75rem;padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+  .thumbs button{all:unset;cursor:pointer;position:absolute;right:6px;top:6px;width:30px;height:30px;border-radius:9px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px #0003}
+  .lv{font-size:.8rem;border-radius:999px;padding:2px 9px;background:var(--c4b);color:var(--c4);white-space:nowrap}
+  a.btn{text-decoration:none}
+  .tbl-wrap{overflow-x:auto}
+  .sv-tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+  .sv-tbl th{text-align:left;font-weight:500;color:var(--muted);font-size:.8rem;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .sv-tbl td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  .sv-tbl td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sv-tbl td.stg{color:var(--violet);white-space:nowrap;font-size:.82rem}
+  .sv-tbl tr.sum td{font-weight:600;background:var(--surface-2)}
   @media (max-width:760px){body{grid-template-columns:1fr}aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}
     .brand{margin:0 12px 0 0}.who{margin:0 0 0 auto;border:0;padding:0}main{padding:20px 14px}}
 </style>
@@ -155,6 +176,9 @@
   <div class="brand"><img src="/static/logo.jpg" alt="ตราวิทยาลัย"><div><b>น้องทานตะวัน-Bot</b><small>ห้องธุรการ</small></div></div>
   <button class="tab on" id="statsTab" data-view="stats">📊 สถิติการใช้งาน</button>
   <button class="tab" id="newsTab" data-view="news">📰 ข่าวประชาสัมพันธ์</button>
+  <button class="tab" id="guidanceTab" data-view="guidance">📅 ปฏิทินแนะแนว</button>
+  <button class="tab" id="galleryTab" data-view="gallery">🖼️ คลังภาพกิจกรรม</button>
+  <button class="tab" id="surveyTab" data-view="survey">📝 ผลแบบประเมิน</button>
   <button class="guide" id="adminGuideBtn" type="button">📖 คู่มือผู้ดูแลระบบ</button>
   <div class="who" id="who"></div>
 </aside>
@@ -166,6 +190,13 @@
 </div>
 
 <main>
+  <!-- ใส่รหัสครั้งเดียว ใช้ได้ทุกแท็บที่แก้ข้อมูล (ข่าว / ปฏิทินแนะแนว / คลังภาพ) -->
+  <div class="card login" id="loginBox" hidden>
+    <h2>🔒 ใส่รหัสก่อนแก้ข้อมูล</h2>
+    <p class="hint" id="loginHint">รหัสเดียวกับที่ตั้งไว้ในเครื่องหุ่น (ใส่ครั้งเดียว เบราว์เซอร์นี้จะจำไว้)</p>
+    <form id="loginForm"><input class="inp" type="password" id="pw" autocomplete="current-password" placeholder="รหัสหน้าครู"><button class="btn" type="submit">เข้าสู่ระบบ</button></form>
+    <div class="msg bad" id="loginMsg"></div>
+  </div>
   <!-- ===== สถิติ ===== -->
   <section class="view on" id="view-stats">
     <div class="title"><div><h1>สถิติการใช้งาน</h1><p>วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</p></div><div class="updated" id="updated">กำลังโหลด…</div></div>
@@ -188,13 +219,6 @@
       <div class="counts" id="counts"></div></div>
     <div class="warn" id="storageWarn">⚠️ ตอนนี้หุ่นยังไม่เจอแฟลชไดรฟ์ — ข่าวและรูปที่ลงจะหายเมื่อปิด/รีบูตเครื่อง เสียบแฟลชไดรฟ์ที่ Pi แล้วรีบูตก่อนลงข่าวจริง</div>
     <div class="err" id="newsErr"></div>
-
-    <div class="card login" id="loginBox" hidden>
-      <h2>🔒 ใส่รหัสก่อนแก้ข่าว</h2>
-      <p class="hint" id="loginHint">รหัสเดียวกับที่ตั้งไว้ในเครื่องหุ่น (ใส่ครั้งเดียว เบราว์เซอร์นี้จะจำไว้)</p>
-      <form id="loginForm"><input class="inp" type="password" id="pw" autocomplete="current-password" placeholder="รหัสหน้าครู"><button class="btn" type="submit">เข้าสู่ระบบ</button></form>
-      <div class="msg bad" id="loginMsg"></div>
-    </div>
 
     <div class="news-grid" id="newsArea" hidden>
       <form class="card" id="newsForm" autocomplete="off">
@@ -233,6 +257,70 @@
       </div>
     </div>
   </section>
+
+  <!-- ===== ปฏิทินแนะแนว ===== -->
+  <section class="view" id="view-guidance">
+    <div class="title"><div><h1>ปฏิทินแนะแนวการศึกษา</h1><p>วันที่ลงไว้จะขึ้นในปฏิทินบนจอหุ่น (ปุ่ม 📅 ปฏิทินแนะแนว) และหุ่นตอบได้ว่าแนะแนววันไหน</p></div></div>
+    <div class="err" id="gErr"></div>
+    <div class="news-grid admin-area" id="gArea" hidden>
+      <form class="card" id="gForm" autocomplete="off">
+        <h2 id="gFormTitle">📅 เพิ่มวันแนะแนว</h2>
+        <div class="two">
+          <div class="f"><label for="g-date">วันที่แนะแนว</label><input class="inp" type="date" id="g-date" required></div>
+          <div class="f"><label for="g-end">ถึงวันที่ <small>(หลายวัน — ไม่ใส่ก็ได้)</small></label><input class="inp" type="date" id="g-end"></div>
+        </div>
+        <div class="f"><label for="g-title">ชื่องาน / โรงเรียนที่ไปแนะแนว</label><input class="inp" id="g-title" maxlength="100" required placeholder="เช่น แนะแนวศึกษาต่อ ร.ร.เสาไห้ฯ"></div>
+        <div class="two">
+          <div class="f"><label for="g-time">เวลา</label><input class="inp" id="g-time" maxlength="40" placeholder="เช่น 09.00–12.00 น."></div>
+          <div class="f"><label for="g-place">สถานที่</label><input class="inp" id="g-place" maxlength="100" placeholder="เช่น หอประชุมโรงเรียน"></div>
+        </div>
+        <div class="f"><label for="g-detail">รายละเอียด <small>(ไม่ใส่ก็ได้ — หุ่นอ่านให้ฟังเมื่อแตะ)</small></label><textarea class="inp" id="g-detail" maxlength="500"></textarea></div>
+        <div class="btns"><button class="btn" type="submit" id="gSave">บันทึก</button><button class="btn g" type="button" id="gCancel" hidden>ยกเลิกการแก้</button></div>
+        <div class="msg" id="gMsg"></div>
+      </form>
+      <div class="card"><h2>📋 กำหนดการทั้งหมด</h2><p class="hint">เรียงตามวันที่ · ที่ผ่านไปแล้วจอหุ่นยังโชว์ในปฏิทินเป็นสีจาง</p><div id="gList"></div></div>
+    </div>
+  </section>
+
+  <!-- ===== คลังภาพกิจกรรม ===== -->
+  <section class="view" id="view-gallery">
+    <div class="title"><div><h1>คลังภาพกิจกรรมน้องทานตะวัน-Bot</h1><p>รูปที่เพิ่มจะขึ้นบนจอหุ่น (ปุ่ม 🖼️ คลังภาพกิจกรรม) จัดกลุ่มตามชื่อกิจกรรม</p></div><div class="counts" id="phCount"></div></div>
+    <div class="err" id="phErr"></div>
+    <div class="news-grid admin-area" id="phArea" hidden>
+      <form class="card" id="phForm" autocomplete="off">
+        <h2>🖼️ เพิ่มรูปกิจกรรม</h2>
+        <div class="f"><label for="ph-title">ชื่อกิจกรรม <small>(ชื่อเดียวกัน = อัลบั้มเดียวกัน)</small></label><input class="inp" id="ph-title" maxlength="100" required list="phAlbums" placeholder="เช่น น้องทานตะวัน-Bot ต้อนรับผู้ปกครอง"><datalist id="phAlbums"></datalist></div>
+        <div class="f"><label for="ph-date">วันที่จัดกิจกรรม <small>(ไม่ใส่ก็ได้)</small></label><input class="inp" type="date" id="ph-date"></div>
+        <div class="f"><span class="lbl">รูป <small>(เลือกได้หลายรูปพร้อมกัน — ระบบย่อรูปให้เอง)</small></span>
+          <div class="drop" id="phDrop"><div class="ph">📷</div><div><span id="phNames">ลากรูปมาวาง หรือแตะเพื่อเลือกไฟล์</span><small>JPG / PNG</small></div></div>
+          <input type="file" id="ph-files" accept="image/jpeg,image/png,image/webp" multiple hidden></div>
+        <div class="btns"><button class="btn" type="submit" id="phSave">อัปโหลดรูป</button></div>
+        <div class="msg" id="phMsg"></div>
+      </form>
+      <div class="card"><h2>📋 รูปทั้งหมด</h2><p class="hint">รูปใหม่ขึ้นก่อน · กด 🗑️ เพื่อลบ</p><div class="thumbs" id="phList"></div></div>
+    </div>
+  </section>
+
+  <!-- ===== ผลแบบประเมิน ===== -->
+  <section class="view" id="view-survey">
+    <div class="title"><div><h1>ผลแบบประเมินความพึงพอใจ</h1><p>คนตอบบนจอหุ่น (ปุ่ม 📝 แบบประเมิน) · มาตราส่วน 5 ระดับ</p></div>
+      <a class="btn g" href="/survey.csv" download>⬇️ ดาวน์โหลด Excel (CSV)</a></div>
+    <div class="err" id="svErr">โหลดผลแบบประเมินไม่ได้ — เซิร์ฟเวอร์หุ่นเปิดอยู่ไหม?</div>
+    <section class="kpis">
+      <div class="card kpi"><div class="label">จำนวนผู้ตอบ</div><div class="value" id="svTotal">–</div><div class="sub" id="svToday">&nbsp;</div></div>
+      <div class="card kpi"><div class="label">ภาพรวม (x̄ / S.D.)</div><div class="value" id="svAvg">–</div><div class="sub" id="svLevel">&nbsp;</div></div>
+      <div class="card kpi"><div class="label">เกณฑ์ผ่าน (ภาพรวม x̄ ≥ 3.51)</div><div class="value" id="svPass">–</div><div class="sub">ระดับมากขึ้นไป</div></div>
+    </section>
+    <div class="card" style="margin-bottom:12px"><h2>ตอนที่ 2 ความพึงพอใจรายข้อ</h2>
+      <p class="hint">แปลผล (บุญชม ศรีสะอาด, 2560): 4.51–5.00 มากที่สุด · 3.51–4.50 มาก · 2.51–3.50 ปานกลาง · 1.51–2.50 น้อย · 1.00–1.50 น้อยที่สุด</p>
+      <div class="tbl-wrap"><table class="sv-tbl"><thead><tr><th>ขั้นการประชาสัมพันธ์</th><th>รายการประเมิน</th><th>x̄</th><th>S.D.</th><th>ระดับ</th></tr></thead><tbody id="svItems"></tbody></table></div></div>
+    <section class="grid">
+      <div class="card"><h2>เพศ</h2><ol class="rows" id="svGenders"></ol></div>
+      <div class="card"><h2>สถานะ</h2><ol class="rows" id="svRoles"></ol></div>
+      <div class="card"><h2>สิ่งที่ใช้งาน</h2><p class="hint">ตอบได้มากกว่า 1 ข้อ</p><ol class="rows" id="svUsages"></ol></div>
+    </section>
+    <div class="card" style="margin-top:12px"><h2>ตอนที่ 3 ข้อเสนอแนะ</h2><p class="hint">30 รายการล่าสุด (ทั้งหมดอยู่ในไฟล์ดาวน์โหลด)</p><ul class="rows" id="svComments"></ul></div>
+  </section>
 </main>
 
 <script>
@@ -242,12 +330,28 @@ const nf = new Intl.NumberFormat("th-TH");
 const starText = (n) => "★".repeat(n) + "☆".repeat(5 - n);
 
 // ================= แท็บ =================
+const LOADERS = {}; let currentView = "stats";
 function showView(v) {
+  if (!document.getElementById("view-" + v)) v = "stats";
+  currentView = v;
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
   document.querySelectorAll(".view").forEach((s) => s.classList.toggle("on", s.id === "view-" + v));
-  try { history.replaceState(null, "", v === "news" ? "#news" : "#"); } catch (e) {}
-  if (v === "news") loadNews();
+  $("loginBox").hidden = true;
+  try { history.replaceState(null, "", v === "stats" ? "#" : "#" + v); } catch (e) {}
+  if (LOADERS[v]) LOADERS[v]();
 }
+// แท็บที่ต้องใส่รหัส: ยังไม่ได้เข้าระบบ → โชว์กล่องใส่รหัส ซ่อนเนื้อหา (คืน true)
+function adminGate(r, areaId) {
+  if (r.status !== 401 && r.status !== 403) { $("loginBox").hidden = true; $(areaId).hidden = false; return false; }
+  logged = false; setWho();
+  $("view-" + currentView).querySelector(".title").after($("loginBox"));   // กล่องใส่รหัสอยู่ใต้หัวข้อของแท็บนั้น
+  $("loginBox").hidden = false; $(areaId).hidden = true;
+  $("loginHint").textContent = r.status === 403 ? "ยังไม่ได้ตั้งรหัสหน้าครูในเครื่องหุ่น (ADMIN_PASSWORD ในไฟล์ .env) — ติดต่อผู้ดูแลหุ่น"
+    : "รหัสเดียวกับที่ตั้งไว้ในเครื่องหุ่น (ใส่ครั้งเดียว เบราว์เซอร์นี้จะจำไว้)";
+  $("loginForm").hidden = r.status === 403;
+  return true;
+}
+const jsonOf = (r) => r.json().then((d) => ({ r, d })).catch(() => ({ r, d: {} }));
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
 
 // ================= สถิติ =================
@@ -287,24 +391,16 @@ let items = [], today = "", editing = null, pickedImage = null, removeImage = fa
 
 function newsError(msg) { $("newsErr").textContent = msg || ""; $("newsErr").classList.toggle("show", !!msg); }
 function setWho() {
-  $("who").innerHTML = logged ? 'แก้ข่าวได้แล้ว<br><button type="button" id="logout">ออกจากระบบ</button>' : "";
+  $("who").innerHTML = logged ? 'เข้าสู่ระบบแล้ว (แก้ข้อมูลได้)<br><button type="button" id="logout">ออกจากระบบ</button>' : "";
   const b = $("logout");
-  if (b) b.addEventListener("click", () => fetch("/admin/logout", { method: "POST" }).then(() => { logged = false; setWho(); loadNews(); }));
+  if (b) b.addEventListener("click", () => fetch("/admin/logout", { method: "POST" }).then(() => { logged = false; setWho(); showView(currentView); }));
 }
 
 function loadNews() {
-  return fetch("/admin/news").then((r) => r.json().then((d) => ({ r, d })).catch(() => ({ r, d: {} }))).then(({ r, d }) => {
-    if (r.status === 401 || r.status === 403) {
-      logged = false; setWho();
-      $("loginBox").hidden = false; $("newsArea").hidden = true;
-      $("loginHint").textContent = r.status === 403 ? "ยังไม่ได้ตั้งรหัสหน้าครูในเครื่องหุ่น (ADMIN_PASSWORD ในไฟล์ .env) — ติดต่อผู้ดูแลหุ่น"
-        : "รหัสเดียวกับที่ตั้งไว้ในเครื่องหุ่น (ใส่ครั้งเดียว เบราว์เซอร์นี้จะจำไว้)";
-      $("loginForm").hidden = r.status === 403;
-      return;
-    }
+  return fetch("/admin/news").then(jsonOf).then(({ r, d }) => {
+    if (adminGate(r, "newsArea")) return;
     if (!r.ok) throw new Error(d.error || r.status);
     logged = true; setWho(); newsError("");
-    $("loginBox").hidden = true; $("newsArea").hidden = false;
     items = d.items || []; today = d.today || new Date().toISOString().slice(0, 10);
     $("storageWarn").classList.toggle("show", !(d.storage && d.storage.persistent));
     renderList(); refreshPreview();
@@ -316,7 +412,7 @@ $("loginForm").addEventListener("submit", (e) => {
   $("loginMsg").textContent = "";
   fetch("/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("pw").value }) })
     .then((r) => r.json().then((d) => ({ r, d })))
-    .then(({ r, d }) => { if (r.ok) { $("pw").value = ""; loadNews(); } else $("loginMsg").textContent = d.error || "เข้าไม่ได้"; })
+    .then(({ r, d }) => { if (r.ok) { $("pw").value = ""; showView(currentView); } else $("loginMsg").textContent = d.error || "เข้าไม่ได้"; })
     .catch(() => { $("loginMsg").textContent = "ติดต่อเซิร์ฟเวอร์ไม่ได้"; });
 });
 
@@ -469,7 +565,156 @@ function refreshPreview() {
 }
 addEventListener("resize", fitPreview);
 
-if (location.hash === "#news") showView("news");
+LOADERS.news = loadNews;
+
+// ================= ปฏิทินแนะแนว =================
+const TH_MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+let gItems = [], gToday = "", gEditing = null;
+const G_FIELDS = ["date", "end", "title", "time", "place", "detail"];
+function gError(m) { $("gErr").textContent = m || ""; $("gErr").classList.toggle("show", !!m); }
+function loadGuidance() {
+  return fetch("/admin/guidance").then(jsonOf).then(({ r, d }) => {
+    if (adminGate(r, "gArea")) return;
+    if (!r.ok) throw new Error(d.error);
+    logged = true; setWho(); gError("");
+    gItems = d.items || []; gToday = d.today || "";
+    renderGuidance();
+  }).catch(() => gError("โหลดปฏิทินไม่ได้ — เซิร์ฟเวอร์หุ่นเปิดอยู่ไหม?"));
+}
+function renderGuidance() {
+  $("gList").innerHTML = gItems.length ? gItems.map((e) => {
+    const [, m, dd] = e.date.split("-").map(Number);
+    const sub = [e.end ? "ถึง " + thDate(e.end) : "", e.time, e.place].filter(Boolean).join(" · ");
+    return `<div class="gi${(e.end || e.date) < gToday ? " past" : ""}${gEditing === e.id ? " editing" : ""}" data-id="${esc(e.id)}">` +
+      `<div class="dd"><b>${dd}</b><small>${TH_MON[m - 1]} ${String(Number(e.date.slice(0, 4)) + 543).slice(2)}</small></div>` +
+      `<div><b class="t">${esc(e.title)}</b><small class="s">${esc(sub)}</small></div>` +
+      `<div class="acts"><button type="button" data-act="edit" title="แก้">✏️</button><button type="button" data-act="del" title="ลบ">🗑️</button></div></div>`;
+  }).join("") : '<p class="empty">ยังไม่มีกำหนดการ — เพิ่มวันแนะแนวจากฟอร์มด้านซ้ายได้เลย</p>';
+}
+function gReset() {
+  gEditing = null; $("gForm").reset();
+  $("gFormTitle").textContent = "📅 เพิ่มวันแนะแนว"; $("gSave").textContent = "บันทึก"; $("gCancel").hidden = true;
+  renderGuidance();
+}
+$("gCancel").addEventListener("click", gReset);
+$("gList").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  const id = b.closest("[data-id]").dataset.id, g = gItems.find((x) => x.id === id);
+  if (b.dataset.act === "edit") {
+    gReset(); gEditing = id;
+    for (const k of G_FIELDS) $("g-" + k).value = g[k] || "";
+    $("gFormTitle").textContent = "✏️ แก้กำหนดการ"; $("gSave").textContent = "บันทึกการแก้ไข"; $("gCancel").hidden = false;
+    renderGuidance(); $("gForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  if (!confirm(`ลบกำหนดการ "${g.title}" ?`)) return;
+  fetch("/admin/guidance/" + encodeURIComponent(id), { method: "DELETE" }).then(jsonOf).then(({ r, d }) => {
+    if (!r.ok) gError(d.error || "ลบไม่ได้"); else { if (gEditing === id) gReset(); loadGuidance(); }
+  });
+});
+$("gForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const body = {}; for (const k of G_FIELDS) body[k] = $("g-" + k).value.trim();
+  $("gMsg").className = "msg"; $("gMsg").textContent = "กำลังบันทึก…";
+  fetch(gEditing ? "/admin/guidance/" + encodeURIComponent(gEditing) : "/admin/guidance",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    .then(jsonOf).then(({ r, d }) => {
+      if (r.status === 401) { loadGuidance(); return; }
+      if (!r.ok) { $("gMsg").className = "msg bad"; $("gMsg").textContent = d.error || "บันทึกไม่ได้"; return; }
+      gReset(); $("gMsg").className = "msg good"; $("gMsg").textContent = "บันทึกแล้ว ✓ ขึ้นปฏิทินบนจอหุ่นทันที";
+      loadGuidance();
+    }).catch(() => { $("gMsg").className = "msg bad"; $("gMsg").textContent = "ติดต่อเซิร์ฟเวอร์ไม่ได้"; });
+});
+LOADERS.guidance = loadGuidance;
+
+// ================= คลังภาพกิจกรรม =================
+let phItems = [], phFiles = [];
+function phError(m) { $("phErr").textContent = m || ""; $("phErr").classList.toggle("show", !!m); }
+function loadGallery() {
+  return fetch("/admin/gallery").then(jsonOf).then(({ r, d }) => {
+    if (adminGate(r, "phArea")) return;
+    if (!r.ok) throw new Error(d.error);
+    logged = true; setWho(); phError("");
+    phItems = d.items || [];
+    const albums = [...new Set(phItems.map((p) => p.title))];
+    $("phCount").innerHTML = `<div><b>${albums.length}</b>กิจกรรม</div><div><b>${phItems.length}</b>รูป</div>`;
+    $("phAlbums").innerHTML = albums.map((a) => `<option value="${esc(a)}">`).join("");
+    $("phList").innerHTML = phItems.length ? phItems.map((p) =>
+      `<figure data-id="${esc(p.id)}"><img src="${esc(p.image_url)}" alt="" loading="lazy"><figcaption>${esc(p.title)}</figcaption>` +
+      `<button type="button" data-act="del" title="ลบรูป">🗑️</button></figure>`).join("")
+      : '<p class="empty">ยังไม่มีรูป — เพิ่มรูปกิจกรรมจากฟอร์มด้านซ้ายได้เลย</p>';
+  }).catch(() => phError("โหลดคลังภาพไม่ได้ — เซิร์ฟเวอร์หุ่นเปิดอยู่ไหม?"));
+}
+function phPick(files) {
+  phFiles = [...files].filter((f) => /^image\//.test(f.type));
+  $("phNames").textContent = phFiles.length ? `เลือกแล้ว ${phFiles.length} รูป` : "ลากรูปมาวาง หรือแตะเพื่อเลือกไฟล์";
+}
+$("phDrop").addEventListener("click", () => $("ph-files").click());
+$("ph-files").addEventListener("change", (e) => phPick(e.target.files));
+$("phDrop").addEventListener("dragover", (e) => { e.preventDefault(); $("phDrop").classList.add("over"); });
+$("phDrop").addEventListener("dragleave", () => $("phDrop").classList.remove("over"));
+$("phDrop").addEventListener("drop", (e) => { e.preventDefault(); $("phDrop").classList.remove("over"); phPick(e.dataTransfer.files); });
+$("phList").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-act=del]");
+  if (!b || !confirm("ลบรูปนี้ ?")) return;
+  fetch("/admin/gallery/" + encodeURIComponent(b.closest("[data-id]").dataset.id), { method: "DELETE" }).then(jsonOf)
+    .then(({ r, d }) => { if (!r.ok) phError(d.error || "ลบไม่ได้"); else loadGallery(); });
+});
+$("phForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = $("phMsg"), btn = $("phSave");
+  if (!phFiles.length) { msg.className = "msg bad"; msg.textContent = "เลือกรูปก่อน"; return; }
+  btn.setAttribute("aria-busy", "true");
+  let ok = 0; const fails = [];
+  for (const [i, f] of phFiles.entries()) {   // ย่อแล้วส่งทีละรูป (รูปเยอะก็ไม่ติดขนาดสูงสุด)
+    msg.className = "msg"; msg.textContent = `กำลังอัปโหลด ${i + 1}/${phFiles.length}…`;
+    try {
+      const blob = await shrinkImage(f), fd = new FormData();
+      fd.append("title", $("ph-title").value.trim()); fd.append("date", $("ph-date").value);
+      fd.append("image", blob, "photo.jpg");
+      const { r, d } = await fetch("/admin/gallery", { method: "POST", body: fd }).then(jsonOf);
+      if (r.status === 401) { btn.removeAttribute("aria-busy"); loadGallery(); return; }
+      if (!r.ok) { fails.push(f.name + ": " + (d.error || "ไม่สำเร็จ")); if (r.status === 400) break; } else ok++;
+    } catch (err) { fails.push(f.name + ": " + err.message); }
+  }
+  btn.removeAttribute("aria-busy");
+  msg.className = fails.length ? "msg bad" : "msg good";
+  msg.textContent = (ok ? `อัปโหลดแล้ว ${ok} รูป ✓ ` : "") + (fails.length ? "ไม่สำเร็จ — " + fails.join(", ") : "");
+  if (ok) { phFiles = []; $("ph-files").value = ""; phPick([]); }
+  loadGallery();
+});
+LOADERS.gallery = loadGallery;
+
+// ================= ผลแบบประเมิน (ดูได้ไม่ต้องใส่รหัส เหมือนสถิติ) =================
+function loadSurvey() {
+  fetch("/survey.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((d) => {
+    $("svErr").classList.remove("show");
+    $("svTotal").innerHTML = nf.format(d.total) + '<span class="unit">คน</span>';
+    $("svToday").textContent = "วันนี้ " + nf.format(d.today) + " คน";
+    const f2 = (v) => (v == null ? "–" : v.toFixed(2));
+    $("svAvg").innerHTML = d.average == null ? "–" : f2(d.average) + `<span class="unit">S.D. ${f2(d.sd)}</span>`;
+    $("svLevel").textContent = d.average == null ? "ยังไม่มีคนตอบ" : "ระดับ" + d.level;
+    $("svPass").innerHTML = d.average == null ? "–" : d.pass ? '<span style="color:var(--ok)">ผ่าน ✓</span>' : '<span style="color:var(--low)">ยังไม่ผ่าน</span>';
+    $("svItems").innerHTML = d.items.map((x, i) =>
+      `<tr><td class="stg">${esc(x.stage)}</td><td>${i + 1}. ${esc(x.text)}</td><td class="n">${f2(x.average)}</td><td class="n">${f2(x.sd)}</td>` +
+      `<td>${x.level ? `<span class="lv">${esc(x.level)}</span>` : "–"}</td></tr>`).join("") +
+      `<tr class="sum"><td colspan="2">ภาพรวม</td><td class="n">${f2(d.average)}</td><td class="n">${f2(d.sd)}</td><td>${d.level ? `<span class="lv">${esc(d.level)}</span>` : "–"}</td></tr>`;
+    const bars = (id, list) => {
+      const max = Math.max(1, ...list.map((x) => x.count));
+      $(id).innerHTML = list.map((x) =>
+        `<li><span class="q">${esc(x.name)}</span><span class="c">${nf.format(x.count)} คน</span><span class="bar"><i style="width:${(x.count / max) * 100}%"></i></span></li>`).join("");
+    };
+    bars("svGenders", d.genders); bars("svRoles", d.roles); bars("svUsages", d.usages);
+    $("svComments").innerHTML = d.comments.length ? d.comments.map((c) =>
+      `<li><span class="q">${c.liked ? "👍 " + esc(c.liked) : ""}${c.liked && c.improve ? "<br>" : ""}${c.improve ? "🔧 " + esc(c.improve) : ""}</span><small>${esc(c.ts)}</small></li>`).join("")
+      : '<li class="empty">ยังไม่มีข้อเสนอแนะ</li>';
+  }).catch(() => $("svErr").classList.add("show"));
+}
+LOADERS.survey = loadSurvey;
+setInterval(() => { if (currentView === "survey") loadSurvey(); }, 30000);
+
+if (location.hash.length > 1) showView(location.hash.slice(1));
 
 // ---- คู่มือผู้ดูแลระบบ (รูป) ----
 (() => {

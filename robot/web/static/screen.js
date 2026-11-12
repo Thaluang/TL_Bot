@@ -22,7 +22,8 @@ const T = {
     cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
     cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง",
     cFood: "ร้านอาหาร", cFoodSub: "ก๋วยเตี๋ยว หมูกระทะ ตามสั่ง", cCafe: "คาเฟ่แนะนำ", cCafeSub: "กาแฟ ระบายสี 5 ร้าน",
-    cMarket: "ตลาด", cMarketSub: "ตลาดนัด ตลาดสด", cHighlight: "จุดเด่นวิทยาลัย", cHighlightSub: "อัตลักษณ์ รางวัล ทวิภาคี",
+    cMarket: "ตลาด", cMarketSub: "ตลาดนัด ตลาดสด", cAwards: "ผลงานรางวัล", cAwardsSub: "รางวัลพระราชทาน เหรียญทอง",
+    cCalendar: "ปฏิทินแนะแนว", cGallery: "คลังภาพกิจกรรม", cSurvey: "แบบประเมิน",
     cGuide: "คู่มือการใช้งาน", cGuideSub: "วิธีใช้หุ่นทีละขั้น", cOverview: "ภาพรวมการทำงาน", cOverviewSub: "หุ่นทำงานอย่างไร",
     guideMsg: "นี่คือคู่มือการใช้งานหุ่นครับ 📖 ดูรูปทางซ้ายได้เลย แตะรูปเพื่อขยายเต็มจอครับ",
     overviewMsg: "นี่คือภาพรวมการทำงานของผมครับ ⚙️ ดูรูปทางซ้ายได้เลย แตะรูปเพื่อขยายเต็มจอครับ", openHours: "เวลาเปิด", tel: "โทร", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
@@ -66,7 +67,8 @@ const T = {
     cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
     cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby",
     cFood: "Places to eat", cFoodSub: "Noodles, mookata, made-to-order", cCafe: "Cafés", cCafeSub: "Coffee and painting, 5 spots",
-    cMarket: "Markets", cMarketSub: "Evening and fresh markets", cHighlight: "College highlights", cHighlightSub: "Identity, awards, dual system",
+    cMarket: "Markets", cMarketSub: "Evening and fresh markets", cAwards: "Awards", cAwardsSub: "Royal awards, gold medals",
+    cCalendar: "Guidance calendar", cGallery: "Photo gallery", cSurvey: "Survey",
     cGuide: "User guide", cGuideSub: "How to use me, step by step", cOverview: "How I work", cOverviewSub: "System overview",
     guideMsg: "Here is my user guide 📖 See the picture on the left — tap it to view full screen.",
     overviewMsg: "Here is how I work ⚙️ See the picture on the left — tap it to view full screen.", openHours: "Open", tel: "Tel.", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
@@ -263,7 +265,7 @@ function renderBot(m, text, opts = {}) {
     return;
   }
   // แผนผัง/รูปสถานที่ขึ้นใหญ่ทางซ้าย (Board) — ในแชทเหลือรูปย่อไว้แตะเปิดซ้ำ
-  const pics = opts.image ? [{ src: opts.image, name: t().mapAlt, map: true }] : (opts.photos || []);
+  const pics = opts.image ? [{ src: opts.image, name: opts.imageName || t().mapAlt, map: true, ...(opts.noTour ? { tour: false } : {}) }] : (opts.photos || []);
   if (pics.length) showPictures(pics);
   const img = pics.length ? `<button type="button" class="see-left" data-pics="${escapeHtml(JSON.stringify(pics)).replace(/"/g, "&quot;")}">` +
     `<img src="${pics[0].src}" alt="">${t().seeLeft}</button>` : "";
@@ -303,7 +305,8 @@ function sendRating(btn) {
 function showPictures(pics) {
   if (pics[0].map) {
     Board.show("map", `<img class="board-img" src="${pics[0].src}" alt="${escapeHtml(pics[0].name)}">` +
-      `<button type="button" class="tour3d" data-action="campusTour">${t().tour3d}</button>`, t().cMap, "", "🗺️");
+      (pics[0].tour === false ? "" : `<button type="button" class="tour3d" data-action="campusTour">${t().tour3d}</button>`),   // คู่มือ/ภาพรวมไม่มีปุ่ม 3D
+      pics[0].tour === false ? pics[0].name : t().cMap, "", pics[0].tour === false ? "📖" : "🗺️");
     return;
   }
   const fig = (p) => `<figure><img class="place-photo" src="${p.src}" alt="${escapeHtml(p.name)}">` +
@@ -819,8 +822,11 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (action === "showMap") { showMap(); return; }
-  if (action === "showGuide") { addMsg("bot", t()[b.dataset.msg] || "", { image: b.dataset.img }); return; }   // คู่มือเป็นรูป → ขึ้นแผงซ้ายเหมือนแผนผัง
+  if (action === "showGuide") { addMsg("bot", t()[b.dataset.msg] || "", { image: b.dataset.img, noTour: true, imageName: b.textContent.trim() }); return; }   // คู่มือเป็นรูป → ขึ้นแผงซ้ายเหมือนแผนผัง
   if (action === "campusTour") { openTour(); return; }
+  // ปฏิทินแนะแนว / คลังภาพ / แบบประเมิน และปุ่มข้างในแผง (extras.js)
+  if (action && window.Extras && Extras[action]) { Extras[action](b); return; }
+  if (action) return;   // ปุ่มคำสั่งที่ไม่รู้จัก ไม่ส่งชื่อปุ่มไปถาม AI
   askChip(b);
 });
 function showAllMenu() {

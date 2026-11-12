@@ -35,6 +35,8 @@ from answer_cache import AnswerCache, replay_pieces            # noqa: E402
 from datetime import datetime                                  # noqa: E402
 from datadir import DataDir, resolve_data_dir, _writable       # noqa: E402
 from news import NewsStore, NewsError                           # noqa: E402
+from content import GuidanceStore, GalleryStore                 # noqa: E402
+from stats import SURVEY_ITEMS, SURVEY_ROLES, SURVEY_GENDERS, SURVEY_USAGES, SURVEY_TEXT_MAX   # noqa: E402
 from urllib.request import urlopen                              # noqa: E402
 import secrets                                                  # noqa: E402
 import time                                                     # noqa: E402
@@ -60,12 +62,14 @@ print(f"[data] เก็บข้อมูลที่ {DATA.folder}" + ("" if D
 stats = Stats(DATA.path("stats.db"))
 # คำถามที่เคยตอบแล้ว ตอบซ้ำได้ทันที (แก้ไฟล์ข้อมูลเมื่อไหร่ คำตอบเก่าใช้ไม่ได้เอง)
 news = NewsStore(DATA.folder)   # ข่าวประชาสัมพันธ์ที่ครูลงผ่านหน้า /stats
-# คำตอบที่จำไว้ใช้ไม่ได้เมื่อข่าวเปลี่ยน หรือข้ามวัน (ข่าวเริ่ม/หมดอายุตามวันที่)
+guidance = GuidanceStore(DATA.folder)   # ปฏิทินแนะแนวการศึกษา (ครูลงผ่านหน้า /stats)
+gallery = GalleryStore(DATA.folder)     # คลังภาพกิจกรรม (ครูลงผ่านหน้า /stats)
+# คำตอบที่จำไว้ใช้ไม่ได้เมื่อข่าว/ปฏิทินแนะแนวเปลี่ยน หรือข้ามวัน (ข่าวเริ่ม/หมดอายุตามวันที่)
 answers = AnswerCache(config.ANSWER_CACHE_SECONDS, data_files=[
     ROBOT_DIR / config.COLLEGE_DATA_PATH, ROBOT_DIR / config.SARABURI_DATA_PATH, config.SAR_DATA_PATH],
-    version_fn=lambda: (news.version, _now().date().isoformat()))
-# หุ่นรู้ข่าวที่ขึ้นจออยู่ (ต่อท้ายข้อมูลวิทยาลัยที่ส่งให้ AI)
-ai.extra_context = lambda: news.ai_text(_now().date())
+    version_fn=lambda: (news.version, guidance.version, _now().date().isoformat()))
+# หุ่นรู้ข่าวที่ขึ้นจออยู่ + กำหนดการแนะแนว (ต่อท้ายข้อมูลวิทยาลัยที่ส่งให้ AI)
+ai.extra_context = lambda: "\n\n".join(t for t in (news.ai_text(_now().date()), guidance.ai_text(_now().date())) if t)
 # โหลดไลบรารี AI ไว้ก่อนตั้งแต่เปิดเซิร์ฟเวอร์ (บน Pi ช้า ~5 วิ) — คนแรกหลังเปิดเครื่องไม่ต้องรอ
 if config.AI_PROVIDER == "gemini":
     import threading as _threading                             # noqa: E402
@@ -509,6 +513,163 @@ def admin_news_delete(news_id):
     if bad:
         return bad
     return (jsonify(ok=True), 200) if news.delete(news_id) else (jsonify(error="ไม่พบข่าวนี้"), 404)
+
+
+# ---- ปฏิทินแนะแนวการศึกษา (จอหุ่นอ่าน /guidance, ครูแก้ผ่าน /admin/guidance จากหน้า /stats) ----
+@app.get("/guidance")
+def guidance_list():
+    return jsonify(version=guidance.version, today=_now().date().isoformat(), items=guidance.all())
+
+
+@app.get("/admin/guidance")
+def admin_guidance():
+    bad = _need_admin()
+    if bad:
+        return bad
+    return jsonify(items=guidance.all(), today=_now().date().isoformat())
+
+
+@app.post("/admin/guidance")
+def admin_guidance_add():
+    bad = _need_admin()
+    if bad:
+        return bad
+    try:
+        return jsonify(guidance.add(request.get_json(silent=True) or {})), 201
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.post("/admin/guidance/<item_id>")
+def admin_guidance_edit(item_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    try:
+        return jsonify(guidance.update(item_id, request.get_json(silent=True) or {}))
+    except KeyError:
+        return jsonify(error="ไม่พบกำหนดการนี้"), 404
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.delete("/admin/guidance/<item_id>")
+def admin_guidance_delete(item_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    return (jsonify(ok=True), 200) if guidance.delete(item_id) else (jsonify(error="ไม่พบกำหนดการนี้"), 404)
+
+
+# ---- คลังภาพกิจกรรม (จอหุ่นอ่าน /gallery, ครูเพิ่มรูปผ่าน /admin/gallery จากหน้า /stats) ----
+def _public_photo(d: dict) -> dict:
+    return {"id": d["id"], "title": d.get("title", ""), "date": d.get("date", ""), "image_url": f"/gallery/img/{d['image']}"}
+
+
+@app.get("/gallery")
+def gallery_list():
+    return jsonify(version=gallery.version, items=[_public_photo(d) for d in gallery.all()])
+
+
+@app.get("/gallery/img/<name>")
+def gallery_image(name):
+    p = gallery.image_path(name)
+    if not p:
+        return jsonify(error="ไม่พบรูป"), 404
+    return send_from_directory(p.parent, p.name, max_age=7 * 24 * 3600)
+
+
+@app.get("/admin/gallery")
+def admin_gallery():
+    bad = _need_admin()
+    if bad:
+        return bad
+    return jsonify(items=[_public_photo(d) for d in gallery.all()])
+
+
+@app.post("/admin/gallery")
+def admin_gallery_add():
+    """เพิ่มรูปทีละรูป (หน้าครูเลือกหลายรูปได้ แล้วส่งมาทีละรูป)"""
+    bad = _need_admin()
+    if bad:
+        return bad
+    got, err = _news_upload()
+    if err:
+        return err
+    fields, image = got
+    try:
+        return jsonify(_public_photo(gallery.add(fields, image))), 201
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.post("/admin/gallery/<item_id>")
+def admin_gallery_edit(item_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    try:
+        return jsonify(_public_photo(gallery.update(item_id, request.get_json(silent=True) or {})))
+    except KeyError:
+        return jsonify(error="ไม่พบรูปนี้"), 404
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.delete("/admin/gallery/<item_id>")
+def admin_gallery_delete(item_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    return (jsonify(ok=True), 200) if gallery.delete(item_id) else (jsonify(error="ไม่พบรูปนี้"), 404)
+
+
+# ---- แบบประเมินความพึงพอใจ (ตอบบนจอหุ่น, ดูผล/ดาวน์โหลดที่หน้า /stats) ----
+@app.get("/survey")
+def survey_form():
+    opts = lambda d: [{"key": k, "name": v} for k, v in d.items()]   # noqa: E731
+    return jsonify(items=[{"stage": s, "text": q} for s, q in SURVEY_ITEMS],
+                   genders=opts(SURVEY_GENDERS), roles=opts(SURVEY_ROLES), usages=opts(SURVEY_USAGES),
+                   text_max=SURVEY_TEXT_MAX)
+
+
+@app.post("/survey")
+def survey_submit():
+    try:
+        stats.add_survey(request.get_json(silent=True) or {})
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True)
+
+
+@app.get("/survey.json")
+def survey_json():
+    return jsonify(stats.survey_summary(now=_now()))
+
+
+@app.get("/survey.csv")
+def survey_csv():
+    """ผลแบบประเมินทั้งหมด — เปิดใน Excel ได้ (มี BOM ให้ภาษาไทยไม่เพี้ยน)"""
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["ลำดับ", "วันเวลา", "เพศ", "สถานะ", "สิ่งที่ใช้งาน",
+                *[f"ข้อ {i + 1} {q}" for i, (_, q) in enumerate(SURVEY_ITEMS)], "เฉลี่ย", "สิ่งที่ชอบมากที่สุด", "สิ่งที่ควรปรับปรุง"])
+    for k, r in enumerate(stats.survey_rows(), 1):
+        w.writerow([k, r["ts"], SURVEY_GENDERS.get(r["gender"], r["gender"]), SURVEY_ROLES.get(r["role"], r["role"]),
+                    " / ".join(SURVEY_USAGES.get(u, u) for u in r["usage"]),
+                    *r["scores"], round(sum(r["scores"]) / len(r["scores"]), 2), r["liked"], r["improve"]])
+    return Response("﻿" + buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=survey.csv"})
 
 
 # ---- อากาศ (Open-Meteo ฟรี ไม่ต้องสมัคร) — จอ 1920 ถามทุก 30 นาที ----

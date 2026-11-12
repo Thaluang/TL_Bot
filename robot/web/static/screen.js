@@ -5,6 +5,13 @@
 const PREVIEW = /[?&]preview=1/.test(location.search);
 if (PREVIEW) document.body.classList.add("preview");
 
+// แอนิเมชันตกแต่งเล่นเป็นช่วง: 4 วิ ทุก 12 วิ (CSS body.anim-on) — วนตลอดทำให้ Pi วาดจอใหม่ไม่หยุด
+setInterval(() => {
+  if (document.hidden) return;
+  document.body.classList.add("anim-on");
+  setTimeout(() => document.body.classList.remove("anim-on"), 4100);
+}, 12000);
+
 // ---- ข้อความทุกภาษา ----
 const T = {
   th: {
@@ -930,7 +937,7 @@ function playVideo() {
 }
 video.addEventListener("ended", () => { vidIdx++; playVideo(); });
 video.addEventListener("timeupdate", () => {
-  if (video.duration) $("vidProg").style.width = (100 * video.currentTime / video.duration) + "%";
+  if (video.duration) $("vidProg").style.transform = `scaleX(${video.currentTime / video.duration})`;   // transform ไม่ต้องจัดหน้าใหม่
 });
 video.addEventListener("error", () => { if (!attractOn) return; vidFails++; vidIdx++; playVideo(); });
 video.addEventListener("playing", () => { vidFails = 0; });

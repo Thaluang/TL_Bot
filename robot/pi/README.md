@@ -25,6 +25,7 @@ pip install --break-system-packages google-genai edge-tts
 | `robot.desktop` | `~/.config/autostart/robot.desktop` | เปิด `start.sh` ตอนบูต |
 | `wf-panel-pi.ini` | `~/.config/wf-panel-pi/wf-panel-pi.ini` | taskbar อยู่จอ 1920 (HDMI-A-1) |
 | `../pi_ram/labwc-rc.xml` | `~/.config/labwc/rc.xml` | ทัชไปจอ 1920, หน้าแชท → HDMI-A-1, หน้าหุ่น → HDMI-A-2 |
+| `labwc-autostart` | `~/.config/labwc/autostart` | ไม่เปิดตัววาดเดสก์ท็อป (pcmanfm-pi เคยค้างกิน CPU 100%) |
 
 คีย์บอร์ดไทย (Alt+Shift): ใน `~/.config/labwc/environment` ตั้ง `XKB_DEFAULT_LAYOUT=us,th` และ `XKB_DEFAULT_OPTIONS=grp:alt_shift_toggle`
 

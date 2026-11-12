@@ -1,0 +1,7 @@
+# แทน /etc/xdg/labwc/autostart ของระบบ — ตัดตัววาดเดสก์ท็อป (pcmanfm-pi) ออก
+# เคยค้างกิน CPU 100% เต็ม 1 คอร์ตั้งแต่บูต (ไม่ตอบแม้สั่งปิด) ทำให้เครื่องร้อนและจอหุ่นกระตุก
+# หน้าจอหุ่นเปิดเต็มจออยู่แล้ว ไม่ต้องมีวอลเปเปอร์/ไอคอนเดสก์ท็อป
+# อยากได้เดสก์ท็อปคืน: ลบไฟล์ ~/.config/labwc/autostart แล้วรีบูต
+/usr/bin/lwrespawn /usr/bin/wf-panel-pi &
+/usr/bin/kanshi &
+/usr/bin/lxsession-xdg-autostart

@@ -39,7 +39,8 @@
     background:radial-gradient(130% 130% at 50% 50%, transparent 58%, rgba(0,0,0,.4) 100%);
   }
 
-  .stage{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:46px}
+  /* ขยายทั้งหน้า (ตา ปาก ข้อความ มือโบก) — จอหน้าหุ่น 1024×600 ; 1.6 = เต็มจอแต่มือโบกยังไม่ล้นขอบ */
+  .stage{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:46px; zoom:1.6}
 
   /* ไม่มี animation วนไม่หยุด (Pi ต้องวาดใหม่ 60fps ตลอด) — face.js สั่งกระพริบตา (.blink) / ลอย (.bob) เป็นพักๆ แทน */
   .face{position:relative; will-change:transform; display:flex; flex-direction:column; align-items:center; gap:34px}
@@ -51,7 +52,7 @@
     opacity:0; transition:opacity .4s;
   }
 
-  .eyes{display:flex; gap:64px}
+  .eyes{display:flex; gap:110px}   /* ระยะห่างระหว่างตา */
   .eye{will-change:transform; transition:transform .45s cubic-bezier(.34,1.4,.5,1)}
   .eye-ball{
     width:104px; height:122px; border-radius:34px; position:relative;
@@ -72,7 +73,8 @@
 
   .face.blink .eye-ball{animation:blink .22s ease-in-out 1}
   .face.bob{animation:float 3.2s ease-in-out 1}
-  .mouth{margin-top:4px; transition:width .45s ease, height .45s ease, border-radius .45s ease, background .45s ease; will-change:transform}
+  /* ปากใหญ่ขึ้น 1.4 เท่าทุกสถานะ — ใช้ scale แยกจาก transform (ปากขยับตอนพูดใช้ transform อยู่) + เผื่อที่บนล่าง */
+  .mouth{margin:16px 0 12px; scale:1.4; transition:width .45s ease, height .45s ease, border-radius .45s ease, background .45s ease; will-change:transform}
 
   .status{
     position:relative; z-index:2; display:flex; align-items:center; gap:12px;
@@ -135,7 +137,7 @@
   body.state-greeting .mouth{width:104px;height:54px;border-radius:0 0 104px 104px;background:var(--accent)}
 
   /* มือโบก — แทนแขนจริง (เห็นบนจอ ใช้เดโมบนคอมที่ไม่มีเซอร์โว) โผล่เฉพาะตอนทักทาย */
-  .hand{position:absolute; left:calc(100% + 40px); top:-40px; width:120px; z-index:3;
+  .hand{position:absolute; left:calc(100% + 30px); top:-40px; width:120px; z-index:3;
     opacity:0; transform:translateY(60px) scale(.6); pointer-events:none;
     transition:opacity .35s ease, transform .45s cubic-bezier(.34,1.4,.5,1)}
   .hand svg{display:block; width:100%; overflow:visible; fill:var(--accent);

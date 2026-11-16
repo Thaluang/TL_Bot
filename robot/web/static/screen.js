@@ -50,7 +50,8 @@ const T = {
     noHear: "ไม่ได้ยินครับ ลองพูดใหม่ หรือพิมพ์คำถามดูนะครับ 🙏",
     menuPick: "เลือกหมวดได้เลยครับ 👇", menuItems: "แตะดูรายละเอียดได้เลยครับ 👇",
     back: "ย้อนกลับ", home: "หน้าแรก", districtPre: "อ.",
-    greet: "สวัสดีครับ ผมชื่อน้องทานตะวัน-Bot มีอะไรให้ช่วยไหมครับ",
+    // ใช้พูดอย่างเดียว: "บอท" ภาษาไทย (เขียน -Bot เสียงสลับไปอ่านอังกฤษ สะดุด) + ไม่เว้นวรรคช่วงแนะนำตัว ให้พูดต่อกันลื่น ๆ
+    greet: "สวัสดีครับผมชื่อน้องทานตะวันบอท มีอะไรให้ช่วยไหมครับ",
     rateAsk: "คำตอบนี้ช่วยได้ไหมครับ?", rateThanks: "ขอบคุณที่ให้คะแนนครับ 🙏", starUnit: "ดาว",
     attractSub: "สวัสดีครับ ผมชื่อน้องทานตะวัน-Bot ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
     announceTag: "ประกาศ",
@@ -223,12 +224,12 @@ function speechSummary(text, lng) {
     if (out.length && len + p.length > SPEAK_MAX_CHARS) { cut = true; break; }
     out.push(p); len += p.length;
   }
-  let say = out.join(" ");
+  let say = out.join("\n");                                      // ขึ้นบรรทัด = จบประโยค เสียงหยุดตรงนี้ (เซิร์ฟเวอร์ใส่จุดให้)
   if (say.length > SPEAK_MAX_CHARS * 1.5) {                      // ย่อหน้าแรกยาวมาก → ตัดที่ช่องว่างก่อนถึงขีดจำกัด
-    const sp = say.lastIndexOf(" ", SPEAK_MAX_CHARS);
+    const sp = Math.max(say.lastIndexOf(" ", SPEAK_MAX_CHARS), say.lastIndexOf("\n", SPEAK_MAX_CHARS));
     say = say.slice(0, sp > 40 ? sp : SPEAK_MAX_CHARS); cut = true;
   }
-  return cut ? say + " " + T[lng].seeScreen : say;
+  return cut ? say + "\n" + T[lng].seeScreen : say;
 }
 
 // เริ่มพูดได้ก่อนคำตอบไหลจบ: ใช้เฉพาะบรรทัดที่มาครบแล้ว — ถ้าตัวย่อเสียงตัดจบในนั้นแล้ว (เจอหัวข้อ/รายการ
@@ -369,7 +370,7 @@ function typing(on) {
 // ---- พูดออกเสียง ----
 // หลัก: เสียง AI จากเซิร์ฟเวอร์ (/tts — Gemini เสียงผู้ชายเป็นธรรมชาติ)
 // สำรอง: เสียงในเครื่อง (Web Speech) — ใช้เมื่อสร้างเสียงไม่ทัน / โควตาหมด / ไม่มีเน็ต
-const SPEECH_RATE = 1.15;      // ความเร็วพูดของเสียงในเครื่อง (1 = ปกติ) — เสียง AI ตั้งที่ EDGE_TTS_RATE ใน config.py
+const SPEECH_RATE = 0.95;      // ความเร็วพูดของเสียงในเครื่อง (1 = ปกติ) — เสียง AI ตั้งที่ EDGE_TTS_RATE ใน config.py
 const TTS_TIMEOUT_MS = 6000;   // รอเสียง AI เริ่มดังนานสุดเท่านี้ ไม่ทันก็ใช้เสียงในเครื่อง
 let ttsJob = null;             // เสียงที่กำลังพูดอยู่ (มีได้ทีละอัน)
 
@@ -926,12 +927,14 @@ let attractCfg = { videos: [], after: 60 }, attractOn = false, vidIdx = 0, vidFa
 fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {});
 
 // จอว่างนาน → วิดีโอหน้ารอเล่นวน (หลายคลิปเล่นต่อกัน) จนกว่าจะมีคนแตะจอ
+const ATTRACT_VOLUME = 0.35;   // เสียงวิดีโอหน้ารอ (0–1) — เบากว่าเสียงหุ่นพูด
 function playVideo() {
   const list = attractCfg.videos || [];
   if (!list.length || vidFails >= list.length) { stopAttract(); return; }
   video.src = list[vidIdx % list.length];
   video.loop = list.length === 1;
   video.muted = false;
+  video.volume = ATTRACT_VOLUME;
   // เบราว์เซอร์บางตัวห้ามเล่นมีเสียงเอง (บน Pi ตั้ง kiosk ให้เล่นได้แล้ว) → ลองแบบเงียบแทน
   video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
 }

@@ -48,7 +48,7 @@ AI_VOICE = True
 VOICE_ENGINE = "edge"   # "edge" = Microsoft Niwat (เร็ว 2–3 วิ ฟรี) / "gemini" = Gemini TTS (ธรรมชาติกว่า แต่ช้า 6–19 วิ กินโควตา)
 EDGE_TTS_VOICE = "th-TH-NiwatNeural"   # เสียงผู้ชายไทย (ภาษาอังกฤษใช้ EDGE_TTS_VOICE_EN)
 EDGE_TTS_VOICE_EN = "en-US-GuyNeural"
-EDGE_TTS_RATE = "+10%"   # ความเร็วพูด: "+0%" = ปกติ, "+20%" = เร็วขึ้น, "-10%" = ช้าลง
+EDGE_TTS_RATE = "-5%"   # ความเร็วพูด: "+0%" = ปกติ, "+20%" = เร็วขึ้น, "-10%" = ช้าลง
 GEMINI_TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts"]
 GEMINI_TTS_VOICE = "Puck"   # เสียงผู้ชาย ร่าเริง (อื่น ๆ: Charon, Fenrir, Orus)
 TTS_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tts_cache")   # เสียงที่เคยสร้าง เก็บไว้ใช้ซ้ำ

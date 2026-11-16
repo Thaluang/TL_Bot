@@ -29,6 +29,10 @@
   </theme>
   <keyboard>
     <numlock>off</numlock>
+    <!-- หุ่น TL_Bot: Ctrl+Alt+A = เปิดหน้าต่างทดสอบแขน (robot/pi/arm-test.desktop) -->
+    <keybind key="C-A-a">
+      <action name="Execute" command="lxterminal --title=ทดสอบแขน --geometry=110x34 -e env ARM_TEST_WINDOW=1 bash /home/pi/robot-briefing/robot/pi/arm_test.sh" />
+    </keybind>
   </keyboard>
   <touch deviceName="10-0038 generic ft5x06 (79)" mapToOutput="DSI-1" mouseEmulation="yes"/>
   <touch deviceName="11-0038 generic ft5x06 (79)" mapToOutput="DSI-2" mouseEmulation="yes"/>
@@ -73,5 +77,6 @@
   <windowRules>
     <windowRule identifier="tlbot-screen"><action name="MoveToOutput" output="HDMI-A-1"/></windowRule>
     <windowRule identifier="tlbot-face"><action name="MoveToOutput" output="HDMI-A-2"/></windowRule>
+    <windowRule title="ทดสอบแขน"><action name="MoveToOutput" output="HDMI-A-1"/><action name="Maximize"/></windowRule>
   </windowRules>
 </openbox_config>

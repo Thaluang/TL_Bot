@@ -162,8 +162,10 @@ class StepperArms:
     """สั่งแขน/คอเป็นองศา + ท่าทางสำเร็จรูป
     link=None + opener=None คือโหมดจำลอง (เทสต์/คอม) · มี opener = ยังไม่เจอบอร์ด แต่จะลองต่อเองตอนจะโบก"""
 
-    WAVE_UP, WAVE_A, WAVE_B, WAVE_TIMES = 150, 120, 165, 3   # แขนทั้งสองข้าง: ยกขึ้นพร้อมกัน แล้วโบกไปมา
-    SPEED, WAVE_SPEED = 60, 120                               # องศา/วินาที
+    ARM_MAX = 50                        # แขนยกได้สูงสุดกี่องศา (ฝั่ง Pi) — ยก 60° แล้วชนโครงเหล็ก (วัดจริง 16 พ.ย. 69) เผื่อไว้ 10°
+    RAISE_DEG, RAISE_HOLD = 50, 1.0     # ทักทาย: ยกสองแขนขึ้นกี่องศา (ไม่เกิน ARM_MAX) · ค้างไว้กี่วินาทีก่อนลง
+    SPEED = 60                          # องศา/วินาที (ค่าเริ่มของ move)
+    RAISE_SPEED = 30                    # ทักทาย: ยก/ลดแขนช้า ๆ กี่องศา/วินาที (60 ไวเกินไป)
     RETRY = 5.0                                               # ไม่เจอบอร์ด: ลองหาใหม่ห่างกันอย่างน้อยกี่วินาที
 
     def __init__(self, link, opener=None):
@@ -212,6 +214,9 @@ class StepperArms:
         targets = {k: v for k, v in (("L", L), ("R", R), ("N", N)) if v is not None}
         if not targets:
             return
+        for k in ("L", "R"):
+            if k in targets and float(targets[k]) > self.ARM_MAX:   # ไม่ส่งไป ESP32 เลย: แขนจะชนโครงเหล็ก
+                raise ArmError("LIMIT", f"{k}={float(targets[k]):.1f} เกิน {self.ARM_MAX}° แขนจะชนโครงเหล็ก")
         args = " ".join(f"{k}={float(v):.1f}" for k, v in targets.items())
         cmd = f"MOVE {args} V={int(speed or self.SPEED)}"
         if self.link is None:
@@ -231,11 +236,14 @@ class StepperArms:
             self.link.request("ZERO")
 
     def park(self):
-        """กลับมุม 0 → ปลดแรงบิด → ESP32 จดว่าจอดแล้ว (เรียกก่อนปิดเครื่อง)"""
+        """กลับมุม 0 → ESP32 จดว่าจอดแล้ว → ล็อกแรงบิดค้างไว้
+        (เฟิร์มแวร์ปลดแรงบิดหลัง PARK — แขนตกไปกระแทกโครงเหล็ก จึงสั่ง EN 1 ล็อกกลับทันที
+         ไม่ทำให้ธง parked หาย: ปิดเครื่องแล้วเปิดใหม่ยังรู้ตำแหน่ง)"""
         if self.link is None:
             print("[แขน] (จำลอง) PARK")
             return
         self.link.request("PARK", wait_done=True)
+        self.enable(True)
 
     def stop(self):
         if self.link:
@@ -257,16 +265,16 @@ class StepperArms:
 
     # ---- ท่าทาง ----
     def wave(self):
-        """ทักทายด้วยแขนทั้งสองข้าง: ยกขึ้นพร้อมกัน → โบกไปมา → จอด
+        """ทักทายด้วยแขนทั้งสองข้าง: ยกขึ้นพร้อมกัน → ค้างครู่หนึ่ง → ลดลงจอด (ไม่โบก)
         (+ = ยกขึ้นทั้งสองข้าง เพราะเฟิร์มแวร์กลับทิศแขนขวาไว้แล้ว)"""
         with self._gesture:
             if self._ensure_link() is None and self._opener is not None:
                 return                      # ยังไม่ได้เสียบบอร์ด: ข้ามท่า (หน้าจอทักทายต่อได้ตามปกติ)
             try:
-                self.move(L=self.WAVE_UP, R=self.WAVE_UP, speed=self.SPEED)
-                for _ in range(self.WAVE_TIMES):
-                    self.move(L=self.WAVE_A, R=self.WAVE_A, speed=self.WAVE_SPEED)
-                    self.move(L=self.WAVE_B, R=self.WAVE_B, speed=self.WAVE_SPEED)
+                self.move(L=self.RAISE_DEG, R=self.RAISE_DEG, speed=self.RAISE_SPEED)
+                time.sleep(self.RAISE_HOLD)
+                # ลดลงช้า ๆ เอง (PARK ในเฟิร์มแวร์วิ่ง 60°/วิ ตายตัว) — ถึง 0 แล้ว PARK แทบไม่ขยับ แค่จดว่าจอด
+                self.move(L=0, R=0, speed=self.RAISE_SPEED)
                 # จบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) ไม่ใช่แค่ MOVE R=0:
                 # เซิร์ฟเวอร์เปิดพอร์ตใหม่เมื่อไร ESP32 รีเซ็ต ถ้าไม่ได้จอดไว้จะลืมตำแหน่ง แล้วตอบ NOT_PARKED ทุกท่า
                 self.park()

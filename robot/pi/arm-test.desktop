@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ทดสอบแขน
+Comment=หยุดหุ่นชั่วคราว แล้วพิมพ์สั่งแขน/คอทีละแกน (ออกแล้วหุ่นเปิดกลับเอง)
+Exec=lxterminal --title=ทดสอบแขน --geometry=110x34 -e env ARM_TEST_WINDOW=1 bash /home/pi/robot-briefing/robot/pi/arm_test.sh
+Icon=applications-engineering
+Terminal=false
+Categories=Utility;

@@ -26,6 +26,9 @@ pip install --break-system-packages google-genai edge-tts
 | `wf-panel-pi.ini` | `~/.config/wf-panel-pi/wf-panel-pi.ini` | taskbar อยู่จอ 1920 (HDMI-A-1) |
 | `../pi_ram/labwc-rc.xml` | `~/.config/labwc/rc.xml` | ทัชไปจอ 1920, หน้าแชท → HDMI-A-1, หน้าหุ่น → HDMI-A-2 |
 | `labwc-autostart` | `~/.config/labwc/autostart` | ไม่เปิดตัววาดเดสก์ท็อป (pcmanfm-pi เคยค้างกิน CPU 100%) |
+| `arm-test.desktop` | `~/.local/share/applications/arm-test.desktop` | ไอคอน "ทดสอบแขน" บน taskbar → เปิด `arm_test.sh` ในหน้าต่าง (ปุ่มลัด Ctrl+Alt+A อยู่ใน `../pi_ram/labwc-rc.xml`) |
+
+ทดสอบแขนบน Pi เอง: กด **Ctrl+Alt+A** (หรือแตะไอคอน "ทดสอบแขน" บน taskbar) → หุ่นหยุดชั่วคราว พิมพ์ `L 30`, `wave`, `pos` ... → พิมพ์ `q` หุ่นเปิดกลับเอง
 
 VNC ให้เปิดมาที่จอ body (1920, HDMI-A-1) เสมอ: copy `/usr/sbin/wayvnc-run.sh` ไป `/usr/local/sbin/wayvnc-run-body.sh` แล้วเติม `--output=HDMI-A-1` ท้ายคำสั่ง `wayvnc`
 จากนั้นสร้าง `/etc/systemd/system/wayvnc.service.d/body-output.conf` ให้ `ExecStart=` (ว่าง) ตามด้วย `ExecStart=/bin/sh /usr/local/sbin/wayvnc-run-body.sh` → `sudo systemctl daemon-reload && sudo systemctl restart wayvnc`

@@ -73,7 +73,9 @@ class FakeEsp:
 
 def arms(**kw):
     esp = FakeEsp(**kw)
-    return StepperArms(EspLink(esp, heartbeat=0.1)), esp
+    a = StepperArms(EspLink(esp, heartbeat=0.1))
+    a.RAISE_HOLD = 0                     # ไม่ต้องรอค้างแขนจริงในเทสต์
+    return a, esp
 
 
 # ---- อ่านคำตอบ ----
@@ -95,15 +97,15 @@ def test_parse_err_and_event():
 def test_move_waits_until_done_and_sends_degrees():
     a, esp = arms(done_delay=0.2)
     t = time.time()
-    a.move(L=90, R=-30, speed=45)
+    a.move(L=45, R=-30, speed=45)
     assert time.time() - t >= 0.2                       # รอจน ESP32 บอกว่า DONE
-    assert any(s.endswith("MOVE L=90.0 R=-30.0 V=45") for s in esp.sent)
+    assert any(s.endswith("MOVE L=45.0 R=-30.0 V=45") for s in esp.sent)
 
 
 def test_move_over_limit_raises():
-    a, _ = arms(limit=180)
+    a, _ = arms(limit=30)                               # ESP32 ปฏิเสธเอง (เพดานเฟิร์มแวร์ต่ำกว่าฝั่ง Pi)
     with pytest.raises(ArmError) as e:
-        a.move(L=200)
+        a.move(L=40)
     assert e.value.code == "LIMIT"
 
 
@@ -115,7 +117,7 @@ def test_position_read_back():
 
 def test_heartbeat_pings_while_moving():
     a, esp = arms(done_delay=0.45)
-    a.move(R=120)
+    a.move(R=50)
     assert sum(1 for s in esp.sent if s.endswith("PING")) >= 2   # กัน watchdog ของ ESP32 ตัดมอเตอร์
 
 
@@ -127,15 +129,34 @@ def test_no_reply_times_out():
     assert e.value.code == "TIMEOUT"
 
 
+def test_wave_stays_within_arm_limit():
+    """แขนยกได้ไม่เกิน 120° (ตรงกับ maxDeg ในเฟิร์มแวร์) — ท่าโบกต้องไม่โดน ERR LIMIT"""
+    a, esp = arms(limit=120)
+    a.wave()                                             # เกิน 120 → FakeEsp ตอบ ERR LIMIT → โยน ArmError
+    assert esp.parked
+
+
+def test_arm_above_frame_limit_is_refused_before_sending():
+    """แขนยกเกิน ARM_MAX จะชนโครงเหล็ก — ไม่ส่งคำสั่งไป ESP32 เลย (กันพิมพ์พลาดในโปรแกรมทดสอบแขน)"""
+    a, esp = arms()
+    with pytest.raises(ArmError) as e:
+        a.move(L=a.ARM_MAX + 10)
+    assert e.value.code == "LIMIT"
+    assert not any("MOVE" in s for s in esp.sent)
+    a.move(L=a.ARM_MAX, N=55)                           # เท่าเพดานพอดี และคอ (ไม่เกี่ยวโครงแขน) ได้ปกติ
+    assert a.RAISE_DEG <= a.ARM_MAX
+
+
 def test_wave_ends_parked():
     """โบกจบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) — เปิดพอร์ตใหม่ ESP32 รีเซ็ต ยังรู้ตำแหน่ง ไม่ติด NOT_PARKED"""
     a, esp = arms()
     a.wave()
     cmds = [s.split(" ", 1)[1] for s in esp.sent if s and "PING" not in s]
     moves = [c for c in cmds if c.startswith("MOVE")]
-    assert len(moves) >= 4
-    assert all("L=" in m and "R=" in m for m in moves)   # ทักทายด้วยแขนทั้งสองข้างพร้อมกัน
-    assert cmds[-1] == "PARK"
+    assert len(moves) == 2                               # ยกขึ้น → ลดลงช้า ๆ (ไม่โบก) แล้ว PARK
+    assert "L=50.0 R=50.0 V=30" in moves[0]            # ทักทายด้วยแขนทั้งสองข้างพร้อมกัน ช้า ๆ
+    assert "L=0.0 R=0.0 V=30" in moves[1]                # ลดลงช้าเท่าขาขึ้น (PARK ของเฟิร์มแวร์เร็วกว่า)
+    assert cmds[-2:] == ["PARK", "EN 1"]                 # จอดแล้วล็อกค้าง แขนไม่ตกไปกระแทกโครง
     assert esp.parked and esp.pos == {"L": 0.0, "R": 0.0, "N": 0.0}
 
 
@@ -150,7 +171,7 @@ def test_park_and_status():
 
 def test_simulated_when_no_esp32():
     a = StepperArms(None)                 # ไม่มีบอร์ด: ทำงานต่อได้ แค่พิมพ์บอก
-    a.move(L=90); a.wave(); a.park()
+    a.move(L=40); a.wave(); a.park()
     assert a.status()["simulated"] is True
 
 
@@ -186,7 +207,8 @@ def test_plug_in_later_connects_on_next_wave():
     op.plugged = True
     a.wave()                                   # เสียบแล้ว: ต่อเองแล้วโบกจริง
     assert a.link is not None
-    assert any(" MOVE " in s for s in op.esp.sent) and op.esp.sent[-1].endswith("PARK")
+    cmds = [s for s in op.esp.sent if s and "PING" not in s]
+    assert any(" MOVE " in s for s in cmds) and cmds[-2].endswith("PARK") and cmds[-1].endswith("EN 1")
 
 
 def test_retry_is_rate_limited():
@@ -231,7 +253,10 @@ def test_arm_test_commands():
     a, esp = arms()
     assert arm_test.run(a, "L 30") is True and esp.pos["L"] == 30.0
     assert arm_test.run(a, "n -20") is True and esp.pos["N"] == -20.0     # ตัวพิมพ์เล็กก็ได้ ติดลบได้
-    assert arm_test.run(a, "all 90") is True and esp.pos == {"L": 90.0, "R": 90.0, "N": 60.0}   # คอไม่เกิน 60
+    assert arm_test.run(a, "all 45") is True and esp.pos == {"L": 45.0, "R": 45.0, "N": 45.0}
+    with pytest.raises(ArmError):                                          # เกินเพดาน: ลูปหลักพิมพ์ error ให้ แขนไม่ขยับ
+        arm_test.run(a, "L 90")
+    assert esp.pos["L"] == 45.0
     assert arm_test.run(a, "อะไรก็ไม่รู้") is True                         # คำสั่งแปลก: ไม่พัง
     assert arm_test.run(a, "q") is False and esp.parked                    # ออก = จอดก่อน
 

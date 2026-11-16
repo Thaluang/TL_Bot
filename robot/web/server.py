@@ -35,6 +35,7 @@ from answer_cache import AnswerCache, replay_pieces            # noqa: E402
 from datetime import datetime                                  # noqa: E402
 from datadir import DataDir, resolve_data_dir, _writable       # noqa: E402
 from news import NewsStore, NewsError                           # noqa: E402
+from tts_text import thai_pauses                               # noqa: E402
 from content import GuidanceStore, GalleryStore                 # noqa: E402
 from stats import SURVEY_ITEMS, SURVEY_ROLES, SURVEY_GENDERS, SURVEY_USAGES, SURVEY_TEXT_MAX   # noqa: E402
 from urllib.request import urlopen                              # noqa: E402
@@ -256,7 +257,7 @@ def _tts_cache_path(text: str, lang: str) -> Path:
     else:
         voice = config.EDGE_TTS_VOICE_EN if lang == "en" else config.EDGE_TTS_VOICE
         voice, ext = f"{voice}{config.EDGE_TTS_RATE}", "mp3"
-    h = hashlib.sha1(f"v3|{config.VOICE_ENGINE}|{voice}|{lang}|{text}".encode("utf-8")).hexdigest()
+    h = hashlib.sha1(f"v5|{config.VOICE_ENGINE}|{voice}|{lang}|{text}".encode("utf-8")).hexdigest()
     return Path(config.TTS_CACHE_DIR) / f"{h}.{ext}"
 
 
@@ -279,6 +280,8 @@ def edge_mp3_stream(text: str, lang: str):
     import asyncio
     import edge_tts
     voice = config.EDGE_TTS_VOICE_EN if lang == "en" else config.EDGE_TTS_VOICE
+    if lang == "th":
+        text = thai_pauses(text)   # เว้นจังหวะตามช่องว่าง/บรรทัด ไม่อ่านรวดเดียว
     agen = edge_tts.Communicate(text, voice, rate=config.EDGE_TTS_RATE).stream()
     loop = asyncio.new_event_loop()
     try:

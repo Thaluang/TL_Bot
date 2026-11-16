@@ -27,6 +27,10 @@ pip install --break-system-packages google-genai edge-tts
 | `../pi_ram/labwc-rc.xml` | `~/.config/labwc/rc.xml` | ทัชไปจอ 1920, หน้าแชท → HDMI-A-1, หน้าหุ่น → HDMI-A-2 |
 | `labwc-autostart` | `~/.config/labwc/autostart` | ไม่เปิดตัววาดเดสก์ท็อป (pcmanfm-pi เคยค้างกิน CPU 100%) |
 
+VNC ให้เปิดมาที่จอ body (1920, HDMI-A-1) เสมอ: copy `/usr/sbin/wayvnc-run.sh` ไป `/usr/local/sbin/wayvnc-run-body.sh` แล้วเติม `--output=HDMI-A-1` ท้ายคำสั่ง `wayvnc`
+จากนั้นสร้าง `/etc/systemd/system/wayvnc.service.d/body-output.conf` ให้ `ExecStart=` (ว่าง) ตามด้วย `ExecStart=/bin/sh /usr/local/sbin/wayvnc-run-body.sh` → `sudo systemctl daemon-reload && sudo systemctl restart wayvnc`
+(สลับชั่วคราว: `sudo wayvncctl --socket=/tmp/wayvnc/wayvncctl.sock output-set HDMI-A-2`)
+
 คีย์บอร์ดไทย (Alt+Shift): ใน `~/.config/labwc/environment` ตั้ง `XKB_DEFAULT_LAYOUT=us,th` และ `XKB_DEFAULT_OPTIONS=grp:alt_shift_toggle`
 
 ## หลังติดตั้ง

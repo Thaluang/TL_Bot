@@ -49,3 +49,14 @@ def test_presentation_document_reaches_ai_prompt():
     prompt = format_all_data(data, {}, sar_text="")
     for text in ("ปี พ.ศ. 2527", "โรงเรียนโรงงาน", "Fix it Center", "สมาร์ทนา", "MOU"):
         assert text in prompt
+
+
+def test_phonebook_reaches_ai_prompt_without_mobile_numbers():
+    """สมุดโทรศัพท์ tel69.pdf — เบอร์ภายใน + รายชื่อบุคลากร (ไม่ใส่เบอร์มือถือส่วนตัว)"""
+    import re
+    book = load_college_data()["สมุดโทรศัพท์และบุคลากร"]
+    assert book["เบอร์ภายใน"]["112"] == "งานทะเบียน" and book["เบอร์ภายใน"]["118"] == "งานแนะแนว"
+    prompt = format_all_data(load_college_data(), {}, sar_text="")
+    for text in ("นายวิศรุต ไวโสภา", "งานห้องสมุด-งานเอกสารการพิมพ์", "036-281-295"):
+        assert text in prompt
+    assert not re.search(r"0[689]\d-?\d{3}-?\d{4}", str(book))   # ไม่มีเบอร์มือถือ

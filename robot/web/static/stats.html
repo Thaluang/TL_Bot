@@ -94,6 +94,19 @@
   .rows .low{color:var(--low);white-space:nowrap}
   .rows small{grid-column:1/-1;color:var(--muted);font-size:.75rem;margin-top:-4px}
   .empty{color:var(--muted);font-size:.9rem;padding:8px 0}
+  /* ---- คำตอบที่ได้ดาวน้อย → ครูเพิ่มคำตอบ ---- */
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .btn.sm{font-size:.85rem;padding:6px 14px;border-radius:10px}
+  .rows .ta-acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mini{all:unset;cursor:pointer;display:inline-block;white-space:nowrap;flex:none;font-size:.85rem;color:#5b21b6;border:1.5px solid #d8ccfb;border-radius:999px;padding:3px 12px;background:#fff}
+  .mini:hover{background:#f6f2ff}.mini.del{color:var(--low);border-color:#f3c4c2}
+  .rows li.editing{background:#faf7ff;border-radius:12px;padding:10px 12px;margin:4px 0}
+  .rows .ed{grid-column:1/-1;display:flex;flex-direction:column;gap:8px}
+  .rows .ed .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .rows .ed .msg{margin:0}
+  .ta-card{margin-top:12px}
+  .rows .ans{grid-column:1/-1;white-space:pre-wrap;overflow-wrap:anywhere;background:#f6fbf7;border-left:3px solid var(--ok);padding:6px 10px;border-radius:0 8px 8px 0;font-size:.92rem}
+  .ok-tag{color:var(--ok);font-size:.8rem;white-space:nowrap}
 
   /* ---- ข่าว ---- */
   .login{max-width:420px;margin-bottom:16px}
@@ -209,7 +222,17 @@
     <section class="grid">
       <div class="card"><h2>คะแนนที่ได้</h2><p class="hint">คนให้ดาวกี่คนในแต่ละระดับ</p><div class="dist" id="dist"></div></div>
       <div class="card"><h2>คำถามที่ถามบ่อย</h2><p class="hint">10 อันดับแรก (นับเฉพาะข้อความที่ตรงกันทุกตัว)</p><ol class="rows" id="top"></ol></div>
-      <div class="card"><h2>คำตอบที่ได้ 1–2 ดาว</h2><p class="hint">ข้อพวกนี้ควรเติมข้อมูลใน college_data.json / saraburi_data.json</p><ul class="rows" id="low"></ul></div>
+      <div class="card"><div class="card-head"><h2>คำตอบที่ได้ 1–2 ดาว</h2>
+        <a class="btn g sm" href="/low_ratings.doc" download title="คำถามที่ได้ 1–2 ดาวทั้งหมด พร้อมคำตอบที่ครูเพิ่มแล้ว">⬇️ ดาวน์โหลดไฟล์ Word</a></div>
+        <p class="hint">กด ✏️ เพิ่มคำตอบที่ถูก แล้วหุ่นจะใช้คำตอบนั้นตอบข้อนี้ทันที (ต้องเข้าสู่ระบบ) <span id="lowAnswered"></span></p>
+        <ul class="rows" id="low"></ul></div>
+    </section>
+    <!-- คำตอบที่ครูเพิ่ม: หุ่นใช้ตอบก่อนข้อมูลอื่น (เซิร์ฟเวอร์ส่งต่อท้ายข้อมูลให้ AI) -->
+    <section class="card ta-card" id="taCard">
+      <h2>📚 คำตอบที่ครูเพิ่ม</h2>
+      <p class="hint">หุ่นใช้คำตอบเหล่านี้เป็นหลักเมื่อมีคนถามคำถามเดียวกันหรือคล้ายกัน แก้หรือลบได้ตลอด</p>
+      <div class="msg" id="taMsg"></div>
+      <div id="taBody"><ul class="rows" id="taList"></ul></div>
     </section>
   </section>
 
@@ -372,9 +395,15 @@ function render(d) {
     `<li><span class="q">${esc(x.question)}</span><span class="c">${nf.format(x.count)} ครั้ง</span>` +
     `<span class="bar"><i style="width:${(x.count / topMax) * 100}%"></i></span></li>`).join("")
     : '<li class="empty">ยังไม่มีคนถาม</li>';
-  $("low").innerHTML = d.low.length ? d.low.map((x) =>
-    `<li><span class="q">${esc(x.question)}</span><span class="low">${starText(x.stars)}</span><small>${esc(x.ts)}</small></li>`).join("")
-    : '<li class="empty">ยังไม่มีคำตอบที่ได้ดาวน้อย 🎉</li>';
+  $("lowAnswered").textContent = d.low_answered ? `· ครูเพิ่มคำตอบไปแล้ว ${nf.format(d.low_answered)} ข้อ (อยู่ด้านล่าง)` : "";
+  // กำลังพิมพ์คำตอบอยู่ → ไม่วาดรายการใหม่ (โหลดซ้ำทุก 30 วิ จะลบข้อความที่พิมพ์ทิ้ง)
+  if (!$("low").querySelector("li.editing")) {
+    $("low").innerHTML = d.low.length ? d.low.map((x) =>
+      `<li data-q="${esc(x.question)}"><span class="q">${esc(x.question)}</span><span class="low">${starText(x.stars)}</span>` +
+      `<small>${esc(x.ts)}${x.count > 1 ? ` · ได้ดาวน้อย ${nf.format(x.count)} ครั้ง` : ""}</small>` +
+      `<div class="ta-acts"><button type="button" class="mini" data-act="answer">✏️ เพิ่มคำตอบ</button></div></li>`).join("")
+      : '<li class="empty">ยังไม่มีคำตอบที่ได้ดาวน้อย 🎉</li>';
+  }
   $("updated").textContent = "อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 function load() {
@@ -384,6 +413,86 @@ function load() {
 }
 load();
 setInterval(load, 30000);
+
+// ================= คำตอบที่ครูเพิ่ม (จากคำถามที่ได้ 1–2 ดาว) =================
+let taItems = [];
+function taMsg(text, kind) { $("taMsg").className = "msg" + (kind ? " " + kind : ""); $("taMsg").textContent = text || ""; }
+// ยังไม่ได้เข้าระบบ: คนทั่วไปดูสถิติได้ตามปกติ — ไม่เด้งกล่องใส่รหัสเอง ให้กดปุ่มก่อน
+function askLogin(r) {
+  adminGate(r || { status: 401 }, "taBody");
+  $("loginBox").scrollIntoView({ behavior: "smooth", block: "center" });
+  $("pw").focus();
+}
+function loadAnswers() {
+  return fetch("/admin/answers").then(jsonOf).then(({ r, d }) => {
+    if (r.status === 401 || r.status === 403) {
+      $("taBody").hidden = false;
+      $("taList").innerHTML = '<li class="empty">🔒 เข้าสู่ระบบก่อนจึงจะดู เพิ่ม หรือแก้คำตอบได้ ' +
+        '<button type="button" class="mini" data-act="login">เข้าสู่ระบบ</button></li>';
+      return;
+    }
+    if (!r.ok) throw new Error(d.error);
+    logged = true; setWho(); $("taBody").hidden = false;
+    taItems = d.items || [];
+    if ($("taList").querySelector("li.editing")) return;
+    $("taList").innerHTML = taItems.length ? taItems.map((a) =>
+      `<li data-id="${esc(a.id)}"><span class="q">${esc(a.question)}</span><span class="ok-tag">✓ หุ่นใช้ตอบแล้ว</span>` +
+      `<div class="ans">${esc(a.answer)}</div><small>แก้ล่าสุด ${esc(a.updated)}</small>` +
+      `<div class="ta-acts"><button type="button" class="mini" data-act="edit">✏️ แก้</button><button type="button" class="mini del" data-act="del">🗑️ ลบ</button></div></li>`).join("")
+      : '<li class="empty">ยังไม่มี — กด ✏️ เพิ่มคำตอบ ที่คำถามด้านบนได้เลย</li>';
+  }).catch(() => taMsg("โหลดคำตอบที่ครูเพิ่มไม่ได้ — เซิร์ฟเวอร์หุ่นเปิดอยู่ไหม?", "bad"));
+}
+// กล่องพิมพ์คำตอบในแถวนั้นเลย (ใช้ทั้งเพิ่มจากรายการดาวน้อย และแก้ในรายการคำตอบของครู)
+function openEditor(li, question, answer, id) {
+  document.querySelectorAll("li.editing").forEach(closeEditor);
+  li.dataset.html = li.innerHTML;
+  li.classList.add("editing");
+  li.innerHTML = `<span class="q">${esc(question)}</span><div class="ed">` +
+    `<textarea class="inp" maxlength="1500" placeholder="พิมพ์คำตอบที่ถูกต้อง เช่น ข้อมูล ตัวเลข เบอร์โทร ที่หุ่นควรตอบ">${esc(answer || "")}</textarea>` +
+    `<div class="row"><button type="button" class="btn sm" data-act="save">บันทึก ให้หุ่นใช้ตอบ</button>` +
+    `<button type="button" class="btn g sm" data-act="cancel">ยกเลิก</button><span class="msg"></span></div></div>`;
+  li.dataset.question = question; li.dataset.editId = id || "";
+  li.querySelector("textarea").focus();
+}
+function closeEditor(li) { li.classList.remove("editing"); li.innerHTML = li.dataset.html || ""; }
+function saveEditor(li) {
+  const answer = li.querySelector("textarea").value.trim(), msg = li.querySelector(".ed .msg"), btn = li.querySelector('[data-act="save"]');
+  if (!answer) { msg.className = "msg bad"; msg.textContent = "พิมพ์คำตอบก่อนบันทึก"; return; }
+  btn.setAttribute("aria-busy", "true"); msg.className = "msg"; msg.textContent = "กำลังบันทึก…";
+  const id = li.dataset.editId;
+  fetch(id ? "/admin/answers/" + encodeURIComponent(id) : "/admin/answers", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: li.dataset.question, answer }),
+  }).then(jsonOf).then(({ r, d }) => {
+    btn.removeAttribute("aria-busy");
+    if (r.status === 401 || r.status === 403) { msg.className = "msg bad"; msg.textContent = "ต้องเข้าสู่ระบบก่อน (ข้อความที่พิมพ์ยังอยู่)"; askLogin(r); return; }
+    if (!r.ok) { msg.className = "msg bad"; msg.textContent = d.error || "บันทึกไม่ได้"; return; }
+    li.classList.remove("editing");
+    taMsg("บันทึกแล้ว ✓ หุ่นจะใช้คำตอบนี้ตั้งแต่คำถามถัดไป", "good");
+    load(); loadAnswers();
+  }).catch(() => { btn.removeAttribute("aria-busy"); msg.className = "msg bad"; msg.textContent = "ติดต่อเซิร์ฟเวอร์ไม่ได้"; });
+}
+function onAnswerClick(e) {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  const li = b.closest("li"), act = b.dataset.act;
+  if (act === "login") return askLogin();
+  if (act === "answer") return openEditor(li, li.dataset.q, "", "");
+  if (act === "cancel") return closeEditor(li);
+  if (act === "save") return saveEditor(li);
+  const a = taItems.find((x) => x.id === li.dataset.id);
+  if (!a) return;
+  if (act === "edit") return openEditor(li, a.question, a.answer, a.id);
+  if (act === "del" && confirm(`ลบคำตอบของคำถาม "${a.question}" ?\nหุ่นจะกลับไปตอบจากข้อมูลเดิม`)) {
+    fetch("/admin/answers/" + encodeURIComponent(a.id), { method: "DELETE" }).then(jsonOf).then(({ r, d }) => {
+      if (!r.ok) taMsg(d.error || "ลบไม่ได้", "bad"); else { taMsg("ลบแล้ว", "good"); load(); loadAnswers(); }
+    });
+  }
+}
+$("low").addEventListener("click", onAnswerClick);
+$("taList").addEventListener("click", onAnswerClick);
+LOADERS.stats = loadAnswers;   // เข้าสู่ระบบเสร็จ → showView("stats") → โหลดรายการใหม่
+loadAnswers();
 
 // ================= ข่าว =================
 const CAT_NAME = { admission: "รับสมัคร", event: "กิจกรรม", scholarship: "ทุนการศึกษา", award: "ผลงาน", general: "ประกาศทั่วไป" };

@@ -150,6 +150,18 @@ class Stats:
                 "genders": count("gender", SURVEY_GENDERS), "roles": count("role", SURVEY_ROLES),
                 "usages": count("usage", SURVEY_USAGES), "comments": comments}
 
+    def _low(self, limit=None):
+        """คำถามที่ได้ 1–2 ดาว รวมข้อซ้ำเป็นแถวเดียว (ดาวต่ำสุด, กี่ครั้ง, ล่าสุดเมื่อไร) — ข้อที่เพิ่งได้ดาวน้อยขึ้นก่อน"""
+        sql = ("SELECT question, MIN(stars) stars, COUNT(*) c, MAX(ts) ts FROM ratings WHERE stars <= 2 AND question != '' "
+               "GROUP BY question ORDER BY MAX(id) DESC" + (f" LIMIT {int(limit)}" if limit else ""))
+        return [{"question": r["question"], "stars": r["stars"], "count": r["c"], "ts": r["ts"]}
+                for r in self._conn.execute(sql)]
+
+    def low_questions(self):
+        """ทุกข้อที่ได้ 1–2 ดาว (ไว้ทำไฟล์ดาวน์โหลด)"""
+        with self._lock:
+            return self._low()
+
     def summary(self, now=None):
         today = (now or datetime.now()).strftime("%Y-%m-%d")
         one = lambda sql, *a: self._conn.execute(sql, a).fetchone()[0]   # noqa: E731
@@ -160,8 +172,7 @@ class Stats:
             avg = one("SELECT AVG(stars) FROM ratings")
             top = [{"question": r["question"], "count": r["c"]} for r in self._conn.execute(
                 "SELECT question, COUNT(*) c FROM questions GROUP BY question ORDER BY c DESC, MAX(id) DESC LIMIT 10")]
-            low = [{"question": r["question"], "stars": r["stars"], "ts": r["ts"]} for r in self._conn.execute(
-                "SELECT question, stars, ts FROM ratings WHERE stars <= 2 ORDER BY id DESC LIMIT 20")]
+            low = self._low(limit=100)
             return {
                 "questions_total": one("SELECT COUNT(*) FROM questions"),
                 "questions_today": one("SELECT COUNT(*) FROM questions WHERE ts LIKE ?", today + "%"),

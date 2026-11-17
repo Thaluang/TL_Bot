@@ -149,7 +149,7 @@ def test_screen_has_quick_questions():
     assert screen.status_code == 200
     html = screen.data.decode("utf-8")
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
-    assert dock.count('class="chip') == 4      # ชิปแนะนำ 4 ปุ่ม (ผลงานรางวัล/สมัครเรียน/สถานที่ท่องเที่ยว/แผนผัง) — หลักสูตรอยู่ในเมนูทั้งหมด
+    assert dock.count('class="chip') == 4      # ชิปแนะนำ 4 ปุ่ม (ผลงานรางวัล/สมัครเรียน/สถานที่ท่องเที่ยว/ผอ.สอจ.สระบุรี) — หลักสูตรอยู่ในเมนูทั้งหมด
 
 
 # ---------- wayfinding ----------
@@ -430,7 +430,7 @@ def test_menu_endpoint_returns_tree_without_ai(monkeypatch):
     r = make_client().get("/menu")
     assert r.status_code == 200
     m = r.get_json()
-    assert set(m) == {"trips", "souvenirs", "stay", "food", "cafe", "market"}
+    assert set(m) == {"trips", "souvenirs", "stay", "food", "cafe", "market", "directors"}   # directors = รายชื่อ ผอ.สอจ.
     assert [c["key"] for c in m["trips"]["categories"]] == list(server.saraburi_data["ท่องเที่ยวสระบุรี"])
 
 
@@ -974,12 +974,19 @@ def test_new_screen_layout():
 def test_dock_chips_and_all_menu():
     html = make_client().get("/screen").get_data(as_text=True)
     dock = html[html.index('id="dockQs"'):html.index("</div>", html.index('id="dockQs"'))]
-    assert 'data-action="showMap"' in dock and 'data-menu="trips"' in dock
+    assert 'data-action="showDirectors"' in dock and 'data-menu="trips"' in dock
+    assert 'data-action="showMap"' not in dock                     # แผนผังย้ายไปอยู่ในเมนูทั้งหมดอย่างเดียว
     assert "สมัครเรียน" in dock and "หลักสูตร" not in dock and "สถานที่ท่องเที่ยว" in dock
-    # ลำดับ: ผลงานรางวัล → สมัครเรียน → สถานที่ท่องเที่ยว → แผนผัง
+    # ลำดับ: ผลงานรางวัล → สมัครเรียน → สถานที่ท่องเที่ยว → ผอ.สอจ.สระบุรี
     assert (dock.index("ผลงานรางวัล") < dock.index("สมัครเรียน") < dock.index('data-menu="trips"')
-            < dock.index('data-action="showMap"'))
+            < dock.index('data-action="showDirectors"'))
     tpl = html[html.index('id="allMenuTpl"'):html.index("</template>", html.index('id="allMenuTpl"'))]
+    # เมนูทั้งหมดเรียงตามความสำคัญ: เรื่องวิทยาลัยก่อน แล้วค่อยเรื่องเที่ยว/กินในสระบุรี
+    order = ['data-t="cApply"', 'data-t="cPrograms"', 'data-action="showDirectors"', 'data-t="cAwards"',
+             'data-action="showMap"', 'data-action="campusTour"', 'data-t="cContact"',
+             'data-menu="trips"', 'data-menu="souvenirs"', 'data-menu="food"', 'data-menu="cafe"', 'data-menu="stay"', 'data-menu="market"']
+    pos = [tpl.index(k) for k in order]
+    assert pos == sorted(pos) and tpl.count('class="menu-btn"') == len(order)
     for needle in ('data-action="showMap"', 'data-menu="trips"', 'data-menu="souvenirs"', 'data-menu="stay"', 'data-menu="food"', 'data-menu="cafe"', 'data-menu="market"',
                    'data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง"',
                    'data-q="เปิดสอนสาขาอะไรบ้าง"'):   # หลักสูตรยังอยู่ในเมนูทั้งหมด
@@ -1141,3 +1148,98 @@ def test_guides_for_users_and_admin():
     stats = c.get("/stats").get_data(as_text=True)
     assert 'id="adminGuideBtn"' in stats and "/static/guides/admin-guide.jpg" in stats
     assert c.get("/static/guides/admin-guide.jpg").status_code == 200
+
+
+# ---------- ข้อมูล ผอ.สอจ.สระบุรี ----------
+
+def test_menu_has_directors_and_places():
+    d = make_client().get("/menu").get_json()
+    assert "trips" in d and len(d["directors"]) == 7
+    assert d["directors"][0]["photo"] == "/static/directors/jenwit.jpg"
+
+
+def test_director_photo_served():
+    r = make_client().get("/static/directors/chalermchon.jpg")
+    assert r.status_code == 200 and r.mimetype == "image/jpeg"
+
+
+def test_answer_photos_prefers_directors():
+    import server
+    got = server.answer_photos("ประวัติ ผอ.ปราณี", "", "th")
+    assert [p["src"] for p in got] == ["/static/directors/pranee.jpg"] and got[0]["person"]
+
+
+# ---- สถานะเน็ต (/net) — ป้ายเน็ตดี/เน็ตช้า บนจอ ----
+def fake_net(monkeypatch, delay=0.0, fail=False, http_error=False):
+    import urllib.error
+    clock = {"t": 1000.0}
+    monkeypatch.setattr(server, "_mono", lambda: clock["t"])
+
+    class R:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def opener(req, timeout=None):
+        clock["t"] += delay
+        if fail:
+            raise OSError("no internet")
+        if http_error:   # เซิร์ฟเวอร์ Google ตอบ 404 = เน็ตต่อได้ ใช้วัดเวลาได้เหมือนกัน
+            raise urllib.error.HTTPError("u", 404, "nf", {}, None)
+        return R()
+    monkeypatch.setattr(server, "urlopen", opener)
+    monkeypatch.setattr(server, "_net", {"at": -1e9, "level": None, "ms": None, "ai_ms": None, "ai_at": -1e9, "hist": []})
+    return clock
+
+
+def test_net_good_when_fast(monkeypatch):
+    fake_net(monkeypatch, delay=0.2)
+    d = make_client().get("/net").get_json()
+    assert d["level"] == "good" and d["ms"] == 200
+
+
+def test_net_slow_when_probe_slow(monkeypatch):
+    fake_net(monkeypatch, delay=2.0, http_error=True)
+    d = make_client().get("/net").get_json()
+    assert d["level"] == "slow" and d["ms"] == 2000
+
+
+def test_net_down_when_no_internet(monkeypatch):
+    fake_net(monkeypatch, fail=True)
+    d = make_client().get("/net").get_json()
+    assert d["level"] == "down" and d["ms"] is None
+
+
+def test_net_slow_when_ai_answered_slowly_recently(monkeypatch):
+    clock = fake_net(monkeypatch, delay=0.1)
+    server.note_ai_latency(9.0)
+    assert make_client().get("/net").get_json()["level"] == "slow"
+    clock["t"] += server.NET_AI_MEMORY + server.NET_TTL + 1    # นานแล้ว ไม่นับ
+    assert make_client().get("/net").get_json()["level"] == "good"
+
+
+def test_net_is_cached_briefly(monkeypatch):
+    calls = []
+    fake_net(monkeypatch, delay=0.1)
+    real = server.urlopen
+    monkeypatch.setattr(server, "urlopen", lambda *a, **k: (calls.append(1), real(*a, **k))[1])
+    c = make_client()
+    c.get("/net"); c.get("/net")
+    assert len(calls) == 1
+
+
+def test_stt_partial_flag_passes_through(stt_env):
+    r = make_client().post("/stt?lang=th&partial=1", data=b"part", content_type="audio/webm")
+    assert r.status_code == 200
+
+
+def test_net_one_spike_does_not_flip_to_slow(monkeypatch):
+    clock = fake_net(monkeypatch, delay=0.3)
+    c = make_client()
+    c.get("/net")
+    clock["t"] += server.NET_TTL
+    c.get("/net")
+    monkeypatch.setattr(server, "urlopen", lambda *a, **k: (clock.__setitem__("t", clock["t"] + 4.0), None)[1] or
+                        type("R", (), {"__enter__": lambda s: s, "__exit__": lambda s, *a: False})())
+    clock["t"] += server.NET_TTL
+    d = c.get("/net").get_json()
+    assert d["ms"] == 4000 and d["level"] == "good"    # ค่ากลางยังดีอยู่

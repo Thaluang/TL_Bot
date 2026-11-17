@@ -4,6 +4,8 @@
     {"id", "date": "YYYY-MM-DD", "end": "YYYY-MM-DD" | "", "title", "time", "place", "detail"}
 - คลังภาพกิจกรรม:          gallery.json + gallery/<id>-xxxxxx.jpg|png|webp
     {"id", "title", "date": "YYYY-MM-DD" | "", "image", "order": int}
+- คำตอบที่ครูเพิ่ม:         teacher_answers.json  (จากคำถามที่ได้ 1–2 ดาวในหน้าสถิติ)
+    {"id", "question", "answer", "updated": "YYYY-MM-DD HH:MM"}
 เก็บในโฟลเดอร์ข้อมูลถาวรเดียวกับข่าว (ดู datadir.py) — เขียนไฟล์ก่อน สำเร็จแล้วค่อยเปลี่ยนในหน่วยความจำ
 """
 import json
@@ -11,9 +13,10 @@ import os
 import re
 import threading
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
+from answer_cache import normalize
 from news import NewsError, _date_ok, _image_ext
 
 _NAME = re.compile(r"^[0-9a-f]{12}-[0-9a-f]{6}\.(jpg|png|webp)$")
@@ -214,3 +217,74 @@ class GalleryStore(_JsonList):
             return None
         p = self.img_dir / name
         return p if p.is_file() else None
+
+
+# ================= คำตอบที่ครูเพิ่ม =================
+ANSWER_LIMITS = {"question": 300, "answer": 1500}
+ANSWERS_MAX = 300
+
+
+class TeacherAnswerStore(_JsonList):
+    """คำถามที่หุ่นตอบได้ไม่ดี (ได้ 1–2 ดาว) + คำตอบที่ถูกซึ่งครูพิมพ์ให้ — ส่งให้ AI ใช้ตอบก่อนข้อมูลอื่น
+    คำถามเดียวกัน (ต่างแค่ช่องว่าง/ครับ/ค่ะ/?) เก็บข้อเดียว: เพิ่มซ้ำ = แก้คำตอบเดิม"""
+
+    def __init__(self, folder):
+        super().__init__(folder, "teacher_answers.json")
+
+    def all(self) -> list:
+        """ใหม่สุดก่อน"""
+        with self._lock:
+            return sorted((dict(d) for d in self._items), key=lambda d: d.get("updated", ""), reverse=True)
+
+    def has(self, question: str) -> bool:
+        key = normalize(question)
+        with self._lock:
+            return any(normalize(d["question"]) == key for d in self._items)
+
+    def _clean(self, fields: dict, current: dict) -> dict:
+        out = dict(current)
+        for key, n in ANSWER_LIMITS.items():
+            if key in fields:
+                out[key] = str(fields[key] if fields[key] is not None else "").strip()[:n]
+        if not out.get("question"):
+            raise NewsError("ไม่มีคำถาม")
+        if not out.get("answer"):
+            raise NewsError("พิมพ์คำตอบก่อนบันทึก")
+        out["updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        return out
+
+    def add(self, fields: dict) -> dict:
+        key = normalize(str(fields.get("question") or ""))
+        same = next((d for d in self.all() if normalize(d["question"]) == key), None)
+        if same:
+            return self.update(same["id"], fields)
+        item = self._clean(fields, {"id": uuid.uuid4().hex[:12], "question": "", "answer": ""})
+        with self._lock:
+            if len(self._items) >= ANSWERS_MAX:
+                raise NewsError(f"เก็บคำตอบได้ไม่เกิน {ANSWERS_MAX} ข้อ — ลบข้อที่ไม่ใช้แล้วก่อน")
+            self._commit(self._items + [item])
+        return dict(item)
+
+    def update(self, item_id: str, fields: dict) -> dict:
+        cur = self.get(item_id)
+        if cur is None:
+            raise KeyError(item_id)
+        item = self._clean(fields, cur)
+        with self._lock:
+            self._commit([item if d["id"] == item_id else d for d in self._items])
+        return dict(item)
+
+    def delete(self, item_id: str) -> bool:
+        if self.get(item_id) is None:
+            return False
+        with self._lock:
+            self._commit([d for d in self._items if d["id"] != item_id])
+        return True
+
+    def ai_text(self) -> str:
+        items = self.all()
+        if not items:
+            return ""
+        lines = ["## คำตอบที่ครูของวิทยาลัยตรวจและยืนยันแล้ว (ถ้าคำถามตรงหรือใกล้เคียงข้อไหน ให้ตอบตามคำตอบของครูข้อนั้นเป็นหลัก)"]
+        lines += [f"- ถาม: {d['question']}\n  ตอบ: {d['answer']}" for d in items]
+        return "\n".join(lines)

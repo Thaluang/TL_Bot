@@ -24,6 +24,7 @@ from database import load_college_data, load_saraburi_data      # noqa: E402
 from ai import ask_ai, ask_ai_stream, is_quota_error, speak_wav, transcribe                # noqa: E402
 from wayfinding import wants_map                               # noqa: E402
 from places import photos_for, menu_tree                       # noqa: E402
+import directors                                               # noqa: E402
 import json                                                    # noqa: E402
 import queue                                                   # noqa: E402
 from gpio_btn import GpioButton                                # noqa: E402
@@ -31,12 +32,12 @@ from stepper import StepperArms                                # noqa: E402
 from stats import Stats                                        # noqa: E402
 from announce import load_announcements, due_announcements    # noqa: E402
 from qr import load_qr_codes, resolve as resolve_qr            # noqa: E402
-from answer_cache import AnswerCache, replay_pieces            # noqa: E402
+from answer_cache import AnswerCache, replay_pieces, normalize  # noqa: E402
 from datetime import datetime                                  # noqa: E402
 from datadir import DataDir, resolve_data_dir, _writable       # noqa: E402
 from news import NewsStore, NewsError                           # noqa: E402
 from tts_text import thai_pauses                               # noqa: E402
-from content import GuidanceStore, GalleryStore                 # noqa: E402
+from content import GuidanceStore, GalleryStore, TeacherAnswerStore   # noqa: E402
 from stats import SURVEY_ITEMS, SURVEY_ROLES, SURVEY_GENDERS, SURVEY_USAGES, SURVEY_TEXT_MAX   # noqa: E402
 from urllib.request import urlopen                              # noqa: E402
 import secrets                                                  # noqa: E402
@@ -65,12 +66,14 @@ stats = Stats(DATA.path("stats.db"))
 news = NewsStore(DATA.folder)   # ข่าวประชาสัมพันธ์ที่ครูลงผ่านหน้า /stats
 guidance = GuidanceStore(DATA.folder)   # ปฏิทินแนะแนวการศึกษา (ครูลงผ่านหน้า /stats)
 gallery = GalleryStore(DATA.folder)     # คลังภาพกิจกรรม (ครูลงผ่านหน้า /stats)
-# คำตอบที่จำไว้ใช้ไม่ได้เมื่อข่าว/ปฏิทินแนะแนวเปลี่ยน หรือข้ามวัน (ข่าวเริ่ม/หมดอายุตามวันที่)
+teacher_answers = TeacherAnswerStore(DATA.folder)   # คำตอบที่ครูแก้ให้ (จากคำถามที่ได้ 1–2 ดาว ในหน้า /stats)
+# คำตอบที่จำไว้ใช้ไม่ได้เมื่อข่าว/ปฏิทินแนะแนว/คำตอบของครูเปลี่ยน หรือข้ามวัน (ข่าวเริ่ม/หมดอายุตามวันที่)
 answers = AnswerCache(config.ANSWER_CACHE_SECONDS, data_files=[
     ROBOT_DIR / config.COLLEGE_DATA_PATH, ROBOT_DIR / config.SARABURI_DATA_PATH, config.SAR_DATA_PATH],
-    version_fn=lambda: (news.version, guidance.version, _now().date().isoformat()))
-# หุ่นรู้ข่าวที่ขึ้นจออยู่ + กำหนดการแนะแนว (ต่อท้ายข้อมูลวิทยาลัยที่ส่งให้ AI)
-ai.extra_context = lambda: "\n\n".join(t for t in (news.ai_text(_now().date()), guidance.ai_text(_now().date())) if t)
+    version_fn=lambda: (news.version, guidance.version, teacher_answers.version, _now().date().isoformat()))
+# หุ่นรู้ข่าวที่ขึ้นจออยู่ + กำหนดการแนะแนว + คำตอบที่ครูแก้ให้ (ต่อท้ายข้อมูลวิทยาลัยที่ส่งให้ AI)
+ai.extra_context = lambda: "\n\n".join(t for t in (news.ai_text(_now().date()), guidance.ai_text(_now().date()),
+                                                    teacher_answers.ai_text()) if t)
 # โหลดไลบรารี AI ไว้ก่อนตั้งแต่เปิดเซิร์ฟเวอร์ (บน Pi ช้า ~5 วิ) — คนแรกหลังเปิดเครื่องไม่ต้องรอ
 if config.AI_PROVIDER == "gemini":
     import threading as _threading                             # noqa: E402
@@ -143,6 +146,12 @@ def state_endpoint():
     return jsonify(state=state["value"], lang=state["lang"])
 
 
+def answer_photos(question: str, answer: str, lang: str) -> list:
+    """รูปทางซ้ายของคำตอบ: ถามถึง ผอ. → รูปท่าน, ไม่งั้น → รูปสถานที่/ของฝาก"""
+    return (directors.photos_for(question, answer, lang=lang)
+            or photos_for(question, answer, saraburi_data, lang=lang))
+
+
 @app.post("/ask")
 def ask():
     data = request.get_json(silent=True) or {}
@@ -164,7 +173,7 @@ def ask():
         if wants_map(question):
             result["image"] = "/static/map.jpg"   # ถามทางในวิทยาลัย → แผนผัง ไม่ต้องหารูปที่เที่ยว
         else:
-            result["photos"] = photos_for(question, answer, saraburi_data, lang=lang)
+            result["photos"] = answer_photos(question, answer, lang)
         return jsonify(**result)
     except Exception as e:
         state["value"] = "error"
@@ -211,18 +220,21 @@ def ask_stream():
     def generate():
         line = lambda obj: json.dumps(obj, ensure_ascii=False) + "\n"   # noqa: E731
         pieces = []
+        t0 = time.monotonic()
         try:
             cached = answers.get(question, lang)
             source = replay_pieces(cached) if cached else ask_ai_stream(question, college_data, saraburi_data, lang=lang)
             for piece in source:
                 state["value"] = "answering"
+                if not pieces and not cached:
+                    note_ai_latency(time.monotonic() - t0)   # ป้ายเน็ตช้า/เน็ตดี บนจอ
                 pieces.append(piece)
                 yield line({"t": piece})
             state["value"] = "answering"
             if not cached:
                 answers.put(question, lang, "".join(pieces))   # ตอบครบแล้วค่อยจำ (ขาดกลางทางไม่จำ)
             # หารูปจากคำตอบที่ต่อครบแล้ว (ชื่อสถานที่อาจถูกตัดคร่อมสองท่อน)
-            photos = [] if image else photos_for(question, "".join(pieces), saraburi_data, lang=lang)
+            photos = [] if image else answer_photos(question, "".join(pieces), lang)
             yield line({"done": True, "image": image, "photos": photos})
         except Exception as e:
             state["value"] = "error"
@@ -257,7 +269,7 @@ def _tts_cache_path(text: str, lang: str) -> Path:
     else:
         voice = config.EDGE_TTS_VOICE_EN if lang == "en" else config.EDGE_TTS_VOICE
         voice, ext = f"{voice}{config.EDGE_TTS_RATE}", "mp3"
-    h = hashlib.sha1(f"v5|{config.VOICE_ENGINE}|{voice}|{lang}|{text}".encode("utf-8")).hexdigest()
+    h = hashlib.sha1(f"v6|{config.VOICE_ENGINE}|{voice}|{lang}|{text}".encode("utf-8")).hexdigest()
     return Path(config.TTS_CACHE_DIR) / f"{h}.{ext}"
 
 
@@ -720,6 +732,57 @@ def weather():
     return jsonify(c["data"])
 
 
+# ---- สถานะเน็ต: GET /net → {"level": "good"|"slow"|"down", "ms": เวลาต่อเน็ตเป็นมิลลิวินาที}
+# จอขึ้นป้าย "เน็ตดี / เน็ตช้า / ไม่มีเน็ต" — วัดจากเครื่องหุ่นออกไปหา Google (ที่ AI อยู่)
+# + ดูเวลาที่ AI เริ่มตอบจริงล่าสุด (เน็ตปิงไวแต่ AI ตอบช้า ก็นับว่าช้า คนรอจะได้เข้าใจ)
+NET_PROBE_URL = "https://generativelanguage.googleapis.com/"
+NET_TTL = 10              # วัดซ้ำได้ทุก 10 วิ (จอถามบ่อยกว่านั้นได้ ใช้ค่าเดิม)
+NET_GOOD_MS = 1200        # ต่อเน็ตได้ภายในเท่านี้ (ค่ากลาง 3 ครั้งล่าสุด — รวมจับมือ HTTPS แล้ว) = เน็ตดี
+NET_TIMEOUT = 5           # เกินนี้ = ไม่มีเน็ต
+NET_AI_SLOW = 6.0         # AI เริ่มตอบช้ากว่านี้ (วินาที) = เน็ตช้า
+NET_AI_MEMORY = 120       # จำความช้าของ AI ไว้ 2 นาที
+_mono = time.monotonic
+_net = {"at": -1e9, "level": None, "ms": None, "ai_ms": None, "ai_at": -1e9, "hist": []}
+_net_lock = __import__("threading").Lock()
+
+
+def note_ai_latency(seconds: float) -> None:
+    """เวลาตั้งแต่ถามจนได้คำตอบท่อนแรก — ask/stream เรียกทุกครั้ง"""
+    _net["ai_ms"], _net["ai_at"] = round(seconds * 1000), _mono()
+
+
+def _probe_net():
+    import urllib.error
+    from urllib.request import Request
+    t0 = _mono()
+    try:
+        with urlopen(Request(NET_PROBE_URL, method="HEAD"), timeout=NET_TIMEOUT):
+            pass
+    except urllib.error.HTTPError:
+        pass                      # Google ตอบกลับมา (แม้เป็น 404) = เน็ตใช้ได้
+    except Exception:
+        return None
+    return round((_mono() - t0) * 1000)
+
+
+@app.get("/net")
+def net_status():
+    with _net_lock:
+        now = _mono()
+        if now - _net["at"] >= NET_TTL:
+            _net["ms"], _net["at"] = _probe_net(), _mono()
+            _net["hist"] = (_net.get("hist") or [])[-2:] + [_net["ms"]]
+        ms, hist = _net["ms"], _net.get("hist") or [_net["ms"]]
+        # เน็ตแกว่งเป็นพัก ๆ — ใช้ค่ากลาง 3 ครั้งล่าสุด ป้ายจะได้ไม่กระพริบสลับไปมา / ไม่มีเน็ต = ต่อไม่ได้ 2 ครั้งติด
+        ok = sorted(m for m in hist if m is not None)
+        typical = ok[(len(ok) - 1) // 2] if ok else None   # วัดได้ 2 ครั้ง ใช้ค่าที่ดีกว่า (ครั้งเดียวช้า ยังไม่นับ)
+        ai_slow = (_net["ai_ms"] or 0) > NET_AI_SLOW * 1000 and now - _net["ai_at"] < NET_AI_MEMORY
+        down = all(m is None for m in hist[-2:])
+        level = "down" if down else "good" if typical <= NET_GOOD_MS and not ai_slow else "slow"
+        _net["level"] = level
+        return jsonify(level=level, ms=ms, ai_ms=_net["ai_ms"] if ai_slow else None)
+
+
 @app.post("/rate")
 def rate():
     """ให้ดาว 1–5 กับคำตอบ (จอเนื้อหาส่งมาพร้อมคำถามของคำตอบนั้น)"""
@@ -740,7 +803,84 @@ def stats_page():
 
 @app.get("/stats.json")
 def stats_json():
-    return jsonify(stats.summary(now=_now()))
+    d = stats.summary(now=_now())
+    # ข้อที่ครูเพิ่มคำตอบแล้ว ไม่ต้องโชว์ในรายการดาวน้อยอีก (ยังอยู่ในไฟล์ดาวน์โหลด)
+    todo = [x for x in d["low"] if not teacher_answers.has(x["question"])]
+    d["low_answered"] = len(d["low"]) - len(todo)
+    d["low"] = todo[:20]
+    return jsonify(d)
+
+
+@app.get("/low_ratings.doc")
+def low_ratings_doc():
+    """คำถามที่ได้ 1–2 ดาวทั้งหมด เป็นไฟล์ Word (HTML ที่ Word เปิดได้ ไม่ต้องลงไลบรารีเพิ่มบน Pi)
+    มีช่องคำตอบที่ครูเพิ่มแล้ว — ข้อที่ยังว่างไว้ให้ครูเขียนคำตอบ"""
+    from html import escape
+    rows = stats.low_questions()
+    given = {normalize(d["question"]): d["answer"] for d in teacher_answers.all()}
+    trs = "".join(
+        f"<tr><td>{i}</td><td>{escape(r['question'])}</td><td>{'★' * r['stars']}{'☆' * (5 - r['stars'])}</td>"
+        f"<td>{r['count']}</td><td>{escape(r['ts'][:16])}</td><td>{escape(given.get(normalize(r['question']), ''))}</td></tr>"
+        for i, r in enumerate(rows, 1))
+    now = _now()
+    when = f"{now.day}/{now.month}/{now.year + 543}"
+    html = ('<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">'
+            '<head><meta charset="utf-8"><title>คำถามที่ได้ 1–2 ดาว</title><style>'
+            'body{font-family:"TH Sarabun New",Tahoma,sans-serif;font-size:16pt}'
+            'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4pt;vertical-align:top}'
+            'th{background:#ede9fe}</style></head><body>'
+            '<h2>คำถามที่หุ่นยนต์น้องทานตะวัน-Bot ตอบแล้วได้ 1–2 ดาว</h2>'
+            f'<p>วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์ · ข้อมูล ณ {when} · ทั้งหมด {len(rows)} ข้อ<br>'
+            'ข้อที่ช่อง "คำตอบที่ถูกต้อง" ยังว่าง ใส่คำตอบได้ที่หน้าสถิติ (ปุ่ม ✏️ เพิ่มคำตอบ) หุ่นจะใช้ตอบทันที</p>'
+            '<table><tr><th>ลำดับ</th><th>คำถาม</th><th>ดาว</th><th>จำนวนครั้ง</th><th>ล่าสุด</th><th>คำตอบที่ถูกต้อง</th></tr>'
+            + (trs or '<tr><td colspan="6">ยังไม่มีคำถามที่ได้ดาวน้อย</td></tr>') + "</table></body></html>")
+    return Response("﻿" + html, mimetype="application/msword",
+                    headers={"Content-Disposition": "attachment; filename=low_ratings.doc"})
+
+
+# ---- คำตอบที่ครูเพิ่ม (หน้า /stats แท็บสถิติ: ปุ่ม ✏️ ข้างคำถามที่ได้ 1–2 ดาว) ----
+@app.get("/admin/answers")
+def admin_answers():
+    bad = _need_admin()
+    if bad:
+        return bad
+    return jsonify(items=teacher_answers.all())
+
+
+@app.post("/admin/answers")
+def admin_answers_add():
+    bad = _need_admin()
+    if bad:
+        return bad
+    try:
+        return jsonify(teacher_answers.add(request.get_json(silent=True) or {})), 201
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.post("/admin/answers/<item_id>")
+def admin_answers_edit(item_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    try:
+        return jsonify(teacher_answers.update(item_id, request.get_json(silent=True) or {}))
+    except KeyError:
+        return jsonify(error="ไม่พบคำตอบนี้"), 404
+    except NewsError as e:
+        return jsonify(error=str(e)), 400
+    except OSError as e:
+        return _save_failed(e)
+
+
+@app.delete("/admin/answers/<item_id>")
+def admin_answers_delete(item_id):
+    bad = _need_admin()
+    if bad:
+        return bad
+    return (jsonify(ok=True), 200) if teacher_answers.delete(item_id) else (jsonify(error="ไม่พบคำตอบนี้"), 404)
 
 
 @app.get("/attract")
@@ -778,7 +918,7 @@ def qr():
 @app.get("/menu")
 def menu():
     """โครงเมนูที่เที่ยว/ของฝาก — หน้าจอโหลดครั้งเดียว ไม่เรียก AI"""
-    return jsonify(menu_tree(saraburi_data))
+    return jsonify(**menu_tree(saraburi_data), directors=directors.menu_list())
 
 
 def lan_ips():

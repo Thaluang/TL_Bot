@@ -129,32 +129,29 @@ def test_no_reply_times_out():
     assert e.value.code == "TIMEOUT"
 
 
-def test_wave_stays_within_arm_limit():
-    """แขนยกได้ไม่เกิน 120° (ตรงกับ maxDeg ในเฟิร์มแวร์) — ท่าโบกต้องไม่โดน ERR LIMIT"""
-    a, esp = arms(limit=120)
-    a.wave()                                             # เกิน 120 → FakeEsp ตอบ ERR LIMIT → โยน ArmError
+def test_wave_pose_set_by_user():
+    """ทักทาย: ซ้าย 50° ขวา 140° (ผู้ใช้ตั้ง 17 พ.ย. 69) แล้วเอาลงจอดที่ท่าพัก"""
+    a, esp = arms(limit=100000)
+    assert a.WAVE_POSE == {"L": 50, "R": 140}
+    a.wave()
     assert esp.parked
 
 
-def test_arm_above_frame_limit_is_refused_before_sending():
-    """แขนยกเกิน ARM_MAX จะชนโครงเหล็ก — ไม่ส่งคำสั่งไป ESP32 เลย (กันพิมพ์พลาดในโปรแกรมทดสอบแขน)"""
-    a, esp = arms()
-    with pytest.raises(ArmError) as e:
-        a.move(L=a.ARM_MAX + 10)
-    assert e.value.code == "LIMIT"
-    assert not any("MOVE" in s for s in esp.sent)
-    a.move(L=a.ARM_MAX, N=55)                           # เท่าเพดานพอดี และคอ (ไม่เกี่ยวโครงแขน) ได้ปกติ
-    assert a.RAISE_DEG <= a.ARM_MAX
+def test_arms_have_no_angle_limit_on_pi_side():
+    """ปลดลิมิตองศาแขนแล้ว — ฝั่ง Pi ส่งทุกองศาไป ESP32 ตรง ๆ (ทั้งยกสูงและติดลบ)"""
+    a, esp = arms(limit=100000)
+    a.move(L=200, R=-90)
+    assert any("L=200.0" in s and "R=-90.0" in s for s in esp.sent)
 
 
 def test_wave_ends_parked():
     """โบกจบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) — เปิดพอร์ตใหม่ ESP32 รีเซ็ต ยังรู้ตำแหน่ง ไม่ติด NOT_PARKED"""
-    a, esp = arms()
+    a, esp = arms(limit=100000)
     a.wave()
     cmds = [s.split(" ", 1)[1] for s in esp.sent if s and "PING" not in s]
     moves = [c for c in cmds if c.startswith("MOVE")]
     assert len(moves) == 2                               # ยกขึ้น → ลดลงช้า ๆ (ไม่โบก) แล้ว PARK
-    assert "L=50.0 R=50.0 V=30" in moves[0]            # ทักทายด้วยแขนทั้งสองข้างพร้อมกัน ช้า ๆ
+    assert "L=50.0 R=140.0 V=30" in moves[0]             # ทักทาย: ซ้าย 50° ขวา 140° พร้อมกัน ช้า ๆ
     assert "L=0.0 R=0.0 V=30" in moves[1]                # ลดลงช้าเท่าขาขึ้น (PARK ของเฟิร์มแวร์เร็วกว่า)
     assert cmds[-2:] == ["PARK", "EN 1"]                 # จอดแล้วล็อกค้าง แขนไม่ตกไปกระแทกโครง
     assert esp.parked and esp.pos == {"L": 0.0, "R": 0.0, "N": 0.0}
@@ -254,9 +251,7 @@ def test_arm_test_commands():
     assert arm_test.run(a, "L 30") is True and esp.pos["L"] == 30.0
     assert arm_test.run(a, "n -20") is True and esp.pos["N"] == -20.0     # ตัวพิมพ์เล็กก็ได้ ติดลบได้
     assert arm_test.run(a, "all 45") is True and esp.pos == {"L": 45.0, "R": 45.0, "N": 45.0}
-    with pytest.raises(ArmError):                                          # เกินเพดาน: ลูปหลักพิมพ์ error ให้ แขนไม่ขยับ
-        arm_test.run(a, "L 90")
-    assert esp.pos["L"] == 45.0
+    assert arm_test.run(a, "L 90") is True and esp.pos["L"] == 90.0      # ไม่จำกัดองศาแขนแล้ว (ยกเกิน 60° ชนโครง)
     assert arm_test.run(a, "อะไรก็ไม่รู้") is True                         # คำสั่งแปลก: ไม่พัง
     assert arm_test.run(a, "q") is False and esp.parked                    # ออก = จอดก่อน
 

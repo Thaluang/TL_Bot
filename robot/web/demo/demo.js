@@ -72,6 +72,7 @@
     if (u === "/announcements/due") return json({ due: [] });
     if (u === "/stats.json") return json(SAMPLE_STATS);
     if (u === "/news") return json({ version: "demo", items: SAMPLE_NEWS });
+    if (u === "/net") return json({ level: "good", ms: 300 });   // เดโม: ป้ายเน็ตโชว์ "เน็ตดี"
     if (u === "/weather") return json({ temp: 33, code: 2, text_th: "แดดสลับเมฆ", text_en: "Partly cloudy", high: 35, low: 24, rain: 40 });
     if (u === "/admin/news" && !(opts && opts.method && opts.method !== "GET"))
       return json({ items: SAMPLE_NEWS, today: new Date().toISOString().slice(0, 10), storage: { persistent: true, path: "demo" } });

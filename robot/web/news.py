@@ -40,6 +40,25 @@ def _image_ext(data: bytes) -> str:
     raise NewsError("รองรับเฉพาะรูป JPG, PNG หรือ WebP")
 
 
+def write_json_atomic(file: Path, data) -> None:
+    """เขียน JSON แบบไม่พังกลางทาง (เขียนไฟล์ชั่วคราว → fsync → เปลี่ยนชื่อทับ) — ใช้ร่วมกับปฏิทิน/คลังภาพ"""
+    file.parent.mkdir(parents=True, exist_ok=True)
+    tmp = file.with_suffix(".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False, indent=1))
+        f.flush()
+        os.fsync(f.fileno())   # ไฟดับกลางเขียนบนแฟลชไดรฟ์ (FAT) ไม่ให้ได้ไฟล์ว่าง
+    os.replace(tmp, file)
+
+
+def read_json_list(file: Path) -> list:
+    try:
+        data = json.loads(file.read_text(encoding="utf-8"))
+        return [d for d in data if isinstance(d, dict) and d.get("id")] if isinstance(data, list) else []
+    except (OSError, ValueError):
+        return []
+
+
 def _date_ok(s: str) -> str:
     s = (s or "").strip()
     if s and not _DATE.match(s):

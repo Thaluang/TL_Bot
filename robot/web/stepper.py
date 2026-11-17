@@ -162,11 +162,13 @@ class StepperArms:
     """สั่งแขน/คอเป็นองศา + ท่าทางสำเร็จรูป
     link=None + opener=None คือโหมดจำลอง (เทสต์/คอม) · มี opener = ยังไม่เจอบอร์ด แต่จะลองต่อเองตอนจะโบก"""
 
-    ARM_MAX = 50                        # แขนยกได้สูงสุดกี่องศา (ฝั่ง Pi) — ยก 60° แล้วชนโครงเหล็ก (วัดจริง 16 พ.ย. 69) เผื่อไว้ 10°
-    RAISE_DEG, RAISE_HOLD = 50, 1.0     # ทักทาย: ยกสองแขนขึ้นกี่องศา (ไม่เกิน ARM_MAX) · ค้างไว้กี่วินาทีก่อนลง
+    # ไม่จำกัดองศาแขนแล้ว (ผู้ใช้ขอปลด 17 พ.ย. 69) — ระวัง: ยก 60° ขึ้นไปแขนชนโครงเหล็ก (วัดจริง 16 พ.ย. 69)
+    # ทักทายตอนคนมาแตะจอ: ยกแขนแต่ละข้างไปกี่องศา (นับจากจุด 0 = ท่าพัก 5° จากห้อยตรง) — ผู้ใช้ตั้ง 17 พ.ย. 69
+    WAVE_POSE = {"L": 50, "R": 140}
+    RAISE_HOLD = 1.0                    # ค้างท่ายกไว้กี่วินาทีก่อนเอาลง
     SPEED = 60                          # องศา/วินาที (ค่าเริ่มของ move)
     RAISE_SPEED = 30                    # ทักทาย: ยก/ลดแขนช้า ๆ กี่องศา/วินาที (60 ไวเกินไป)
-    RETRY = 5.0                                               # ไม่เจอบอร์ด: ลองหาใหม่ห่างกันอย่างน้อยกี่วินาที
+    RETRY = 5.0                                              # ไม่เจอบอร์ด: ลองหาใหม่ห่างกันอย่างน้อยกี่วินาที
 
     def __init__(self, link, opener=None):
         self.link = link
@@ -214,9 +216,6 @@ class StepperArms:
         targets = {k: v for k, v in (("L", L), ("R", R), ("N", N)) if v is not None}
         if not targets:
             return
-        for k in ("L", "R"):
-            if k in targets and float(targets[k]) > self.ARM_MAX:   # ไม่ส่งไป ESP32 เลย: แขนจะชนโครงเหล็ก
-                raise ArmError("LIMIT", f"{k}={float(targets[k]):.1f} เกิน {self.ARM_MAX}° แขนจะชนโครงเหล็ก")
         args = " ".join(f"{k}={float(v):.1f}" for k, v in targets.items())
         cmd = f"MOVE {args} V={int(speed or self.SPEED)}"
         if self.link is None:
@@ -271,10 +270,10 @@ class StepperArms:
             if self._ensure_link() is None and self._opener is not None:
                 return                      # ยังไม่ได้เสียบบอร์ด: ข้ามท่า (หน้าจอทักทายต่อได้ตามปกติ)
             try:
-                self.move(L=self.RAISE_DEG, R=self.RAISE_DEG, speed=self.RAISE_SPEED)
+                self.move(**self.WAVE_POSE, speed=self.RAISE_SPEED)   # ยกพร้อมกัน ถึงท่าพร้อมกัน
                 time.sleep(self.RAISE_HOLD)
                 # ลดลงช้า ๆ เอง (PARK ในเฟิร์มแวร์วิ่ง 60°/วิ ตายตัว) — ถึง 0 แล้ว PARK แทบไม่ขยับ แค่จดว่าจอด
-                self.move(L=0, R=0, speed=self.RAISE_SPEED)
+                self.move(**{k: 0 for k in self.WAVE_POSE}, speed=self.RAISE_SPEED)   # ลงกลับท่าพัก
                 # จบด้วย PARK (กลับ 0 + ESP32 จดว่าจอดแล้ว) ไม่ใช่แค่ MOVE R=0:
                 # เซิร์ฟเวอร์เปิดพอร์ตใหม่เมื่อไร ESP32 รีเซ็ต ถ้าไม่ได้จอดไว้จะลืมตำแหน่ง แล้วตอบ NOT_PARKED ทุกท่า
                 self.park()

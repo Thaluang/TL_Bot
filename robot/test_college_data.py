@@ -69,7 +69,7 @@ def test_saraburi_college_directors_reach_ai_prompt():
     assert list(directors)[0] == "วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์"
     assert directors["วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์"] == "นายเฉลิมชนม์ เวทสรากุล"
     assert directors["วิทยาลัยเทคนิคมวกเหล็ก"] == "นางปราณี ต่อมดวงแก้ว"
-    assert directors["วิทยาลัยการอาชีพหนองแค"] == "นายทิฐินันท์ ทุมมา"
+    assert directors["วิทยาลัยการอาชีพหนองแค"] == "ดร.ทิฐินันท์ ทุมมา"   # เอกสาร ผอ.สอจ. ใช้คำนำหน้า ดร.
     committees = data["คณะกรรมการประกวดสิ่งประดิษฐ์ของคนรุ่นใหม่ 2569"]["คณะกรรมการ"]
     assert len(committees) == 21
     assert sum(len(v) for v in committees.values()) == 214
@@ -83,3 +83,13 @@ def test_unqualified_director_question_rule():
     from ai import _rules
     rules = _rules("th")
     assert "โดยไม่ระบุวิทยาลัย ให้ตอบผู้อำนวยการวิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์" in rules
+
+
+def test_director_profiles_reach_ai_prompt():
+    """ประวัติ/ผลงาน ผอ. 7 ท่าน (ข้อมูล ผอ.สอจ.สระบุรี) อยู่ใน prompt ให้ AI ตอบได้"""
+    data = load_college_data()
+    profiles = data["ผู้อำนวยการวิทยาลัยในจังหวัดสระบุรี"]["ประวัติและผลงานผู้อำนวยการ (ข้อมูล ผอ.สอจ.สระบุรี)"]
+    assert len([k for k in profiles if not k.startswith("_")]) == 7
+    prompt = format_all_data(data, {}, sar_text="")
+    for text in ("Fix-it Center", "ศาลาดุสิตดาลัย", "วิทยาลัยเกษตรและเทคโนโลยีเพชรบุรี", "วิทยาลัยการอาชีพนครนายก"):
+        assert text in prompt, text

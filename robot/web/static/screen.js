@@ -25,6 +25,8 @@ const T = {
     send: "ส่ง", mic: "กดเพื่อพูด", replay: "ฟังอีกครั้ง", theme: "สลับโหมดมืด/สว่าง",
     cMap: "แผนผังวิทยาลัย", cPrograms: "หลักสูตร", cApply: "สมัครเรียน",
     cContact: "ช่องทางติดต่อ", cTrips: "ที่เที่ยวสระบุรี", cSouvenir: "ของฝากสระบุรี",
+    cDirectors: "ข้อมูล ผอ.สอจ.สระบุรี", cDirectorsShort: "ผอ.สอจ.สระบุรี", cDirectorsSub: "ผู้อำนวยการวิทยาลัยในสระบุรี",
+    directorsTitle: "ข้อมูล ผอ.สอจ.สระบุรี", directorsSub: "แตะที่ท่านเพื่อดูประวัติและผลงาน",
     cMapShort: "แผนผัง", cTripsShort: "สถานที่ท่องเที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
     cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
     cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง",
@@ -48,6 +50,9 @@ const T = {
     scanMapSay: "สแกนคิวอาร์โค้ดบนจอ เพื่อเปิดแผนที่นำทางในมือถือได้เลยครับ",
     sysErr: "ขออภัยครับ ระบบขัดข้อง ลองใหม่อีกครั้งนะครับ",
     noHear: "ไม่ได้ยินครับ ลองพูดใหม่ หรือพิมพ์คำถามดูนะครับ 🙏",
+    netGood: "เน็ตดี", netSlow: "เน็ตช้า", netDown: "ไม่มีเน็ต",
+    liveHint: "🎤 กำลังฟัง…", liveWait: "พูดได้เลยครับ…",
+    thinkSlow: "เน็ตช้านิดนึง รอสักครู่นะครับ…", thinkLong: "ขอคิดแป๊บนึงนะครับ…",
     menuPick: "เลือกหมวดได้เลยครับ 👇", menuItems: "แตะดูรายละเอียดได้เลยครับ 👇",
     back: "ย้อนกลับ", home: "หน้าแรก", districtPre: "อ.",
     // ใช้พูดอย่างเดียว: "บอท" ภาษาไทย (เขียน -Bot เสียงสลับไปอ่านอังกฤษ สะดุด) + ไม่เว้นวรรคช่วงแนะนำตัว ให้พูดต่อกันลื่น ๆ
@@ -71,6 +76,8 @@ const T = {
     send: "Send", mic: "Tap to speak", replay: "Play again", theme: "Switch dark/light mode",
     cMap: "Campus map", cPrograms: "Programs", cApply: "Apply",
     cContact: "Contact us", cTrips: "Places to visit", cSouvenir: "Local souvenirs",
+    cDirectors: "Saraburi college directors", cDirectorsShort: "Directors", cDirectorsSub: "Vocational college directors in Saraburi",
+    directorsTitle: "Saraburi college directors", directorsSub: "Tap a director to see their profile",
     cMapShort: "Map", cTripsShort: "Places to visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
     cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
     cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby",
@@ -94,6 +101,9 @@ const T = {
     scanMapSay: "Scan the QR code on the screen to get directions on your phone.",
     sysErr: "Sorry, something went wrong. Please try again.",
     noHear: "Sorry, I didn't catch that. Try speaking again or type your question 🙏",
+    netGood: "Good net", netSlow: "Slow net", netDown: "Offline",
+    liveHint: "🎤 Listening…", liveWait: "Go ahead…",
+    thinkSlow: "The internet is slow — one moment please…", thinkLong: "Just a moment…",
     menuPick: "Pick a category 👇", menuItems: "Tap one to see more 👇",
     back: "Back", home: "Home", districtPre: "",
     greet: "Hi! I'm Nong Tantawan-Bot. How can I help you today?",
@@ -146,6 +156,7 @@ function applyLang(l) {
   document.querySelectorAll("#langSeg button").forEach((b) => b.classList.toggle("on", b.dataset.lang === l));
   if (recog) recog.lang = t().speech;
   setState(state);   // อัปเดตป้ายสถานะ + บอกเซิร์ฟเวอร์ว่าเปลี่ยนภาษา
+  showNet(netLevel);
   window.dispatchEvent(new Event("lang-change"));   // news.js วาดฝั่งซ้ายใหม่ตามภาษา
 }
 
@@ -317,8 +328,8 @@ function showPictures(pics) {
       pics[0].tour === false ? pics[0].name : t().cMap, "", pics[0].tour === false ? "📖" : "🗺️");
     return;
   }
-  const fig = (p) => `<figure><img class="place-photo" src="${p.src}" alt="${escapeHtml(p.name)}">` +
-    `<figcaption>${escapeHtml(p.name)}${p.caption ? ` <small>· ${t().districtPre}${escapeHtml(p.caption)}</small>` : ""}</figcaption></figure>`;
+  const fig = (p) => `<figure><img class="place-photo${p.person ? " person" : ""}" src="${p.src}" alt="${escapeHtml(p.name)}">` +
+    `<figcaption>${escapeHtml(p.name)}${p.caption ? ` <small>· ${p.person ? "" : t().districtPre}${escapeHtml(p.caption)}</small>` : ""}</figcaption></figure>`;
   Board.show("photos", `<div class="gallery${pics.length === 1 ? " one" : ""}">${pics.map(fig).join("")}</div>`,
     pics.length === 1 ? pics[0].name : t().photosTitle, pics.length > 1 ? pics.map((p) => p.name).join(" · ") : "", "📷");
 }
@@ -358,12 +369,21 @@ function showMap() {
   box.insertBefore(b, box.querySelector(".tools"));
 }
 
+const THINK_NOTE_MS = 5000;
 function typing(on) {
   let el = $("typing");
   if (on && !el) {
     el = document.createElement("div"); el.id = "typing"; el.className = "msg bot typing";
     el.innerHTML = AVA + '<div class="a-body"><i></i><i></i><i></i></div>';
     chat.appendChild(el); scrollDown();
+    // รอนานเกิน 5 วิ → บอกคนรอว่าทำไมช้า (เน็ตช้า หรือแค่คิดนาน)
+    setTimeout(() => {
+      if (!el.isConnected) return;
+      checkNet();
+      const note = document.createElement("small"); note.className = "think-note";
+      note.textContent = netLevel === "good" ? t().thinkLong : t().thinkSlow;
+      el.querySelector(".a-body").appendChild(note); scrollDown();
+    }, THINK_NOTE_MS);
   } else if (!on && el) { el.remove(); }
 }
 
@@ -420,10 +440,29 @@ function speak(text, speakLang, onEnd) {
   a.play().catch(() => { clearTimeout(timer); if (!started) local(); });   // บล็อกเสียงอัตโนมัติ → เสียงในเครื่อง
 }
 
+// เว้นวรรคเหมือนคนพูด (เหมือน tts_text.py ฝั่งเซิร์ฟเวอร์): หายใจตรงจบประโยค/ระหว่างวลียาว ๆ
+// คำสั้น ๆ ที่ถูกเว้นวรรคแยกออกมา ต่อติดกันไป ไม่หยุดกลางวลี
+const PHRASE_MIN = 8;
+const IS_THAI = /[฀-๿]/;
+function humanGaps(text) {
+  return text.split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean).map((line) =>
+    line.replace(/\s+ๆ/g, "ๆ").replace(/(ครับ|นะ|จ้า|จ้ะ) (?=[฀-๿])/g, "$1|BR|").split("|BR|").map((part) => {
+      let out = "", phrase = "";
+      for (const tok of part.split(" ")) {
+        if (!out) { out = phrase = tok; continue; }
+        const end = out[out.length - 1];
+        const join = IS_THAI.test(end) && end !== "ๆ" && IS_THAI.test(tok[0] || "");
+        if (join && (phrase.length < PHRASE_MIN || tok.length < PHRASE_MIN)) { out += tok; phrase += tok; }
+        else { out += " " + tok; phrase = tok; }
+      }
+      return out;
+    }).join(" ")).join(" ");
+}
+
 function localSpeak(text, speakLang, job) {
   if (!("speechSynthesis" in window)) { job.finish(); return; }
   const code = T[speakLang].speech;
-  const u = new SpeechSynthesisUtterance(text);
+  const u = new SpeechSynthesisUtterance(speakLang === "th" ? humanGaps(text) : text);
   u.lang = code;
   const voices = (localVoices.length ? localVoices : window.speechSynthesis.getVoices())
     .filter((v) => v.lang && v.lang.toLowerCase().startsWith(code.slice(0, 2)));
@@ -467,6 +506,7 @@ async function ask(question, opts = {}) {
   question = (question || "").trim();
   if (!question) { setState("idle"); return; }
   stopAnswer();   // ยังอ่านคำตอบเก่าอยู่ → หยุดก่อนถามข้อใหม่
+  clearLive();    // ฟองตัวหนังสือสดระหว่างพูด → แทนด้วยคำถามจริง
   const askLang = lang, myConvo = convo;
   const stale = () => myConvo !== convo;
   addMsg("user", question, { voice: !!opts.voice, qr: !!opts.qr });
@@ -504,7 +544,7 @@ async function ask(question, opts = {}) {
         const msg = JSON.parse(line);
         if (msg.t) {
           if (!tw) {   // ท่อนแรกมาถึง: เลิกโชว์ shimmer เริ่มพิมพ์คำตอบ
-            typing(false); setState("answering");
+            typing(false); setState("answering"); checkNet();
             const m = document.createElement("div");
             m.className = "msg bot"; m.innerHTML = AVA + '<div class="a-body"></div>';
             chat.appendChild(m); tw = typewriter(m);
@@ -571,12 +611,32 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const CAN_RECORD = !!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 let recog = null, listening = false, rec = null;
 let useServerStt = !SR || store.get("serverStt") === "1";
+// ---- ตัวหนังสือขึ้นสดระหว่างพูด: ฟองข้อความฝั่งผู้ใช้ (ขอบประ) อัปเดตตามที่ได้ยิน ----
+let liveEl = null;
+function liveStart() {
+  if (PREVIEW) return;
+  clearLive();
+  liveEl = document.createElement("div");
+  liveEl.className = "msg user live";
+  liveEl.innerHTML = '<span class="mic-tag">' + t().liveHint + '</span><span class="live-text wait"></span>';
+  liveEl.querySelector(".live-text").textContent = t().liveWait;
+  chat.appendChild(liveEl); scrollDown();
+}
+function liveUpdate(text) {   // อัปเดตเฉพาะตอนฟองยังอยู่ (กดยกเลิก/คุยใหม่แล้ว ไม่สร้างขึ้นมาใหม่)
+  if (!liveEl || !liveEl.isConnected || !text) return;
+  const box = liveEl.querySelector(".live-text");
+  box.textContent = text; box.classList.remove("wait");
+  scrollDown();
+}
+function clearLive() { if (liveEl) liveEl.remove(); liveEl = null; }
+
 function cancelMic() {   // เลิกฟัง ไม่ส่งเสียงที่อัดไว้
+  clearLive();
   if (!listening) return;
   listening = false;
   if (rec) rec.finish(); else if (recog) recog.stop();
 }
-function noHear() { listening = false; addMsg("bot", t().noHear, { warn: true }); setState("idle"); }
+function noHear() { listening = false; clearLive(); addMsg("bot", t().noHear, { warn: true }); setState("idle"); }
 function toggleMic() {
   if (listening) {   // กดซ้ำระหว่างฟัง = พูดจบแล้ว
     if (rec) rec.finish(); else { recog.stop(); listening = false; setState("idle"); }
@@ -586,13 +646,20 @@ function toggleMic() {
   if (greeting) { greeting.then(toggleMic); return; }   // ทักให้จบก่อน แล้วเริ่มฟังเอง
   stopSpeech();
   setState("listening"); listening = true;
+  liveStart();
   if (useServerStt) { serverListen(); return; }
   recog.lang = t().speech;
-  try { recog.start(); } catch (e) { listening = false; setState("idle"); }
+  try { recog.start(); } catch (e) { listening = false; clearLive(); setState("idle"); }
 }
 
 // อัดเสียงจนคนพูดจบ (เงียบ ~1.2 วิ หลังเริ่มพูด) แล้วส่งให้เซิร์ฟเวอร์ถอดเป็นข้อความ
+// ระหว่างพูด: ส่งเสียงช่วงที่พูดไปแล้วให้ถอดเป็นระยะ → ตัวหนังสือขึ้นตามที่พูด (ช้ากว่าเสียงจริง ~1–2 วิ ตามความเร็วเน็ต)
+// พอหยุดพูด ถอดอีกรอบทันที — รอบนั้นได้ครบประโยคแล้ว ใช้ถามต่อได้เลย ไม่ต้องรอถอดใหม่ทั้งก้อน (ตอบไวขึ้น)
 const STT_SILENCE_MS = 1200, STT_NO_SPEECH_MS = 6000, STT_MAX_MS = 12000;
+const STT_LIVE = true;            // false = ปิดตัวหนังสือสด (ประหยัดโควตา Gemini — ถอดครั้งเดียวตอนพูดจบ)
+const STT_LIVE_EVERY_MS = 1200;   // ถอดสดห่างกันอย่างน้อยเท่านี้ (ทีละคำขอ อันเก่ายังไม่เสร็จไม่ส่งใหม่)
+const STT_TAIL_MS = 450;          // ผลถอดสดนับว่า "ครบประโยค" ถ้าเสียงที่ส่งไปเลยจุดพูดคำสุดท้ายไปอย่างน้อยเท่านี้
+const STT_CHUNK_MS = 250;
 async function serverListen() {
   let stream;
   try {
@@ -611,6 +678,17 @@ async function serverListen() {
   const buf = new Float32Array(an.fftSize);
   const t0 = performance.now();
   let floor = 0, lastLoud = t0;
+  let mrT0 = t0, partial = null, lastPartialAt = 0;   // partial = ผลถอดสดล่าสุด {n, covers, text, promise}
+  const mime = () => mr.mimeType || type || "audio/webm";
+  const sendPartial = (now) => {
+    const n = chunks.length;
+    const p = { n, covers: mrT0 + n * STT_CHUNK_MS, text: null };
+    p.promise = fetch("/stt?partial=1&lang=" + lang,
+      { method: "POST", headers: { "Content-Type": mime() }, body: new Blob(chunks.slice(0, n), { type: mime() }) })
+      .then((r) => (r.ok ? r.json() : {})).then((d) => (d && d.text) || "").catch(() => "")
+      .then((txt) => { p.text = txt; if (partial === p) liveUpdate(txt); return txt; });
+    partial = p; lastPartialAt = now;
+  };
   const level = () => {
     an.getFloatTimeDomainData(buf);
     let s = 0; for (const v of buf) s += v * v;
@@ -620,7 +698,12 @@ async function serverListen() {
     const now = performance.now(), v = level();
     if (now - t0 < 300) { floor = Math.max(floor, v); return; }   // 0.3 วิแรก = วัดเสียงรบกวนในห้อง
     if (v > Math.max(0.02, floor * 2.5)) { heard = true; lastLoud = now; }
-    if ((heard && now - lastLoud > STT_SILENCE_MS) || (!heard && now - t0 > STT_NO_SPEECH_MS) || now - t0 > STT_MAX_MS) finish();
+    if ((heard && now - lastLoud > STT_SILENCE_MS) || (!heard && now - t0 > STT_NO_SPEECH_MS) || now - t0 > STT_MAX_MS) { finish(); return; }
+    if (STT_LIVE && heard && chunks.length && !(partial && partial.text === null)) {
+      const fresh = !partial || chunks.length > partial.n + 1;
+      const pausedNow = now - lastLoud > STT_TAIL_MS && (!partial || partial.covers < lastLoud + STT_TAIL_MS);
+      if (fresh && (now - lastPartialAt > STT_LIVE_EVERY_MS || pausedNow)) sendPartial(now);
+    }
   }, 50);
   function finish() {
     if (done) return; done = true;
@@ -634,28 +717,41 @@ async function serverListen() {
     if (!listening) return;            // ผู้ใช้กดยกเลิก/คุยใหม่ระหว่างฟัง
     listening = false;
     if (!heard) { noHear(); return; }
-    sendStt(new Blob(chunks, { type: mr.mimeType || type || "audio/webm" }));
+    const all = new Blob(chunks, { type: mime() });
+    // ผลถอดสดรอบล่าสุดครอบคลุมจนพูดจบแล้ว → ใช้เลย (ยังไม่เสร็จก็รอมัน) ไม่ต้องถอดใหม่ทั้งก้อน
+    if (partial && partial.covers >= lastLoud + STT_TAIL_MS) {
+      setState("thinking");
+      partial.promise.then((txt) => { if (state !== "thinking") return; if (txt) ask(txt, { voice: true }); else sendStt(all); });
+      return;
+    }
+    sendStt(all);
   }
   mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   mr.onstop = onStop;
   rec = { finish: () => { heard = true; finish(); } };   // กดไมค์ซ้ำ = พูดจบ ส่งเลย
-  mr.start(250);
+  mrT0 = performance.now();
+  mr.start(STT_CHUNK_MS);
 }
 async function sendStt(blob) {
   setState("thinking");
   try {
     const r = await fetch("/stt?lang=" + lang, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) { addMsg("bot", d.error || t().sysErr, { warn: true }); setState("idle"); return; }
+    if (!r.ok) { clearLive(); addMsg("bot", d.error || t().sysErr, { warn: true }); setState("idle"); return; }
     if (!d.text) { noHear(); return; }
     ask(d.text, { voice: true });
-  } catch (e) { addMsg("bot", t().sysErr, { warn: true }); setState("idle"); }
+  } catch (e) { clearLive(); addMsg("bot", t().sysErr, { warn: true }); setState("idle"); }
 }
 
 if (SR) {
   recog = new SR();
-  recog.lang = t().speech; recog.interimResults = false; recog.maxAlternatives = 1;
-  recog.onresult = (e) => { listening = false; ask(e.results[0][0].transcript, { voice: true }); };
+  recog.lang = t().speech; recog.interimResults = true; recog.maxAlternatives = 1;   // interim = ตัวหนังสือขึ้นสดระหว่างพูด
+  recog.onresult = (e) => {
+    let txt = "", final = false;
+    for (const r of e.results) { txt += r[0].transcript; if (r.isFinal) final = true; }
+    if (!final) { liveUpdate(txt); return; }
+    listening = false; ask(txt, { voice: true });
+  };
   recog.onerror = (e) => {
     // บริการเสียงของเบราว์เซอร์ใช้ไม่ได้ → สลับไปฟังผ่านเซิร์ฟเวอร์ แล้วฟังต่อเลยไม่ต้องกดใหม่
     if (CAN_RECORD && (e.error === "network" || e.error === "service-not-allowed")) {
@@ -665,10 +761,38 @@ if (SR) {
     }
     noHear();
   };
-  recog.onend = () => { if (!useServerStt) { listening = false; if (state === "listening") setState("idle"); } };
+  recog.onend = () => { if (!useServerStt) { listening = false; if (state === "listening") { clearLive(); setState("idle"); } } };
 }
 if ((SR || CAN_RECORD) && !PREVIEW) mic.addEventListener("click", toggleMic);
 else if (!PREVIEW) mic.style.display = "none";
+
+// ---- ป้ายสถานะเน็ต (มุมขวาบน): เน็ตดี / เน็ตช้า / ไม่มีเน็ต ----
+// เซิร์ฟเวอร์วัดจากเครื่องหุ่นออกไปหา Google + เวลาที่ AI เริ่มตอบจริง (GET /net)
+const NET_EVERY_MS = 15000;
+var netEl = document.getElementById("net");   // var: applyLang ตอนเปิดจอเรียก showNet ก่อนบรรทัดนี้
+var netLevel = "good", netBusy = false;
+function showNet(level, ms) {
+  if (!level) return;
+  netLevel = level;
+  if (!netEl) return;
+  netEl.className = "net net-" + level;
+  netEl.querySelector(".net-text").textContent = t()[{ good: "netGood", slow: "netSlow", down: "netDown" }[level]];
+  if (ms !== undefined) netEl.title = ms == null ? "" : ms + " ms";
+}
+async function checkNet() {
+  if (netBusy || document.hidden) return;
+  netBusy = true;
+  try {
+    const r = await fetch("/net", { cache: "no-store" });
+    const d = await r.json();
+    showNet(["good", "slow", "down"].includes(d.level) ? d.level : "down", d.ms);
+  } catch (e) { showNet("down", null); }   // ต่อเครื่องหุ่นไม่ได้เลย
+  netBusy = false;
+}
+checkNet();
+setInterval(checkNet, NET_EVERY_MS);
+window.addEventListener("online", checkNet);
+window.addEventListener("offline", () => showNet("down", null));
 
 // ---- พิมพ์ ----
 composer.addEventListener("submit", (e) => {
@@ -830,6 +954,7 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (action === "showMap") { showMap(); return; }
+  if (action === "showDirectors") { (menuData ? Promise.resolve() : loadMenu()).then(showDirectors); return; }
   if (action === "showGuide") { addMsg("bot", t()[b.dataset.msg] || "", { image: b.dataset.img, noTour: true, imageName: b.textContent.trim() }); return; }   // คู่มือเป็นรูป → ขึ้นแผงซ้ายเหมือนแผนผัง
   if (action === "campusTour") { openTour(); return; }
   // ปฏิทินแนะแนว / คลังภาพ / แบบประเมิน และปุ่มข้างในแผง (extras.js)
@@ -840,6 +965,15 @@ document.addEventListener("click", (e) => {
 function showAllMenu() {
   Board.show("menu", $("allMenuTpl").innerHTML, t().allMenuTitle, t().allMenuSub, "☰");
   $("boardBody").querySelectorAll("[data-t]").forEach((e) => { if (t()[e.dataset.t]) e.innerHTML = t()[e.dataset.t]; });
+}
+// ข้อมูล ผอ.สอจ.สระบุรี: รายชื่อพร้อมรูปทางซ้าย → แตะท่านไหน ถาม AI ประวัติท่านนั้น (คำตอบขึ้นรูปท่านทางซ้ายเอง)
+function showDirectors() {
+  const list = (menuData && menuData.directors) || [];
+  if (!list.length) return;
+  Board.show("menu", '<div class="menu-list">' + list.map((d) =>
+    `<button type="button" class="menu-item" data-q="${escapeHtml(d.q.th)}" data-q-en="${escapeHtml(d.q.en)}">` +
+    `<img class="person" src="${d.photo}" alt=""><span><b>${L(d.name)}</b><small>${L(d.role)}</small></span></button>`).join("") +
+    "</div>", t().directorsTitle, t().directorsSub, "👔");
 }
 function askChip(b) {
   const q = (lang === "en" && b.dataset.qEn) || b.dataset.q || b.textContent.trim();

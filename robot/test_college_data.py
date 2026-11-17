@@ -60,3 +60,26 @@ def test_phonebook_reaches_ai_prompt_without_mobile_numbers():
     for text in ("นายวิศรุต ไวโสภา", "งานห้องสมุด-งานเอกสารการพิมพ์", "036-281-295"):
         assert text in prompt
     assert not re.search(r"0[689]\d-?\d{3}-?\d{4}", str(book))   # ไม่มีเบอร์มือถือ
+
+
+def test_saraburi_college_directors_reach_ai_prompt():
+    """คำสั่ง สอจ.สระบุรี ที่ 20/2569 — ผอ.ทุกวิทยาลัยในสระบุรี + คณะกรรมการประกวดสิ่งประดิษฐ์"""
+    data = load_college_data()
+    directors = data["ผู้อำนวยการวิทยาลัยในจังหวัดสระบุรี"]["ผู้อำนวยการแต่ละวิทยาลัย"]
+    assert list(directors)[0] == "วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์"
+    assert directors["วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์"] == "นายเฉลิมชนม์ เวทสรากุล"
+    assert directors["วิทยาลัยเทคนิคมวกเหล็ก"] == "นางปราณี ต่อมดวงแก้ว"
+    assert directors["วิทยาลัยการอาชีพหนองแค"] == "นายทิฐินันท์ ทุมมา"
+    committees = data["คณะกรรมการประกวดสิ่งประดิษฐ์ของคนรุ่นใหม่ 2569"]["คณะกรรมการ"]
+    assert len(committees) == 21
+    assert sum(len(v) for v in committees.values()) == 214
+    prompt = format_all_data(data, {}, sar_text="")
+    for text in ("นายเจนวิทย์ ตั้งเจริญวรคุณ", "นายพสิษฐ์ นาหว่าน", "นางสาวกาญจนา เทพนม", "อาคารอเนกประสงค์ (โดม)"):
+        assert text in prompt
+
+
+def test_unqualified_director_question_rule():
+    """ถาม ผอ. เฉย ๆ ต้องตอบ ผอ.ท่าหลวงฯ เท่านั้น"""
+    from ai import _rules
+    rules = _rules("th")
+    assert "โดยไม่ระบุวิทยาลัย ให้ตอบผู้อำนวยการวิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์" in rules

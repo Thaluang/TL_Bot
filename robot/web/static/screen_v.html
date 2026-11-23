@@ -459,9 +459,9 @@
   .sheet.tall{top:80px;bottom:80px}
   .sheet h3{display:flex;align-items:center;gap:16px;font:600 42px var(--head);color:var(--navy);margin-bottom:24px}
   .sheet h3 .hi{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;font-size:34px;color:#fff;background:linear-gradient(145deg,#5b9bff,#1d5fd6)}
-  .sheet h4{display:flex;align-items:center;gap:12px;font:600 28px var(--head);color:var(--navy);margin:4px 0 14px}
-  .sheet h4::before{content:"";width:6px;height:28px;border-radius:3px;background:var(--gold)}
-  .sheet h4 span{font:400 19px var(--head);color:var(--ink2)}
+  .sheet>h4{display:flex;align-items:center;gap:12px;font:600 28px var(--head);color:var(--navy);margin:4px 0 14px}
+  .sheet>h4::before{content:"";width:6px;height:28px;border-radius:3px;background:var(--gold)}
+  .sheet>h4 span{font:400 19px var(--head);color:var(--ink2)}
   .pv-close{all:unset;cursor:pointer;position:absolute;left:50%;bottom:40px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:12px;padding:20px 50px;border-radius:999px;background:var(--navy);color:#fff;font:500 28px var(--head);white-space:nowrap}
   #pvMore .sheet{top:560px;bottom:auto}
   #pvMore .tile{padding:30px 26px;font-size:28px}
@@ -473,7 +473,12 @@
   .tiles.four .tile{flex-direction:column;gap:10px;padding:18px 8px;font-size:20px;text-align:center;justify-content:center}
   .tiles.four .tile .ti{width:56px;height:56px;font-size:28px}
   #pvInfo .newsbox{flex:1;min-height:0;display:flex;flex-direction:column;margin-bottom:24px}
-  #pvInfo .news{flex:1;gap:16px}
+  #pvInfo .news{flex:1;gap:16px;grid-template-rows:none;grid-auto-rows:minmax(0,1fr)}   /* ข่าว 1–2 ข่าว = แถวเดียวเต็มกรอบ ไม่เหลือแถวว่าง */
+  #pvInfo .news>.nc:only-child{grid-column:1/-1}
+  /* จอแนวตั้ง: ทุกการ์ดรูปบน ข้อความล่าง (โปสเตอร์ก็เช่นกัน — การ์ดสูง รูปจะได้ใหญ่) */
+  #pvInfo .nc.portrait,#pvInfo .nc.landscape{grid-template-columns:none;grid-template-rows:minmax(0,1fr) auto}
+  #pvInfo .nc.portrait .tx,#pvInfo .nc.landscape .tx{padding:16px 22px 18px}
+  #pvInfo .nc h4{font-size:25px;-webkit-line-clamp:3}
   .pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font:500 17px var(--head);color:var(--muted);min-height:12px}
   .pager i{width:10px;height:10px;border-radius:99px;background:#c5d3ee;transition:width .3s}
   .pager i.on{width:34px;background:var(--royal)}

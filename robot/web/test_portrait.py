@@ -172,3 +172,23 @@ def test_start_sh_rotates_touchscreen_from_config():
     sh = (Path(__file__).resolve().parent.parent / "pi" / "start.sh").read_text(encoding="utf-8")
     assert "SCREEN_ROTATE" in sh and "wlr-randr --output HDMI-A-1 --transform" in sh
     assert sh.index("--transform") < sh.index("--class=tlbot-screen")   # หมุนก่อนเปิดหน้าจอ
+
+
+def test_system_page_bar_has_phone_qr(tmp_path, monkeypatch):
+    """เว็บระบบที่เปิดในจอ: แถบบนมี QR ให้สแกนไปกรอกในมือถือ (คีย์บอร์ดบนจอพิมพ์ลงเว็บที่ฝังไม่ได้)"""
+    import threading
+    from werkzeug.serving import make_server
+    chrome = _chrome()
+    if not chrome:
+        pytest.skip("ไม่มี Chrome/Chromium")
+    monkeypatch.setattr(ps, "fetch_headers", lambda url: {})
+    ps.clear_cache()
+    srv = make_server("127.0.0.1", 0, server.app, threaded=True)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{srv.server_port}/screen-v?preview=1&pv=sys:admit"
+        out = subprocess.run([chrome, "--headless=new", "--disable-gpu", f"--user-data-dir={tmp_path}", "--timeout=8000",
+                              "--dump-dom", url], capture_output=True, text=True, encoding="utf-8", timeout=90).stdout
+    finally:
+        srv.shutdown()
+    assert 'id="pvWebQr"' in out and 'id="pvWebQr" class="on"' in out, out[-600:]

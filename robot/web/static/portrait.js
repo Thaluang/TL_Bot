@@ -76,16 +76,19 @@
   }).catch(() => {});
   loadSystems(); setInterval(loadSystems, 5 * 60 * 1000);
 
-  function setBar(title, sub, color, icon) {
+  function setBar(title, sub, color, icon, qrUrl) {
     $("pvWebTitle").textContent = title; $("pvWebSub").textContent = sub;
     $("pvWebIcon").setAttribute("href", "#" + icon);
     $("tourView").style.setProperty("--c", color);
+    const q = $("pvWebQr");
+    q.classList.toggle("on", !!qrUrl);
+    q.querySelector("i").innerHTML = qrUrl ? qrSvg(qrUrl) : "";
   }
   // แถบบนของหน้าเว็บเต็มจอ: ระบบของวิทยาลัย / ทัวร์ 3 มิติ / ลิงก์จากคำตอบ AI
   const origOpenTour = openTour;
   openTour = function (src) {
     const sys = src && Object.values(systems).find((s) => s.url === src);
-    if (sys) setBar(sys.title, sys.sub, sys.color, sys.icon);
+    if (sys) setBar(sys.title, sys.sub, sys.color, sys.icon, sys.url);
     else if (!src || /campus_tour/.test(src)) setBar("ทัวร์วิทยาลัย 3 มิติ", "ชมวิทยาลัยแบบเสมือนจริง", "#d0356c", "i-cube");
     else { let host = src; try { host = new URL(src).host; } catch (e) {} setBar("เว็บไซต์", host, "#1d5fd6", "i-globe"); }
     closeLayers();

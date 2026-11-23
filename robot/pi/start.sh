@@ -56,6 +56,15 @@ for _ in $(seq 1 60); do
 done
 sleep 4
 
+# จอสัมผัสแนวตั้ง: config.py ตั้ง SCREEN_LAYOUT = "portrait" → หมุน HDMI-A-1 ตาม SCREEN_ROTATE (90/270)
+# การแตะหมุนตามเอง (labwc แมปทัช ILITEK กับ HDMI-A-1 ไว้ใน ~/.config/labwc/rc.xml) — ตั้งกลับ "landscape" = จอแนวนอนเหมือนเดิม
+read -r SCREEN_LAYOUT SCREEN_ROTATE <<<"$(cd "$APP/robot" && python3 -c 'import config; print(getattr(config, "SCREEN_LAYOUT", "landscape"), getattr(config, "SCREEN_ROTATE", "90"))' 2>/dev/null)"
+if [ "$SCREEN_LAYOUT" = "portrait" ]; then
+  wlr-randr --output HDMI-A-1 --transform "${SCREEN_ROTATE:-90}" && echo "จอสัมผัส: แนวตั้ง (หมุน $SCREEN_ROTATE)"
+else
+  wlr-randr --output HDMI-A-1 --transform normal 2>/dev/null
+fi
+
 # คีย์บอร์ดบนจอ: ใช้ของในหน้าเว็บ (static/osk.js) — squeekboard ของระบบโดนหน้าต่าง kiosk เต็มจอบัง
 
 # Wayland ไม่ฟัง --window-position → ใช้ --class เป็น app_id แล้วให้ labwc ย้ายจอ

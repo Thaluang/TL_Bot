@@ -159,3 +159,16 @@ def test_screen_v_boots_in_chrome(tmp_path, monkeypatch):
     assert 'data-pv-ready="1"' in out, out[-800:]
     assert 'id="siteQr"><svg' in out          # QR ท้ายจอวาดแล้ว
     assert 'data-menu="trips"' in out          # เมนูอื่นๆ เติมแล้ว
+
+
+def test_screen_rotate_config_valid():
+    """start.sh หมุนจอสัมผัสตาม config ตอน SCREEN_LAYOUT = portrait — ค่าผิดแล้ว wlr-randr ไม่หมุน จอจะเป็นแนวนอนเฉย ๆ"""
+    import config
+    assert config.SCREEN_LAYOUT in ("landscape", "portrait")
+    assert config.SCREEN_ROTATE in ("90", "270")
+
+
+def test_start_sh_rotates_touchscreen_from_config():
+    sh = (Path(__file__).resolve().parent.parent / "pi" / "start.sh").read_text(encoding="utf-8")
+    assert "SCREEN_ROTATE" in sh and "wlr-randr --output HDMI-A-1 --transform" in sh
+    assert sh.index("--transform") < sh.index("--class=tlbot-screen")   # หมุนก่อนเปิดหน้าจอ

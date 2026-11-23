@@ -424,12 +424,13 @@
   .c3{--c:#16924a;--c2:#4fd081;--l:#e4f7ec}.c4{--c:#6b3fd1;--c2:#a585ff;--l:#efe9ff}
   .c5{--c:#0a8fb0;--c2:#4fcbe6;--l:#e2f6fb}.c6{--c:#d0356c;--c2:#ff7fa8;--l:#ffe8f0}
   .c8{--c:#3d4f7a;--c2:#7b8db8;--l:#edf0f7}
-  .c7{--c:#e8b23a;--c2:#f7d77c;background:linear-gradient(135deg,#123a8c,#0a2463);box-shadow:0 0 0 4px #f7d77c88,0 18px 34px -16px #04123acc}
+  /* ปุ่มคุยกับหุ่น: พื้นทองแบบเดียวกับแถบ "สู่ระบบบริการอัจฉริยะ" (.welcome .sub) — เด่นกว่าปุ่มอื่น */
+  .c7{--c:#0a2463;--c2:#123a8c;--l:#0a246322;background:linear-gradient(135deg,var(--gold2),var(--gold));box-shadow:0 0 0 4px #fff,0 18px 34px -16px #a77a14cc}
   .c7::after{display:none}
-  .c7 .ic{color:var(--navy)}.c7 b{color:#fff}.c7 small{color:#c9d6f2}
-  .c7 .go{background:var(--gold);color:var(--navy)}.c7 .n{color:var(--navy)}
+  .c7 .ic{color:var(--gold2)}.c7 b{color:var(--navy)}.c7 small{color:#5a4310}
+  .c7 .go{background:var(--navy);color:var(--gold2)}.c7 .n{color:var(--navy)}
   body.anim-on .c7{animation:pulse 2s ease-in-out 2}
-  @keyframes pulse{50%{box-shadow:0 0 0 10px #f7d77c66,0 18px 34px -16px #04123acc}}
+  @keyframes pulse{50%{box-shadow:0 0 0 4px #fff,0 0 0 12px #f7d77c99,0 18px 34px -16px #a77a14cc}}
 
   /* ---------- ปุ่มรอง + ท้ายจอ ---------- */
   .quick{position:absolute;left:32px;right:32px;top:1574px;display:grid;grid-template-columns:1fr 1fr;gap:20px}

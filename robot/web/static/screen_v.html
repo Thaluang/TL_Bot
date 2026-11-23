@@ -568,6 +568,42 @@
   #pvWebQr i{width:104px;height:104px;background:#fff;border-radius:12px;padding:5px}
   #pvWebQr i svg{display:block;width:100%;height:100%}
   #tourView iframe{position:absolute;left:0;top:128px;width:100%;height:calc(100% - 128px)}
+  /* ---------- หน้ารอ (วิดีโอ): พื้นธีมหน้าแรก + คลิปในกรอบทอง ---------- */
+  #attract{background:radial-gradient(900px 600px at 50% 0%,#2f6fe0 0,transparent 65%),linear-gradient(180deg,#123a8c 0%,#0a2463 55%,#061640 100%);isolation:isolate}
+  #attract .pattern{-webkit-mask:linear-gradient(180deg,transparent 10%,#000 40%,#000 80%,transparent);mask:linear-gradient(180deg,transparent 10%,#000 40%,#000 80%,transparent)}
+  #attract .hd{box-shadow:0 0 0 6px #ffffff33,0 28px 50px -24px #000c}
+  .at-title{position:absolute;left:40px;right:40px;top:300px;text-align:center;color:#fff}
+  .at-kick{display:inline-flex;padding:10px 28px;border-radius:999px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy);font:600 26px var(--head);box-shadow:0 10px 24px -10px #a77a14}
+  .at-title b{display:block;margin-top:22px;font:600 46px/1.25 var(--head);text-shadow:0 4px 18px #0006}
+  .at-title b em{font-style:normal;color:var(--gold2)}
+  .at-frame{position:absolute;left:30px;right:30px;top:500px;padding:14px;border-radius:44px;
+    background:linear-gradient(135deg,var(--gold2),var(--gold) 45%,#b8861f 60%,var(--gold2));box-shadow:0 0 0 6px #ffffff22,0 40px 80px -30px #000}
+  .at-video{position:relative;border-radius:32px;overflow:hidden;background:#000;aspect-ratio:16/9}
+  #attract .at-video video{width:100%;height:100%;object-fit:cover}
+  #attract .at-video .prog{top:auto;bottom:0;height:8px;background:#ffffff33}
+  #attract .at-video .prog i{background:linear-gradient(90deg,var(--gold2),var(--gold))}
+  .at-frame .cn{position:absolute;width:70px;height:70px;border:6px solid #fff;z-index:2;opacity:.9}
+  .at-frame .cn.tl{left:-16px;top:-16px;border-right:0;border-bottom:0;border-top-left-radius:30px}
+  .at-frame .cn.tr{right:-16px;top:-16px;border-left:0;border-bottom:0;border-top-right-radius:30px}
+  .at-frame .cn.bl{left:-16px;bottom:-16px;border-right:0;border-top:0;border-bottom-left-radius:30px}
+  .at-frame .cn.br{right:-16px;bottom:-16px;border-left:0;border-top:0;border-bottom-right-radius:30px}
+  .at-tap{position:absolute;left:70px;right:70px;top:1180px;display:flex;align-items:center;gap:26px;padding:26px 34px;border-radius:40px;
+    background:#fff;box-shadow:0 0 0 6px #ffffff33,0 30px 60px -24px #000;animation:attap 2.4s ease-in-out infinite}
+  .at-tap .face{margin-top:12px;width:110px;height:110px}
+  .at-tap b{display:block;font:600 40px var(--head);color:var(--navy)}
+  .at-tap small{display:block;font:400 22px var(--head);color:var(--ink2);margin-top:4px}
+  .at-tap .hand{margin-left:auto;width:90px;height:90px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:46px;color:#fff;
+    background:linear-gradient(120deg,#ff8a00,#ff3d7f 55%,#a83dff);box-shadow:0 12px 24px -10px #ff3d7f}
+  @keyframes attap{50%{transform:scale(1.03)}}
+  .at-hints{position:absolute;left:60px;right:60px;top:1420px;display:flex;flex-wrap:wrap;justify-content:center;gap:16px}
+  .at-hints small{flex-basis:100%;text-align:center;font:500 24px var(--head);color:#c9d6f2;margin-bottom:4px}
+  .at-hints span{display:inline-flex;align-items:center;gap:10px;padding:14px 24px;border-radius:999px;font:500 25px var(--head);color:#fff;
+    background:#ffffff14;border:1.5px solid #ffffff44}
+  .at-hints span svg{font-size:28px;color:var(--gold2)}
+  .at-foot{position:absolute;left:0;right:0;bottom:90px;text-align:center}
+  .at-foot b{font:600 46px var(--head);color:#fff;text-shadow:0 4px 18px #0006}
+  .at-foot b em{font-style:normal;color:var(--gold2)}
+  .at-foot::before{content:"";display:block;width:120px;height:4px;margin:0 auto 26px;border-radius:4px;background:var(--gold)}
   /* จอตัวอย่าง (?preview=1 ในหน้าครู/จับภาพ): ไม่เล่นแอนิเมชัน */
   body.preview *,body.preview *::before,body.preview *::after{animation:none!important;transition:none!important}
 
@@ -800,11 +836,39 @@
   </div>
 
   <!-- วิดีโอหน้ารอ -->
+  <!-- วิดีโอหน้ารอ: คลิปเดิม (16:9) วางในกรอบทอง บนพื้นธีมเดียวกับหน้าแรก — screen.js ใช้แค่ #attract, video, #vidProg -->
   <div id="attract" aria-hidden="true">
-    <video playsinline preload="auto"></video>
-    <div class="prog"><i id="vidProg"></i></div>
-    <div class="brand"><span></span><b>วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</b></div>
-    <div class="tap"><i><svg class="i"><use href="#i-hand"/></svg></i><span>แตะจอเพื่อเริ่มใช้งาน</span></div>
+    <div class="pattern"></div>
+    <span class="arc" style="left:-300px;top:1000px;width:900px;height:900px"></span>
+    <span class="arc" style="left:600px;top:-200px;width:800px;height:800px"></span>
+    <header class="hd">
+      <div class="logo"></div>
+      <div class="names">
+        <h1>วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</h1>
+        <h2>Thaluang Cementhai Anusorn Technical College</h2>
+        <p><svg class="i"><use href="#i-gov"/></svg>สำนักงานคณะกรรมการการอาชีวศึกษา &nbsp;·&nbsp; กระทรวงศึกษาธิการ</p>
+      </div>
+    </header>
+    <div class="at-title">
+      <span class="at-kick">แนะนำวิทยาลัย</span>
+      <b>ยินดีต้อนรับสู่ <em>ท่าหลวงซิเมนต์ไทยอนุสรณ์</em></b>
+    </div>
+    <div class="at-frame">
+      <i class="cn tl"></i><i class="cn tr"></i><i class="cn bl"></i><i class="cn br"></i>
+      <div class="at-video"><video playsinline preload="auto"></video><div class="prog"><i id="vidProg"></i></div></div>
+    </div>
+    <div class="at-tap">
+      <div class="face"><i></i><i></i><b></b></div>
+      <div><b>แตะจอเพื่อเริ่มใช้งาน</b><small>ถามน้องทานตะวัน-Bot ได้ทุกเรื่องเกี่ยวกับวิทยาลัย</small></div>
+      <span class="hand"><svg class="i"><use href="#i-hand"/></svg></span>
+    </div>
+    <div class="at-hints"><small>ถามได้เลย เช่น</small>
+      <span><svg class="i"><use href="#i-clip"/></svg>สมัครเรียนทำอย่างไร</span>
+      <span><svg class="i"><use href="#i-layers"/></svg>เปิดสอนสาขาอะไรบ้าง</span>
+      <span><svg class="i"><use href="#i-map"/></svg>ห้องน้ำอยู่ตรงไหน</span>
+      <span><svg class="i"><use href="#i-mount"/></svg>สระบุรีเที่ยวที่ไหนดี</span>
+    </div>
+    <div class="at-foot"><b>ก้าวสู่อนาคตที่ดีกว่า <em>ไปด้วยกัน</em></b></div>
   </div>
 
   <div id="announce" role="alert">

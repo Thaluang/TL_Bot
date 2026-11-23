@@ -154,7 +154,7 @@
   window.Portrait = { view, home, openSystem };
   body.dataset.pvReady = "1";   // บอกว่าสคริปต์รันจบ (เทสต์ web/test_portrait.py เช็ก)
 
-  // ?pv=chat|info|more|map|homemap|newchat|speaking|sys:<key> — เปิดมุมมองนั้นทันที (ใช้จับภาพตรวจหน้าจอ)
+  // ?pv=chat|info|more|map|homemap|newchat|speaking|attract|sys:<key> — เปิดมุมมองนั้นทันที (ใช้จับภาพตรวจหน้าจอ)
   const want = (location.search.match(/[?&]pv=([\w:]+)/) || [])[1];
   if (want === "chat") view("chat");
   else if (want === "info" || want === "more") $(want === "info" ? "pvInfo" : "pvMore").classList.add("on");
@@ -162,5 +162,6 @@
   else if (want === "map") { view("chat"); addMsg("user", "แผนผังวิทยาลัย"); showMap(); }
   else if (want === "homemap") showMap();
   else if (want === "speaking") { view("chat"); addMsg("user", "สมัครเรียนทำอย่างไร"); addMsg("bot", "สมัครออนไลน์ได้เลยครับ (ตัวอย่างคำตอบ)", { rateQ: "สมัครเรียนทำอย่างไร" }); body.classList.add("speaking"); }
+  else if (want === "attract") { $("attract").classList.add("open"); fetch("/attract").then((r) => r.json()).then((d) => { const v = $("attract").querySelector("video"); if (d.videos && d.videos[0]) { v.src = d.videos[0]; v.muted = true; v.currentTime = 5; } }).catch(() => {}); }
   else if (want === "newchat") { view("chat"); document.querySelector('#pvChat [data-action="newChat"]').click(); }
 })();

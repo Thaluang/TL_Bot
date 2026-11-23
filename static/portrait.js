@@ -151,6 +151,45 @@
   applyLang(lang);
   newChat();
 
+  // ---------- บันทึกเวลาช่วงพูดคุยลง log ของหุ่น (/pv/log → /dev/shm/tlbot.log บรรทัด [เสียง]) ----------
+  // ใช้หาว่า "พูดแล้วรอนาน / ตัวหนังสือไม่ครบ" ช้าหรือหายตรงช่วงไหน — ห่อฟังก์ชันส่วนกลางของ screen.js ไม่แก้ screen.js
+  if (!PREVIEW) {
+    const vlog = (ev, data) => { try { origFetch("/pv/log", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ev, ms: Math.round(performance.now()), data: data == null ? "" : String(data) }) }).catch(() => {}); } catch (e) {} };
+    const origFetch = window.fetch.bind(window);
+    window.fetch = function (url, opts) {
+      const u = String(url), t0 = performance.now();
+      const p = origFetch(url, opts);
+      if (/^\/(stt|ask\/stream|tts)/.test(u)) {
+        const name = u.split("?")[0];
+        vlog("req", name + (/partial=1/.test(u) ? " (สด)" : ""));
+        p.then((r) => vlog("res", `${name} ${r.status} ${Math.round(performance.now() - t0)}ms`)).catch(() => vlog("res", name + " ล้ม"));
+      }
+      return p;
+    };
+    const wrap = (name, fn) => { const o = window[name]; if (typeof o === "function") window[name] = function () { fn.apply(this, arguments); return o.apply(this, arguments); }; };
+    // ปุ่มไมค์ผูก toggleMic ตัวเดิมไว้ตอนโหลด (ห่อไม่ได้) → ดักคลิกเอง ก่อนตัวจัดการของ screen.js
+    $("mic").addEventListener("click", () => vlog("mic", (listening ? "หยุด" : "เริ่ม") + " ทาง=" + (useServerStt ? "เซิร์ฟเวอร์" : "เบราว์เซอร์")), true);
+    wrap("liveUpdate", (t) => vlog("live", t));
+    wrap("ask", (q, o) => vlog("ask", (o && o.voice ? "[พูด] " : "") + q));
+    wrap("setState", (s) => vlog("state", s));
+    wrap("noHear", () => vlog("nohear"));
+    if (recog) {
+      recog.addEventListener("result", (e) => { const r = e.results[e.results.length - 1]; vlog(r.isFinal ? "sr-final" : "sr-interim", r[0].transcript); });
+      ["speechstart", "speechend", "end"].forEach((n) => recog.addEventListener(n, () => vlog("sr-" + n)));
+      recog.addEventListener("error", (e) => vlog("sr-error", e.error));
+    }
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () { if (!(this.closest && this.closest("#attract"))) vlog("audio-play", (this.src || "").slice(0, 60)); return play.apply(this, arguments); };   // ไม่นับคลิปหน้ารอ
+    if (window.speechSynthesis) { const sp = speechSynthesis.speak.bind(speechSynthesis); speechSynthesis.speak = (u) => { vlog("local-tts", (u.text || "").slice(0, 40)); return sp(u); }; }
+    // คำตอบตัวแรกขึ้นจอ
+    let lastBot = null;
+    new MutationObserver(() => {
+      const b = [...$("chat").querySelectorAll(".msg.bot:not(.typing)")].pop();
+      if (b && b !== lastBot && b.textContent.trim()) { lastBot = b; vlog("first-text", b.textContent.trim().slice(0, 40)); }
+    }).observe($("chat"), { childList: true, subtree: true, characterData: true });
+  }
+
   window.Portrait = { view, home, openSystem };
   body.dataset.pvReady = "1";   // บอกว่าสคริปต์รันจบ (เทสต์ web/test_portrait.py เช็ก)
 

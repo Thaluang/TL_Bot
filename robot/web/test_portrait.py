@@ -226,3 +226,22 @@ def test_screen_layout_endpoint(monkeypatch):
 def test_stats_preview_follows_screen_layout():
     html = make_client().get("/stats").get_data(as_text=True)
     assert "/screen-layout" in html and "pv=info" in html
+
+
+# ---- ความลื่นบน Pi 4 (วัดจริง 23 พ.ย. 2569): หน้ารอของเดิม Chromium กิน CPU 159–189% คลิปกระตุก
+#      ต้นเหตุ 1) การ์ดแตะจอขยายเข้าออกวนตลอด 2) หน้าแรกใต้หน้ารอยังเล่นแอนิเมชันตกแต่ง — แก้แล้วเหลือ ~66% นิ่ง ----
+def _css():
+    html = make_client().get("/screen-v").get_data(as_text=True)
+    return html[html.index("<style>"):html.index("</style>")]
+
+
+def test_attract_has_no_looping_animation():
+    css = _css()
+    rules = [r.strip() for r in css.split("}") if ("#attract" in r or ".at-" in r) and "infinite" in r]   # ดูทีละกฎ (กฎยาวขึ้นบรรทัดใหม่)
+    assert not rules, rules
+
+
+def test_attract_hides_pages_underneath():
+    css = _css().replace(" ", "")
+    for part in ("#home", "#pvChat", "#board"):
+        assert f"body:has(#attract.open){part}" in css, part

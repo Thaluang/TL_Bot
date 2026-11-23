@@ -125,7 +125,14 @@ def missing_key_error():
 @app.get("/")
 @app.get("/screen")
 def screen_page():
-    return send_from_directory(STATIC_DIR, "screen.html")
+    # อ่านค่าตอนเรียก (ไม่ใช่ตอน import) — แก้ config แล้วรีสตาร์ตก็สลับหน้า
+    portrait = getattr(config, "SCREEN_LAYOUT", "landscape") == "portrait"
+    return send_from_directory(STATIC_DIR, "screen_v.html" if portrait else "screen.html")
+
+
+@app.get("/screen-v")
+def screen_portrait_page():
+    return send_from_directory(STATIC_DIR, "screen_v.html")
 
 
 @app.get("/face")

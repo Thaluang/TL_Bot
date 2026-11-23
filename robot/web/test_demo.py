@@ -74,3 +74,26 @@ def test_demo_shim_loads_before_news_js(tmp_path):
     html = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert html.index('src="demo.js"') < html.index('src="static/news.js"')
     assert (tmp_path / "static" / "news.js").is_file() and (tmp_path / "static" / "osk.js").is_file()
+
+
+# ---- จอแนวตั้ง: หน้าแรกของเดโม = หน้าแนวตั้ง (ตรงกับหุ่นตอนนี้) หน้าเดิมย้ายไป landscape.html ----
+def test_demo_index_is_portrait_page(tmp_path):
+    build(tmp_path)
+    index = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'data-layout="portrait"' in index
+    land = (tmp_path / "landscape.html").read_text(encoding="utf-8")
+    assert 'data-layout="portrait"' not in land and 'id="mic"' in land
+    for f in ("static/portrait.js", "static/portrait_util.js", "static/extras.js", "static/guides/user-guide.jpg"):
+        assert (tmp_path / f).is_file(), f
+    assert index.index('src="demo.js"') < index.index('src="static/news.js"')
+    assert not re.search(r"[\"'`(]/static/", index + land + (tmp_path / "static/portrait.js").read_text(encoding="utf-8"))
+
+
+def test_demo_answers_pv_systems(tmp_path):
+    """ปุ่มระบบ 2–5 บนเดโม: demo.js ตอบ /pv/systems เอง (ไม่มีเซิร์ฟเวอร์) — ลิงก์เดียวกับหุ่นจริง"""
+    import portrait_systems
+    build(tmp_path)
+    js = (tmp_path / "demo.js").read_text(encoding="utf-8")
+    assert '"/pv/systems"' in js
+    for s in portrait_systems.SYSTEMS:
+        assert s["url"] in js

@@ -136,6 +136,12 @@ def screen_portrait_page():
     return send_from_directory(STATIC_DIR, "screen_v.html")
 
 
+@app.get("/screen-layout")
+def screen_layout():
+    """แนวของจอหลักตอนนี้ — หน้าครู (/stats) ใช้จัดกรอบจอตัวอย่างข่าว"""
+    return jsonify(layout=getattr(config, "SCREEN_LAYOUT", "landscape"))
+
+
 @app.get("/pv/systems")
 def portrait_systems_list():
     """ระบบภายนอกของปุ่ม 2–5 บนจอแนวตั้ง + embed = เปิดซ้อนในจอนี้ได้ไหม (ไม่ได้ → จอขึ้น QR)"""

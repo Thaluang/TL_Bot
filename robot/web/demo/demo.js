@@ -51,6 +51,8 @@
     { id: "d3", category: "scholarship", title: "ทุนปูนซิเมนต์ไทย เปิดรับสมัครแล้ว", subtitle: "ยื่นได้ถึง 15 ธ.ค. 2569",
       detail: "ทุนการศึกษาสำหรับนักศึกษาเรียนดี", link: "", image_url: "", image: "", start: "", end: "", hidden: false },
   ];
+  // ปุ่มระบบ 2–5 ของจอแนวตั้ง — build_demo.py ใส่รายการจาก web/portrait_systems.py
+  const PV_SYSTEMS = [];
   const DEMO_NO_EDIT = { error: "นี่คือเดโม — แก้ข่าวได้เฉพาะบนหุ่นตัวจริง" };
   window.DEMO_SCREEN_URL = "index.html";   // หน้าครูใช้เป็นจอตัวอย่าง
   const store = {
@@ -72,6 +74,8 @@
     if (u === "/announcements/due") return json({ due: [] });
     if (u === "/stats.json") return json(SAMPLE_STATS);
     if (u === "/news") return json({ version: "demo", items: SAMPLE_NEWS });
+    if (u === "/screen-layout") return json({ layout: "portrait" });   // เดโม: หน้าแรกเป็นจอแนวตั้ง
+    if (u === "/pv/systems") return json(PV_SYSTEMS);
     if (u === "/net") return json({ level: "good", ms: 300 });   // เดโม: ป้ายเน็ตโชว์ "เน็ตดี"
     if (u === "/weather") return json({ temp: 33, code: 2, text_th: "แดดสลับเมฆ", text_en: "Partly cloudy", high: 35, low: 24, rain: 40 });
     if (u === "/admin/news" && !(opts && opts.method && opts.method !== "GET"))
@@ -109,7 +113,7 @@
       ".demo-bar.float:not(.open)>:not(.tag){display:none}}";
     document.head.appendChild(css);
     const bar = document.createElement("div");
-    bar.className = "demo-bar " + (page === "stats" ? "inflow" : "float");
+    bar.className = "demo-bar float";   // ลอยมุมจอทุกหน้า (หน้าครูรุ่นใหม่มีเมนูด้านข้าง แทรกบนสุดแล้วดันเนื้อหาเพี้ยน)
     const add = (label, href, onClick) => {
       const el = document.createElement(href ? "a" : "button");
       const [icon, ...rest] = label.split(" ");
@@ -136,6 +140,6 @@
     tag.className = "tag";
     tag.addEventListener("click", () => bar.classList.toggle("open"));
     bar.appendChild(tag);
-    if (page === "stats") document.body.prepend(bar); else document.body.appendChild(bar);
+    document.body.appendChild(bar);
   });
 })();

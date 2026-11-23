@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from places import menu_tree
+import portrait_systems
 
 WEB_DIR = Path(__file__).resolve().parent
 STATIC = WEB_DIR / "static"
@@ -30,11 +31,15 @@ def build(out: Path) -> None:
         shutil.copy2(STATIC / f, out / "static" / f)
     shutil.copytree(STATIC / "places", out / "static" / "places", dirs_exist_ok=True)
     shutil.copytree(STATIC / "vendor", out / "static" / "vendor", dirs_exist_ok=True)   # qrcode.js (QR ของลิงก์ในคำตอบ)
-    for js in ("screen.js", "face.js", "news.js", "osk.js"):
+    (out / "static" / "guides").mkdir(exist_ok=True)
+    shutil.copy2(STATIC / "guides" / "user-guide.jpg", out / "static" / "guides" / "user-guide.jpg")   # ปุ่มคู่มือของจอแนวตั้ง
+    for js in ("screen.js", "face.js", "news.js", "osk.js", "extras.js", "portrait.js", "portrait_util.js"):
         (out / "static" / js).write_text(_relative((STATIC / js).read_text(encoding="utf-8")), encoding="utf-8")
 
-    # 3 หน้า: จอแชท (index.html), หน้าหุ่น, สถิติ — ทุกหน้าโหลด demo.js ก่อน (แทน fetch ไปเซิร์ฟเวอร์)
-    for src, dest, first_script in (("screen.html", "index.html", "<script>"),
+    # 4 หน้า: จอแนวตั้ง (index.html = หน้าหลักของหุ่นตอนนี้), จอแนวนอนเดิม (landscape.html), หน้าหุ่น, สถิติ
+    # ทุกหน้าโหลด demo.js ก่อน (แทน fetch ไปเซิร์ฟเวอร์)
+    for src, dest, first_script in (("screen_v.html", "index.html", "<script>"),
+                                    ("screen.html", "landscape.html", "<script>"),
                                     ("face.html", "face.html", '<script src="static/face.js"></script>'),
                                     ("stats.html", "stats.html", "<script>")):
         html = _relative((STATIC / src).read_text(encoding="utf-8"))
@@ -50,6 +55,10 @@ def build(out: Path) -> None:
     demo_js = (WEB_DIR / "demo" / "demo.js").read_text(encoding="utf-8")
     assert "videos: []" in demo_js, "demo.js: หา videos: [] ไม่เจอ"
     demo_js = demo_js.replace("videos: []", "videos: " + json.dumps([f"static/videos/{f.name}" for f in vids]), 1)
+    # ระบบภายนอกของปุ่ม 2–5 (รายการเดียวกับหุ่นจริง) — เดโมเปิดบน https จึงฝังได้ทุกเว็บที่ยอม https: (ไม่เช็กตอนสร้าง)
+    assert "PV_SYSTEMS = []" in demo_js, "demo.js: หา PV_SYSTEMS = [] ไม่เจอ"
+    pv = [{**s, "embed": True} for s in portrait_systems.SYSTEMS]
+    demo_js = demo_js.replace("PV_SYSTEMS = []", "PV_SYSTEMS = " + json.dumps(pv, ensure_ascii=False), 1)
     (out / "demo.js").write_text(demo_js, encoding="utf-8")
 
     data = json.loads(SARABURI_DATA.read_text(encoding="utf-8"))

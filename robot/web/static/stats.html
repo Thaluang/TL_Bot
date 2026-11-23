@@ -143,6 +143,9 @@
   .side-col{display:flex;flex-direction:column;gap:16px;min-width:0}
   .preview{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:16/9;background:#f4f1ff;border:1px solid var(--line)}
   .preview iframe{position:absolute;left:0;top:0;width:1920px;height:1080px;border:0;transform-origin:0 0;pointer-events:none}
+  /* จอหลักแนวตั้ง (config.SCREEN_LAYOUT = portrait): กรอบ 9:16 เปิดแผงข่าวให้เห็นการ์ดข่าว */
+  .preview.portrait{aspect-ratio:9/16;max-width:420px;margin:0 auto}
+  .preview.portrait iframe{width:1080px;height:1920px}
   .preview .lbl{position:absolute;right:10px;top:10px;z-index:2;font-size:.75rem;background:#1c1240cc;color:#fff;border-radius:999px;padding:3px 10px}
   .counts{display:flex;gap:10px;flex-wrap:wrap}
   .counts div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px 14px;font-size:.8rem;color:var(--muted)}
@@ -665,11 +668,21 @@ $("newsForm").addEventListener("submit", (e) => {
 });
 
 // ---- จอตัวอย่าง: หน้าจอจริงในโหมด preview (ไม่พูด ไม่ส่งสถานะให้หุ่น) ย่อให้พอดีกรอบ ----
-function fitPreview() { const f = $("previewFrame"); f.style.transform = "scale(" + ($("preview").clientWidth / 1920) + ")"; }
+// จอหลักแนวตั้ง → กรอบตัวอย่าง 9:16 และเปิดแผงข้อมูลพื้นฐาน (?pv=info) ที่มีการ์ดข่าว — ถามแนวจอจาก /screen-layout
+let previewPortrait = false;
+function fitPreview() { const f = $("previewFrame"); f.style.transform = "scale(" + ($("preview").clientWidth / (previewPortrait ? 1080 : 1920)) + ")"; }
 function refreshPreview() {
   const f = $("previewFrame");
-  if (!f.src) f.src = (window.DEMO_SCREEN_URL || "/screen") + "?preview=1";
-  else try { f.contentWindow.postMessage("news-refresh", "*"); } catch (e) {}
+  if (!f.src) {
+    fetch("/screen-layout").then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((d) => {
+      previewPortrait = d && d.layout === "portrait";
+      $("preview").classList.toggle("portrait", previewPortrait);
+      f.src = (window.DEMO_SCREEN_URL || "/screen") + "?preview=1" + (previewPortrait ? "&pv=info" : "");
+      fitPreview();
+    });
+    return;
+  }
+  try { f.contentWindow.postMessage("news-refresh", "*"); } catch (e) {}
   fitPreview();
 }
 addEventListener("resize", fitPreview);

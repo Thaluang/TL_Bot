@@ -526,11 +526,16 @@
   #pvChat .composer>svg{font-size:32px;color:var(--muted)}
   #pvChat .composer input{font-size:27px}
   #pvChat .composer .send{width:66px;height:66px;background:var(--royal)}
-  #pvChat .talk{height:150px;border-radius:40px;font-size:42px;gap:26px;background:linear-gradient(135deg,var(--navy2),var(--navy));box-shadow:0 20px 40px -20px #0a2463}
-  #pvChat .talk .mic-ic{width:100px;height:100px;background:var(--gold)}
-  #pvChat .talk .mic-ic svg{width:48px;height:48px;fill:var(--navy)}
-  #pvChat .talk small{font-size:22px}
-  body.state-listening #pvChat .talk{background:linear-gradient(135deg,#b4235a,#d0356c)}
+  /* ปุ่มไมค์: สีสดเด่นที่สุดในหน้า (ผู้ใช้ขอ) — ไล่สีส้ม-ชมพู-ม่วง วงไอคอนสีขาว */
+  #pvChat .talk{height:150px;border-radius:40px;font-size:42px;gap:26px;text-shadow:0 2px 6px #0003;
+    background:linear-gradient(120deg,#ff8a00 0%,#ff3d7f 50%,#a83dff 100%);box-shadow:0 0 0 5px #fff,0 0 0 9px #ff3d7f55,0 24px 44px -16px #ff3d7fcc}
+  #pvChat .talk .mic-ic{width:104px;height:104px;background:#fff;box-shadow:0 8px 20px -6px #0005}
+  #pvChat .talk .mic-ic svg{width:52px;height:52px;fill:#ff3d7f}
+  #pvChat .talk .mic-ic::before,#pvChat .talk .mic-ic::after{border-color:#fff}
+  #pvChat .talk small{font-size:22px;opacity:.95}
+  body.anim-on #pvChat .talk{animation:micglow 2s ease-in-out 2}
+  @keyframes micglow{50%{box-shadow:0 0 0 5px #fff,0 0 0 18px #ff3d7f44,0 24px 44px -16px #ff3d7fcc}}
+  body.state-listening #pvChat .talk{background:linear-gradient(120deg,#e0103a,#ff3d7f);animation:none}
   /* ปุ่มหยุดพูด: ขึ้นตรงแถวปุ่มคำถาม (ซ่อนชิปไว้ระหว่างหุ่นพูด) — ไม่ลอยทับแชท/ดาวให้คะแนน */
   #pvChat .stop-talk{bottom:330px;padding:22px 48px;font-size:28px}
   body.speaking #pvChat .chips{visibility:hidden}

@@ -212,3 +212,17 @@ def test_new_chat_button_stays_in_chat(tmp_path, monkeypatch):
         srv.shutdown()
     body = out[out.index("<body"):out.index(">", out.index("<body"))]
     assert "view-chat" in body, body
+
+
+def test_screen_layout_endpoint(monkeypatch):
+    """หน้าครู (/stats) ใช้ค่านี้จัดกรอบจอตัวอย่างข่าวให้ตรงกับจอจริง"""
+    c = make_client()
+    monkeypatch.setattr(server.config, "SCREEN_LAYOUT", "portrait")
+    assert c.get("/screen-layout").get_json() == {"layout": "portrait"}
+    monkeypatch.setattr(server.config, "SCREEN_LAYOUT", "landscape")
+    assert c.get("/screen-layout").get_json() == {"layout": "landscape"}
+
+
+def test_stats_preview_follows_screen_layout():
+    html = make_client().get("/stats").get_data(as_text=True)
+    assert "/screen-layout" in html and "pv=info" in html

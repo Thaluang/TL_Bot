@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ม็อกอัปจอแนวตั้ง</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0a2463;--navy2:#123a8c;--royal:#1d5fd6;--gold:#e8b23a;--gold2:#f7d77c;--ink:#0f1f45;--ink2:#56627f;--line:#e3e9f5;
+    --head:"Kanit",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#071a4a}
+  body{font-family:"IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink)}
+  button{all:unset;cursor:pointer;box-sizing:border-box}
+  svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  /* ===== กรอบ 1080×1920 ===== */
+  #app{position:absolute;left:0;top:0;width:1080px;height:1920px;transform-origin:0 0;overflow:hidden;isolation:isolate;
+    background:
+      radial-gradient(900px 620px at 78% 18%,#ffffff 0,#ffffff00 62%),
+      linear-gradient(180deg,#eef5ff 0%,#cfe2ff 22%,#3f7fe6 44%,#1a4fb8 62%,#0d2f7e 82%,#081f57 100%)}
+  .pattern{position:absolute;inset:0;z-index:-1;opacity:.09;
+    background:radial-gradient(circle,#fff 1.6px,transparent 2px) 0 0/34px 34px;
+    -webkit-mask:linear-gradient(180deg,transparent 40%,#000 60%,#000 85%,transparent);mask:linear-gradient(180deg,transparent 40%,#000 60%,#000 85%,transparent)}
+  .arc{position:absolute;z-index:-1;border-radius:50%;border:2px solid #ffffff22}
+
+  /* ===== หัว ===== */
+  header{position:absolute;left:32px;right:32px;top:30px;height:210px;display:flex;gap:28px;align-items:center;padding:0 36px 0 26px;
+    border-radius:36px;overflow:hidden;isolation:isolate;
+    background:
+      radial-gradient(520px 260px at 100% 0%,#3d7bf0aa,transparent 70%),
+      linear-gradient(120deg,#0a2463 0%,#123a8c 55%,#1d5fd6 100%);
+    border:3px solid var(--gold);box-shadow:0 0 0 6px #ffffff,0 28px 50px -24px #0a2463cc}
+  /* ลายเส้นทแยงจาง ๆ + แถบทองล่าง */
+  header::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.08;
+    background:repeating-linear-gradient(135deg,#fff 0 2px,transparent 2px 22px)}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;
+    background:linear-gradient(90deg,var(--gold),var(--gold2) 50%,var(--gold))}
+  .logo{width:164px;height:164px;border-radius:50%;flex:none;background:#fff url(logo.jpg) center/90% no-repeat;
+    box-shadow:0 0 0 5px var(--gold),0 0 0 10px #ffffff33,0 12px 26px -8px #000a}
+  .names{flex:1;min-width:0}
+  .names h1{font:600 38px/1.2 var(--head);white-space:nowrap;color:#fff;letter-spacing:-.3px;text-shadow:0 2px 6px #0004}
+  .names h2{font:500 24px/1.2 var(--head);color:var(--gold2);margin-top:4px;letter-spacing:.2px}
+  .names p{display:flex;align-items:center;gap:10px;font:400 20px/1 var(--head);color:#c9d6f2;margin-top:16px;padding-top:14px;border-top:1px solid #ffffff2e}
+  .names p svg{font-size:24px;color:var(--gold2)}
+
+  /* ===== ฮีโร่ ===== */
+  .hero{position:absolute;left:0;right:0;top:262px;height:580px}
+  .halo{position:absolute;left:46px;top:46px;width:430px;height:430px;border-radius:50%;
+    background:radial-gradient(circle,#ffffff 0,#dbe9ff 45%,#ffffff00 70%)}
+  .halo::before{content:"";position:absolute;inset:26px;border-radius:50%;border:2px solid #1d5fd622}
+  .halo::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px dashed #1d5fd630;animation:spin 80s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .podium{position:absolute;left:110px;top:528px;width:300px;height:40px;border-radius:50%;background:radial-gradient(closest-side,#0a246355,transparent)}
+  .robot{position:absolute;left:30px;top:10px;width:470px;height:560px;filter:drop-shadow(0 24px 24px #0a246340);animation:bob 5s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-8px)}}
+  .robot .wave-arm{transform-origin:318px 330px;animation:wave 3s ease-in-out infinite}
+  @keyframes wave{0%,55%,100%{transform:rotate(0)}65%{transform:rotate(-12deg)}75%{transform:rotate(3deg)}85%{transform:rotate(-8deg)}}
+  .robot .eyes{animation:blink 5s infinite;transform-box:fill-box;transform-origin:center}
+  @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+
+  .welcome{position:absolute;left:486px;right:36px;top:44px}
+  .welcome .kick{display:flex;align-items:center;gap:12px;font:500 22px var(--head);color:var(--royal);letter-spacing:3px}
+  .welcome .kick::before{content:"";width:46px;height:3px;border-radius:3px;background:var(--gold)}
+  .welcome .big{margin-top:10px;font:700 92px/1.05 var(--head);letter-spacing:-1.5px;
+    background:linear-gradient(180deg,var(--navy2) 20%,var(--navy));-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 4px 0 #ffffff)}
+  .welcome .sub{display:inline-flex;align-items:center;margin-top:16px;padding:12px 28px;border-radius:14px;
+    background:linear-gradient(135deg,var(--gold2),var(--gold));box-shadow:0 12px 24px -12px #a77a1488;font:600 36px/1.1 var(--head);color:var(--navy)}
+  .welcome .desc{margin-top:16px;font:400 23px/1.45 var(--head);color:var(--ink2)}
+  .welcome .desc b{font-weight:600;color:var(--navy)}
+
+  /* เวลา + อากาศ */
+  .now{position:absolute;left:486px;right:36px;top:404px;height:142px;display:grid;grid-template-columns:1.12fr 1fr;gap:14px}
+  .now>div{border-radius:28px;padding:16px 24px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;box-shadow:0 18px 36px -18px #0a2463aa}
+  .now .tm{background:#fff}
+  .now .tm b{font:500 66px/1 var(--head);letter-spacing:-1px;color:var(--navy)}
+  .now .tm b span{color:var(--gold);animation:colon 1s steps(1) infinite}
+  @keyframes colon{50%{opacity:.15}}
+  .now .tm small{font:400 18px var(--head);color:var(--ink2);margin-top:8px;white-space:nowrap}
+  .now .wx{background:linear-gradient(150deg,var(--navy2),var(--navy));color:#fff}
+  .now .wx b{font:500 60px/1 var(--head)}.now .wx b sup{font-size:26px;font-weight:300;color:var(--gold2)}
+  .now .wx small{display:flex;align-items:center;gap:6px;font:400 17px/1.35 var(--head);opacity:.9;margin-top:6px}
+  .now .wx .sky{position:absolute;right:14px;top:14px;width:62px;height:62px}
+
+  /* ===== ปุ่ม 8 ปุ่ม ===== */
+  .menu{position:absolute;left:32px;right:32px;top:870px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 20px}
+  .mb{position:relative;height:152px;border-radius:32px;display:flex;align-items:center;gap:20px;padding:0 22px 0 20px;background:#fff;overflow:hidden;
+    box-shadow:0 2px 0 #fff inset,0 18px 34px -16px #04123acc;transition:transform .12s}
+  .mb::after{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(180deg,var(--c2),var(--c))}
+  .mb:active{transform:scale(.98)}
+  .mb .ic{position:relative;width:96px;height:96px;flex:none;border-radius:26px;display:grid;place-items:center;font-size:48px;color:#fff;
+    background:linear-gradient(145deg,var(--c2),var(--c));box-shadow:0 12px 22px -10px var(--c),inset 0 1px 0 #ffffff66}
+  .mb .ic::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,#ffffff38,#ffffff00 55%)}
+  .mb .n{position:absolute;right:-9px;bottom:-9px;width:36px;height:36px;border-radius:50%;background:#fff;color:var(--c);display:grid;place-items:center;
+    font:600 20px var(--head);box-shadow:0 4px 10px -3px #0004}
+  .mb .tx{flex:1;min-width:0}
+  .mb b{display:block;font:600 28px/1.2 var(--head);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mb small{display:block;font:400 19px/1.35 var(--head);color:var(--ink2);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mb .go{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:24px;color:var(--c);background:var(--l)}
+  .c1{--c:#1d5fd6;--c2:#5b9bff;--l:#e8f0ff}
+  .c2{--c:#e07b00;--c2:#ffb547;--l:#fff2e0}
+  .c3{--c:#16924a;--c2:#4fd081;--l:#e4f7ec}
+  .c4{--c:#6b3fd1;--c2:#a585ff;--l:#efe9ff}
+  .c5{--c:#0a8fb0;--c2:#4fcbe6;--l:#e2f6fb}
+  .c6{--c:#d0356c;--c2:#ff7fa8;--l:#ffe8f0}
+  .c8{--c:#3d4f7a;--c2:#7b8db8;--l:#edf0f7}
+  /* ปุ่มคุยกับหุ่น: เด่นกว่าปุ่มอื่น */
+  .c7{--c:#e8b23a;--c2:#f7d77c;background:linear-gradient(135deg,#123a8c,#0a2463);animation:pulse 2.8s ease-in-out infinite}
+  .c7::after{display:none}
+  .c7 .ic{color:var(--navy)}
+  .c7 b{color:#fff}.c7 small{color:#c9d6f2}
+  .c7 .go{background:var(--gold);color:var(--navy)}
+  .c7 .n{color:var(--navy)}
+  @keyframes pulse{50%{box-shadow:0 0 0 6px #f7d77c66,0 18px 34px -16px #04123acc}}
+
+  /* ===== ปุ่มรอง ===== */
+  .quick{position:absolute;left:32px;right:32px;top:1574px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .qb{height:86px;border-radius:24px;display:flex;align-items:center;gap:16px;padding:0 26px;font:500 26px var(--head);color:#fff;
+    background:#ffffff14;border:1.5px solid #ffffff55}
+  .qb .qi{width:50px;height:50px;border-radius:14px;background:#fff;color:var(--navy);display:grid;place-items:center;font-size:26px}
+  .qb .go{margin-left:auto;font-size:24px;opacity:.7}
+  .qb:active{background:#ffffff26}
+
+  /* ===== ท้าย ===== */
+  footer{position:absolute;left:0;right:0;bottom:0;height:240px}
+  footer::before{content:"";position:absolute;left:32px;right:32px;top:0;height:1px;background:linear-gradient(90deg,transparent,#ffffff55,transparent)}
+  .slogan{position:absolute;left:40px;top:62px}
+  .slogan b{display:block;font:600 44px/1.15 var(--head);color:#fff}
+  .slogan b em{font-style:normal;color:var(--gold2)}
+  .slogan small{display:flex;align-items:center;gap:10px;margin-top:14px;font:400 20px var(--head);color:#b9c8ea;letter-spacing:.3px}
+  .slogan small::before{content:"";width:40px;height:3px;border-radius:3px;background:var(--gold)}
+  .qrbox{position:absolute;right:40px;top:32px;display:flex;align-items:center;gap:18px}
+  .qrbox .t{text-align:right;color:#fff;font:500 21px/1.4 var(--head)}
+  .qrbox .t small{display:flex;justify-content:flex-end;align-items:center;gap:8px;color:var(--gold2);font-size:19px}
+  .qrbox .q{width:150px;background:#fff;border-radius:20px;padding:10px;box-shadow:0 14px 30px -12px #000a}
+  .qrbox .q svg{display:block;width:100%;height:auto}
+
+  /* ===== หน้าซ้อน ===== */
+  .layer{position:absolute;inset:0;display:none;z-index:10}
+  .layer.on{display:block;animation:in .22s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(16px)}}
+  .dim{position:absolute;inset:0;background:#061640d9}
+  .close{display:inline-flex;align-items:center;gap:12px;padding:20px 50px;border-radius:999px;background:var(--navy);color:#fff;font:500 28px var(--head)}
+  .home-btn{margin-left:auto;display:flex;align-items:center;gap:10px;padding:18px 28px;border-radius:999px;background:#fff;color:var(--navy);font:500 25px var(--head);flex:none}
+  .home-btn svg{font-size:28px}
+
+  /* เว็บระบบจริง */
+  #webLayer{background:#f4f7fc}
+  .wb{position:absolute;left:0;right:0;top:0;height:128px;display:flex;align-items:center;gap:20px;padding:0 30px;background:var(--navy);color:#fff;z-index:1}
+  .wb::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--c)}
+  .wb .ic{width:72px;height:72px;border-radius:20px;background:var(--c);display:grid;place-items:center;font-size:38px;flex:none}
+  .wb b{font:600 32px/1.15 var(--head);display:block}.wb small{font:400 19px var(--head);opacity:.8}
+  #webLayer iframe{position:absolute;left:0;top:128px;width:100%;height:calc(100% - 128px);border:0;background:#fff}
+  .blocked{position:absolute;left:80px;right:80px;top:520px;text-align:center;display:none}
+  .blocked .ic{width:120px;height:120px;margin:0 auto 30px;border-radius:34px;background:#fff;color:var(--c);display:grid;place-items:center;font-size:60px;box-shadow:0 20px 40px -20px #0a246388}
+  .blocked h3{font:600 40px var(--head);color:var(--navy)}
+  .blocked p{font:400 25px/1.6 var(--head);color:var(--ink2);margin-top:14px}
+
+  /* แชท */
+  #chat{background:#f4f7fc}
+  .ch-top{position:absolute;left:0;right:0;top:0;height:210px;display:flex;align-items:center;gap:26px;padding:0 40px;
+    background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:0 0 44px 44px}
+  .face{width:124px;height:124px;border-radius:38px;background:#0b1b3f;flex:none;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;box-shadow:0 0 0 5px #ffffff33}
+  .face i{width:24px;height:36px;border-radius:12px;background:#7fe3ff;box-shadow:0 0 16px #7fe3ff}
+  .face b{position:absolute;bottom:22px;left:50%;margin-left:-16px;width:32px;height:15px;border:5px solid #7fe3ff;border-top:0;border-radius:0 0 20px 20px}
+  .ch-top h3{font:600 44px var(--head)}.ch-top p{font:400 23px var(--head);opacity:.85}
+  .msgs{position:absolute;left:40px;right:40px;top:250px;bottom:560px;display:flex;flex-direction:column;gap:20px;overflow:hidden}
+  .m{max-width:82%;padding:22px 30px;border-radius:30px;font:400 29px/1.5 var(--head)}
+  .m.bot{background:#fff;border-top-left-radius:8px;box-shadow:0 10px 26px -16px #0a246388}
+  .m.me{align-self:flex-end;background:var(--royal);color:#fff;border-top-right-radius:8px}
+  .dockp{position:absolute;left:40px;right:40px;bottom:40px;height:490px;display:flex;flex-direction:column;gap:20px}
+  .chips{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .chip{display:flex;align-items:center;gap:12px;padding:20px 24px;border-radius:22px;background:#fff;font:500 24px var(--head);border:1.5px solid var(--line)}
+  .chip svg{font-size:28px;color:var(--royal)}
+  .comp{height:96px;border-radius:999px;background:#fff;border:2px solid #cfdaf0;display:flex;align-items:center;gap:16px;padding:0 36px;font:400 27px var(--head);color:#8a94b4}
+  .comp svg{font-size:34px}
+  .mic{flex:1;border-radius:40px;background:linear-gradient(135deg,var(--navy2),var(--navy));color:#fff;display:flex;align-items:center;justify-content:center;gap:28px;box-shadow:0 20px 40px -20px #0a2463}
+  .mic .mi{width:120px;height:120px;border-radius:50%;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-size:58px;box-shadow:0 0 0 12px #e8b23a33}
+  .mic b{font:600 46px var(--head);display:block}.mic small{font:400 23px var(--head);opacity:.85}
+
+  /* แผงเมนูย่อย */
+  .sheet{position:absolute;left:36px;right:36px;top:300px;bottom:300px;display:flex;flex-direction:column;background:#fff;border-radius:40px;padding:44px 40px 150px;box-shadow:0 40px 80px #0008}
+  .sheet h3{display:flex;align-items:center;gap:16px;font:600 42px var(--head);color:var(--navy);margin-bottom:24px}
+  .sheet h3 .hi{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;font-size:34px;color:#fff;background:linear-gradient(145deg,var(--c2,#5b9bff),var(--c,#1d5fd6))}
+  .sheet h4{display:flex;align-items:center;gap:12px;font:600 28px var(--head);color:var(--navy);margin:4px 0 14px}
+  .sheet h4::before{content:"";width:6px;height:28px;border-radius:3px;background:var(--gold)}
+  .sheet h4 span{font:400 19px var(--head);color:var(--ink2)}
+  .sub{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .tile{display:flex;align-items:center;gap:16px;padding:22px;border-radius:24px;background:#f6f8fd;border:1.5px solid var(--line);font:500 26px var(--head);color:var(--ink)}
+  .tile .ti{width:60px;height:60px;border-radius:18px;display:grid;place-items:center;font-size:30px;color:var(--royal);background:#fff;box-shadow:0 6px 14px -8px #0a246366;flex:none}
+  .sheet>.close{position:absolute;left:50%;bottom:40px;transform:translateX(-50%)}
+  .sheet.info{top:80px;bottom:80px}
+  .newsg{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:16px;margin-bottom:24px}
+  .nw{border-radius:24px;overflow:hidden;background:#fff;border:1.5px solid var(--line);display:flex;flex-direction:column;min-height:0;box-shadow:0 10px 24px -18px #0a246388}
+  .nw .im{flex:1;min-height:0;background:var(--g);display:grid;place-items:center;font-size:80px;color:#ffffffd0}
+  .nw .t{padding:14px 18px 16px}
+  .nw .tg{display:inline-block;font:500 16px var(--head);padding:3px 12px;border-radius:6px;color:var(--k);background:var(--kl)}
+  .nw b{font:500 22px/1.35 var(--head);margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .info .sub{grid-template-columns:repeat(4,1fr);gap:12px}
+  .info .tile{flex-direction:column;gap:10px;padding:18px 8px;font-size:20px;text-align:center;justify-content:center}
+  .info .tile .ti{width:56px;height:56px;font-size:28px}
+  .guide img{flex:1;min-height:0;width:100%;object-fit:contain;border-radius:20px;background:#f6f8fd}
+  .rate{display:flex;flex-direction:column;gap:20px}
+  .rate .q{font:500 27px var(--head)}
+  .rate .stars{display:flex;gap:12px;font-size:58px;color:var(--gold)}
+  .rate .stars svg{fill:currentColor;stroke:none}
+  .rate .stars svg.off{color:#d5dcea}
+  .rate textarea{all:unset;height:150px;border-radius:20px;background:#f6f8fd;border:1.5px solid var(--line);padding:20px;font:400 23px var(--head);color:#8a94b4}
+  .toast{position:absolute;left:120px;right:120px;top:50%;transform:translateY(-50%);background:#fff;border-radius:40px;padding:56px;text-align:center}
+  .toast .ic{width:110px;height:110px;margin:0 auto 24px;border-radius:30px;display:grid;place-items:center;font-size:56px;color:#fff;background:linear-gradient(145deg,#ff7fa8,#d0356c)}
+  .toast h3{font:600 38px var(--head);color:var(--navy)}.toast p{font:400 23px var(--head);color:var(--ink2);margin:10px 0 30px}
+</style>
+</head>
+<body>
+<!-- ไอคอนเส้นชุดเดียวกันทั้งหน้า (ไม่ใช้อีโมจิ) -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="school" viewBox="0 0 24 24"><path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2"/><path d="M18 5v17"/><path d="m4 6 8-4 8 4"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/></symbol>
+  <symbol id="clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></symbol>
+  <symbol id="users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></symbol>
+  <symbol id="board" viewBox="0 0 24 24"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/><path d="M8 11h3M8 8h8"/></symbol>
+  <symbol id="cube" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+  <symbol id="grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+  <symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="img" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+  <symbol id="land" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></symbol>
+  <symbol id="layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+  <symbol id="trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="map" viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></symbol>
+  <symbol id="tie" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/><path d="m12 14-1.2 3.5L12 20l1.2-2.5z"/></symbol>
+  <symbol id="phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="mount" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol>
+  <symbol id="food" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></symbol>
+  <symbol id="coffee" viewBox="0 0 24 24"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/></symbol>
+  <symbol id="bed" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"/></symbol>
+  <symbol id="store" viewBox="0 0 24 24"><path d="M3 9h18l-2-6H5z"/><path d="M4 9v12h16V9"/><path d="M9 21v-6h6v6"/></symbol>
+  <symbol id="gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="kbd" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="gov" viewBox="0 0 24 24"><path d="M3 22h18M5 22V11M19 22V11M9 22V11M15 22V11M2 11l10-7 10 7z"/></symbol>
+</svg>
+
+<div id="app">
+  <div class="pattern"></div>
+  <span class="arc" style="left:-260px;top:900px;width:900px;height:900px"></span>
+  <span class="arc" style="left:560px;top:1100px;width:900px;height:900px"></span>
+
+  <header>
+    <div class="logo"></div>
+    <div class="names">
+      <h1>วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</h1>
+      <h2>Thaluang Cementhai Anusorn Technical College</h2>
+      <p><svg class="i"><use href="#gov"/></svg>สำนักงานคณะกรรมการการอาชีวศึกษา &nbsp;·&nbsp; กระทรวงศึกษาธิการ</p>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="halo"></div><div class="podium"></div>
+    <svg class="robot" viewBox="0 0 470 560">
+      <defs>
+        <linearGradient id="wh" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".6" stop-color="#f0f5ff"/><stop offset="1" stop-color="#cbd9f0"/></linearGradient>
+        <radialGradient id="glow"><stop offset="0" stop-color="#e6fbff"/><stop offset=".5" stop-color="#5fd6ff"/><stop offset="1" stop-color="#1d8bff"/></radialGradient>
+        <linearGradient id="visor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a2d5c"/><stop offset="1" stop-color="#050d24"/></linearGradient>
+      </defs>
+      <line x1="200" y1="40" x2="200" y2="72" stroke="#a9bcdc" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="200" cy="32" r="14" fill="#e8b23a" style="filter:drop-shadow(0 0 10px #f7d77c)"/>
+      <rect x="70" y="66" width="260" height="212" rx="98" fill="url(#wh)" stroke="#bccbe4" stroke-width="3"/>
+      <circle cx="64" cy="172" r="36" fill="url(#wh)" stroke="#bccbe4" stroke-width="3"/><circle cx="64" cy="172" r="19" fill="url(#glow)"/>
+      <circle cx="336" cy="172" r="36" fill="url(#wh)" stroke="#bccbe4" stroke-width="3"/><circle cx="336" cy="172" r="19" fill="url(#glow)"/>
+      <rect x="98" y="102" width="204" height="144" rx="64" fill="url(#visor)"/>
+      <path d="M120 120 q40 -14 90 -8" stroke="#ffffff30" stroke-width="10" stroke-linecap="round" fill="none"/>
+      <g class="eyes" stroke="#62e6ff" stroke-width="13" stroke-linecap="round" fill="none" style="filter:drop-shadow(0 0 8px #62e6ff)">
+        <path d="M138 176 q21 -28 42 0"/><path d="M220 176 q21 -28 42 0"/>
+      </g>
+      <path d="M168 204 q32 30 64 0" stroke="#62e6ff" stroke-width="9" stroke-linecap="round" fill="none" style="filter:drop-shadow(0 0 6px #62e6ff)"/>
+      <rect x="168" y="272" width="64" height="26" rx="10" fill="#a9bcdc"/>
+      <path d="M110 300 h180 q42 0 42 42 v116 q0 52 -52 52 h-160 q-52 0 -52 -52 v-116 q0 -42 42 -42z" fill="url(#wh)" stroke="#bccbe4" stroke-width="3"/>
+      <circle cx="200" cy="392" r="44" fill="#fff" stroke="#e8b23a" stroke-width="5"/>
+      <image href="logo.jpg" x="166" y="358" width="68" height="68" clip-path="circle(32px)"/>
+      <rect x="36" y="318" width="54" height="152" rx="27" fill="url(#wh)" stroke="#bccbe4" stroke-width="3"/>
+      <g class="wave-arm">
+        <path d="M312 334 q62 -10 92 -94" stroke="#cbd9f0" stroke-width="54" stroke-linecap="round" fill="none"/>
+        <path d="M312 334 q62 -10 92 -94" stroke="#fff" stroke-width="44" stroke-linecap="round" fill="none"/>
+        <circle cx="408" cy="226" r="36" fill="url(#wh)" stroke="#bccbe4" stroke-width="3"/>
+      </g>
+      <rect x="128" y="504" width="60" height="50" rx="22" fill="#a9bcdc"/><rect x="212" y="504" width="60" height="50" rx="22" fill="#a9bcdc"/>
+    </svg>
+    <div class="welcome">
+      <div class="kick">SMART COLLEGE SERVICE</div>
+      <div class="big">ยินดีต้อนรับ</div>
+      <div class="sub">สู่ระบบบริการอัจฉริยะ</div>
+      <div class="desc">ผม <b>น้องทานตะวัน</b> ผู้ช่วยประจำวิทยาลัย<br>แตะเลือกบริการด้านล่างได้เลยครับ</div>
+    </div>
+    <div class="now"><div class="tm"><b id="clk">--<span>:</span>--</b><small id="dte"></small></div>
+      <div class="wx">
+        <svg class="sky" viewBox="0 0 64 64"><circle cx="40" cy="22" r="11" fill="#f7d77c"/><g stroke="#f7d77c" stroke-width="3" stroke-linecap="round"><path d="M40 4v4M54 10l-3 3M58 22h-4M26 10l3 3"/></g><path d="M18 50h28a10 10 0 0 0 0-20 13 13 0 0 0-25 3 9 9 0 0 0-3 17z" fill="#fff"/></svg>
+        <b>32<sup>°C</sup></b><small>มีเมฆบางส่วน</small><small><svg class="i"><use href="#pin"/></svg>ท่าหลวง สระบุรี</small></div></div>
+  </section>
+
+  <section class="menu">
+    <button class="mb c1" data-sheet="info"><span class="ic"><span class="n">1</span><svg class="i"><use href="#school"/></svg></span><span class="tx"><b>ข้อมูลพื้นฐาน</b><small>ข่าว · ปฏิทิน · คลังภาพ</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c2" data-web="admit"><span class="ic"><span class="n">2</span><svg class="i"><use href="#clip"/></svg></span><span class="tx"><b>ระบบรับสมัครเรียน</b><small>สมัคร ปวช. / ปวส. ออนไลน์</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c3" data-web="mis"><span class="ic"><span class="n">3</span><svg class="i"><use href="#users"/></svg></span><span class="tx"><b>ระบบบริการนักเรียน</b><small>ยื่นคำร้อง · ดูผลการเรียน</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c4" data-web="sch"><span class="ic"><span class="n">4</span><svg class="i"><use href="#award"/></svg></span><span class="tx"><b>ระบบทุนการศึกษา</b><small>ทุนการศึกษาและสวัสดิการ</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c5" data-web="room"><span class="ic"><span class="n">5</span><svg class="i"><use href="#board"/></svg></span><span class="tx"><b>ระบบจองห้องประชุม</b><small>จองห้อง · ส่งคำขอ · อนุมัติ</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c6" data-tour><span class="ic"><span class="n">6</span><svg class="i"><use href="#cube"/></svg></span><span class="tx"><b>ทัวร์วิทยาลัย 3 มิติ</b><small>ชมวิทยาลัยแบบเสมือนจริง</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c7" data-chat><span class="ic"><span class="n">7</span><svg class="i"><use href="#mic"/></svg></span><span class="tx"><b>สอบถามน้องทานตะวัน</b><small>แตะเพื่อพูด หรือพิมพ์คำถาม</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+    <button class="mb c8" data-sheet="more"><span class="ic"><span class="n">8</span><svg class="i"><use href="#grid"/></svg></span><span class="tx"><b>เมนูอื่นๆ</b><small>ที่เที่ยว · ร้านอาหาร · ที่พัก</small></span><span class="go"><svg class="i"><use href="#chev"/></svg></span></button>
+  </section>
+
+  <section class="quick">
+    <button class="qb" data-guide><span class="qi"><svg class="i"><use href="#book"/></svg></span>คู่มือการใช้งาน<svg class="i go"><use href="#chev"/></svg></button>
+    <button class="qb" data-survey><span class="qi"><svg class="i"><use href="#star"/></svg></span>แบบประเมินความพึงพอใจ<svg class="i go"><use href="#chev"/></svg></button>
+  </section>
+
+  <footer>
+    <div class="slogan"><b>ก้าวสู่อนาคตที่ดีกว่า <em>ไปด้วยกัน</em></b><small>วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</small></div>
+    <div class="qrbox"><div class="t">เว็บไซต์วิทยาลัย<small><svg class="i"><use href="#globe"/></svg>www.tl.ac.th</small></div><div class="q" id="siteQr"></div></div>
+  </footer>
+
+  <!-- เว็บระบบจริง -->
+  <div class="layer" id="webLayer"><div class="wb"><span class="ic"><svg class="i"><use id="wIcon" href="#clip"/></svg></span><div><b id="wTitle"></b><small id="wSub"></small></div>
+    <button class="home-btn" data-close><svg class="i"><use href="#home"/></svg>กลับหน้าแรก</button></div>
+    <iframe id="wFrame" title="ระบบของวิทยาลัย"></iframe>
+    <div class="blocked" id="wBlocked"><div class="ic"><svg class="i"><use href="#lock"/></svg></div>
+      <h3>ระบบนี้ยังเปิดบนจอนี้ไม่ได้</h3><p>เว็บ TLMis ตั้งค่าห้ามเปิดซ้อนในหน้าอื่น<br>(ตัวอย่างหน้าที่จะขึ้น ถ้ายังไม่ได้ปลดล็อกฝั่ง TLMis)</p></div></div>
+
+  <!-- แชท -->
+  <div class="layer" id="chat">
+    <div class="ch-top"><div class="face"><i></i><i></i><b></b></div>
+      <div><h3>น้องทานตะวัน-Bot</h3><p>ถามอะไรก็ได้ ยินดีช่วยเสมอครับ</p></div>
+      <button class="home-btn" data-close><svg class="i"><use href="#home"/></svg>หน้าแรก</button></div>
+    <div class="msgs">
+      <div class="m bot">สวัสดีครับ ผมน้องทานตะวัน อยากรู้อะไรเกี่ยวกับวิทยาลัย ถามได้เลยครับ</div>
+      <div class="m me">สมัครเรียน ปวช. ต้องทำยังไง</div>
+      <div class="m bot">สมัครออนไลน์ได้เลยครับ ใช้วุฒิ ม.3 … (ตัวอย่างคำตอบ)</div>
+    </div>
+    <div class="dockp">
+      <div class="chips"><span class="chip"><svg class="i"><use href="#clip"/></svg>สมัครเรียนทำยังไง</span><span class="chip"><svg class="i"><use href="#layers"/></svg>เปิดสอนสาขาอะไร</span><span class="chip"><svg class="i"><use href="#trophy"/></svg>ผลงานและรางวัล</span><span class="chip"><svg class="i"><use href="#phone"/></svg>ช่องทางติดต่อ</span></div>
+      <div class="comp"><svg class="i"><use href="#kbd"/></svg>แตะเพื่อพิมพ์คำถาม…</div>
+      <button class="mic"><span class="mi"><svg class="i"><use href="#mic"/></svg></span><span><b>แตะเพื่อพูด</b><small>หุ่นฟังจนคุณพูดจบเอง</small></span></button>
+    </div>
+  </div>
+
+  <!-- แผง -->
+  <div class="layer" id="sheetLayer"><div class="dim"></div>
+    <div class="sheet" id="sheet"><h3><span class="hi"><svg class="i"><use id="sIcon" href="#school"/></svg></span><span id="sTitle"></span></h3>
+      <div id="sBody" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+      <button class="close" data-close><svg class="i"><use href="#x"/></svg>ปิด กลับหน้าแรก</button></div></div>
+
+  <div class="layer" id="toastLayer"><div class="dim"></div><div class="toast"><div class="ic"><svg class="i"><use href="#cube"/></svg></div>
+    <h3>ทัวร์วิทยาลัย 3 มิติ</h3><p>(ของจริงเปิดหน้าทัวร์เดิมแบบเต็มจอ)</p><button class="close" data-close><svg class="i"><use href="#x"/></svg>ปิด</button></div></div>
+</div>
+
+<script src="qrcode.js"></script>
+<script>
+const app=document.getElementById("app");
+function fit(){const k=Math.min(innerWidth/1080,innerHeight/1920);app.style.transform=`translate(${(innerWidth-1080*k)/2}px,${(innerHeight-1920*k)/2}px) scale(${k})`}
+addEventListener("resize",fit);fit();
+function tick(){const d=new Date();clk.innerHTML=String(d.getHours()).padStart(2,"0")+"<span>:</span>"+String(d.getMinutes()).padStart(2,"0");
+  dte.textContent=d.toLocaleDateString("th-TH",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+tick();setInterval(tick,10000);
+const qr=u=>{const q=qrcode(0,"M");q.addData(u);q.make();return q.createSvgTag({cellSize:4,margin:1,scalable:true})};
+siteQr.innerHTML=qr("https://www.tl.ac.th");
+const I=(id,cls="i")=>`<svg class="${cls}"><use href="#${id}"/></svg>`;
+
+const WEB={
+  admit:{i:"clip",c:"#e07b00",t:"ระบบรับสมัครเรียน",s:"สมัครเรียน ปวช. และ ปวส. ออนไลน์",u:"https://tctatc.github.io/thaluang-admission/"},
+  mis:{i:"users",c:"#16924a",t:"TLMis ระบบบริการนักเรียน นักศึกษา",s:"ยื่นคำร้องและดูผลการเรียน ครบในที่เดียว",u:"https://tl-mis.vercel.app/login",blocked:true},
+  sch:{i:"award",c:"#6b3fd1",t:"TL Scholarship",s:"บริหารจัดการและสรุปผลทุนการศึกษา",u:"https://thaluangcementhaianusorn.github.io/scholarship-system/"},
+  room:{i:"board",c:"#0a8fb0",t:"ระบบจองห้องประชุม",s:"จองห้อง ส่งคำขอ และอนุมัติ ครบในที่เดียว",u:"https://tctatc.github.io/nasakorn-thaluang-room-booking2/#/"}};
+const NEWS=[
+  ["รับสมัคร","#6b3fd1","#efe9ff","linear-gradient(135deg,#a585ff,#6b3fd1)","clip","เปิดรับสมัครนักเรียนใหม่ ปีการศึกษา 2570 ระดับ ปวช. และ ปวส."],
+  ["รางวัล","#16924a","#e4f7ec","linear-gradient(135deg,#4fd081,#16924a)","trophy","ขอแสดงความยินดีกับนักศึกษาที่ได้รับรางวัลการประกวดสิ่งประดิษฐ์"],
+  ["กิจกรรม","#d0356c","#ffe8f0","linear-gradient(135deg,#ff7fa8,#d0356c)","users","กิจกรรมวันสถาปนาวิทยาลัย (ตัวอย่างข่าว)"],
+  ["ทุน","#b97a00","#fff2e0","linear-gradient(135deg,#f7d77c,#e07b00)","award","ประกาศรายชื่อผู้ได้รับทุนการศึกษา (ตัวอย่างข่าว)"]];
+const tiles=a=>`<div class="sub">${a.map(([i,n])=>`<div class="tile"><span class="ti">${I(i)}</span>${n}</div>`).join("")}</div>`;
+const SHEETS={
+  info:["school","#1d5fd6","#5b9bff","ข้อมูลพื้นฐาน",()=>`<h4>ข่าวเด่นวันนี้ <span>แตะข่าวเพื่ออ่านต่อ</span></h4>
+    <div class="newsg">${NEWS.map(([k,c,l,g,ic,t])=>`<div class="nw" style="--k:${c};--kl:${l};--g:${g}"><div class="im">${I(ic)}</div><div class="t"><span class="tg">${k}</span><b>${t}</b></div></div>`).join("")}</div>
+    <h4>ข้อมูลวิทยาลัย</h4>`+tiles([["cal","ปฏิทินแนะแนว"],["img","คลังภาพกิจกรรม"],["land","ประวัติวิทยาลัย"],["layers","สาขาที่เปิดสอน"],["trophy","ผลงานและรางวัล"],["map","แผนผังวิทยาลัย"],["tie","ผอ.สอจ.สระบุรี"],["phone","ช่องทางติดต่อ"]]),"info"],
+  more:["grid","#3d4f7a","#7b8db8","เมนูอื่นๆ",()=>tiles([["mount","ที่เที่ยวสระบุรี"],["food","ร้านอาหาร"],["coffee","คาเฟ่"],["bed","ที่พัก"],["store","ตลาด"],["gift","ของฝาก"]])],
+  guide:["book","#1d5fd6","#5b9bff","คู่มือการใช้งาน",()=>`<img src="user-guide.jpg" alt="">`,"guide"],
+  survey:["star","#c48a12","#f7d77c","แบบประเมินความพึงพอใจ",()=>{const st=n=>`<div class="stars">${[1,2,3,4,5].map(k=>I("star",k<=n?"i":"i off")).join("")}</div>`;
+    return `<div class="rate"><div class="q">1. ความพึงพอใจต่อการใช้งานหุ่นยนต์</div>${st(4)}<div class="q">2. ความถูกต้องของข้อมูลที่ได้รับ</div>${st(5)}
+    <div class="q">3. ความสะดวกในการใช้งานหน้าจอ</div>${st(3)}<div class="q">ข้อเสนอแนะ</div><textarea>แตะเพื่อพิมพ์…</textarea></div>`}]};
+const show=id=>document.getElementById(id).classList.add("on");
+function openSheet(key){const [ic,c,c2,t,body,cls]=SHEETS[key];sIcon.setAttribute("href","#"+ic);sheet.style.setProperty("--c",c);sheet.style.setProperty("--c2",c2);
+  sTitle.textContent=t;sBody.innerHTML=body();sheet.className="sheet"+(cls?" "+cls:"");show("sheetLayer")}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button,.dim");if(!b)return;
+  if(b.matches("[data-close],.dim")){wFrame.src="about:blank";document.querySelectorAll(".layer").forEach(l=>l.classList.remove("on"));return}
+  if(b.dataset.web){const s=WEB[b.dataset.web];webLayer.style.setProperty("--c",s.c);wIcon.setAttribute("href","#"+s.i);wTitle.textContent=s.t;wSub.textContent=s.s;
+    wFrame.style.display=s.blocked?"none":"";wBlocked.style.display=s.blocked?"block":"none";wFrame.src=s.blocked?"about:blank":s.u;show("webLayer")}
+  else if(b.dataset.sheet)openSheet(b.dataset.sheet);
+  else if(b.hasAttribute("data-guide"))openSheet("guide");
+  else if(b.hasAttribute("data-survey"))openSheet("survey");
+  else if(b.hasAttribute("data-chat"))show("chat");
+  else if(b.hasAttribute("data-tour"))show("toastLayer");
+});
+const p=new URLSearchParams(location.search).get("show");
+if(p&&SHEETS[p])openSheet(p);
+if(p==="chat")show("chat");
+</script>
+</body>
+</html>

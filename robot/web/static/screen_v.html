@@ -531,7 +531,10 @@
   #pvChat .talk .mic-ic svg{width:48px;height:48px;fill:var(--navy)}
   #pvChat .talk small{font-size:22px}
   body.state-listening #pvChat .talk{background:linear-gradient(135deg,#b4235a,#d0356c)}
-  #pvChat .stop-talk{bottom:540px}
+  /* ปุ่มหยุดพูด: ขึ้นตรงแถวปุ่มคำถาม (ซ่อนชิปไว้ระหว่างหุ่นพูด) — ไม่ลอยทับแชท/ดาวให้คะแนน */
+  #pvChat .stop-talk{bottom:330px;padding:22px 48px;font-size:28px}
+  body.speaking #pvChat .chips{visibility:hidden}
+  body.osk-open #pvChat .stop-talk{bottom:640px}
   /* คีย์บอร์ดบนจอ: ล่างสุดเต็มกว้าง — ช่องพิมพ์ขยับขึ้นมาอยู่เหนือคีย์บอร์ด */
   .osk-host{position:absolute;left:20px;right:20px;bottom:20px;z-index:60}
   body.osk-open #pvChat .dock{bottom:500px}

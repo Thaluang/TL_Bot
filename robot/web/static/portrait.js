@@ -66,8 +66,14 @@
   }).observe($("chat"), { childList: true });
 
   // ล้างแชทตอนว่างนาน (screen.js เรียก newChat) / กด "คุยใหม่" → กลับหน้าแรกด้วย
+  // ยกเว้นกดปุ่ม "คุยใหม่" ในหน้าแชทเอง → ล้างแชทแต่ยังอยู่หน้าแชท (ดักแบบ capture ก่อนตัวจัดการของ screen.js)
+  let keepChat = false;
+  document.addEventListener("click", (e) => { if (e.target.closest('#pvChat [data-action="newChat"]')) keepChat = true; }, true);
   const origNewChat = newChat;
-  newChat = function () { origNewChat(); home(); };
+  newChat = function () {
+    origNewChat();
+    if (keepChat) { keepChat = false; view("chat"); } else home();
+  };
 
   // ---------- ระบบภายนอก (ปุ่ม 2–5) ----------
   let systems = {};
@@ -148,11 +154,13 @@
   window.Portrait = { view, home, openSystem };
   body.dataset.pvReady = "1";   // บอกว่าสคริปต์รันจบ (เทสต์ web/test_portrait.py เช็ก)
 
-  // ?pv=chat|info|more|map|homemap|sys:<key> — เปิดมุมมองนั้นทันที (ใช้จับภาพตรวจหน้าจอ)
+  // ?pv=chat|info|more|map|homemap|newchat|speaking|sys:<key> — เปิดมุมมองนั้นทันที (ใช้จับภาพตรวจหน้าจอ)
   const want = (location.search.match(/[?&]pv=([\w:]+)/) || [])[1];
   if (want === "chat") view("chat");
   else if (want === "info" || want === "more") $(want === "info" ? "pvInfo" : "pvMore").classList.add("on");
   else if (want && want.startsWith("sys:")) openSystem(want.slice(4));
   else if (want === "map") { view("chat"); addMsg("user", "แผนผังวิทยาลัย"); showMap(); }
   else if (want === "homemap") showMap();
+  else if (want === "speaking") { view("chat"); addMsg("user", "สมัครเรียนทำอย่างไร"); addMsg("bot", "สมัครออนไลน์ได้เลยครับ (ตัวอย่างคำตอบ)", { rateQ: "สมัครเรียนทำอย่างไร" }); body.classList.add("speaking"); }
+  else if (want === "newchat") { view("chat"); document.querySelector('#pvChat [data-action="newChat"]').click(); }
 })();

@@ -192,3 +192,23 @@ def test_system_page_bar_has_phone_qr(tmp_path, monkeypatch):
     finally:
         srv.shutdown()
     assert 'id="pvWebQr"' in out and 'id="pvWebQr" class="on"' in out, out[-600:]
+
+
+def test_new_chat_button_stays_in_chat(tmp_path, monkeypatch):
+    """ปุ่ม "คุยใหม่" ในหน้าแชท = ล้างแชทแต่ยังอยู่หน้าแชท (ล้างตอนหมดเวลาว่างเท่านั้นที่กลับหน้าแรก)"""
+    import threading
+    from werkzeug.serving import make_server
+    chrome = _chrome()
+    if not chrome:
+        pytest.skip("ไม่มี Chrome/Chromium")
+    monkeypatch.setattr(ps, "fetch_headers", lambda url: {})
+    srv = make_server("127.0.0.1", 0, server.app, threaded=True)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{srv.server_port}/screen-v?preview=1&pv=newchat"
+        out = subprocess.run([chrome, "--headless=new", "--disable-gpu", f"--user-data-dir={tmp_path}", "--timeout=8000",
+                              "--dump-dom", url], capture_output=True, text=True, encoding="utf-8", timeout=90).stdout
+    finally:
+        srv.shutdown()
+    body = out[out.index("<body"):out.index(">", out.index("<body"))]
+    assert "view-chat" in body, body

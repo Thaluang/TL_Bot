@@ -463,6 +463,8 @@
   .sheet h4::before{content:"";width:6px;height:28px;border-radius:3px;background:var(--gold)}
   .sheet h4 span{font:400 19px var(--head);color:var(--ink2)}
   .pv-close{all:unset;cursor:pointer;position:absolute;left:50%;bottom:40px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:12px;padding:20px 50px;border-radius:999px;background:var(--navy);color:#fff;font:500 28px var(--head);white-space:nowrap}
+  #pvMore .sheet{top:560px;bottom:auto}
+  #pvMore .tile{padding:30px 26px;font-size:28px}
   .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
   .tiles.four{grid-template-columns:repeat(4,1fr);gap:12px}
   .tile{all:unset;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:16px;padding:22px;border-radius:24px;background:#f6f8fd;border:1.5px solid var(--line);font:500 26px var(--head);color:var(--ink)}
@@ -497,6 +499,18 @@
   .pill.light{background:#fff;color:var(--navy)}
   .pill.ghost{background:#ffffff1f;border:1px solid #ffffff59;color:#fff}
   .ch .badges{display:flex;gap:10px}
+  #pvChat{background:linear-gradient(180deg,#e9f1ff,#f4f7fc 30%,#f4f7fc)}
+  #pvChat .chat{padding:26px 30px 20px;gap:20px}
+  #pvChat .msg{max-width:88%}
+  #pvChat .msg.user{font-size:28px;padding:20px 28px;background:linear-gradient(135deg,#1d5fd6,#123a8c)}
+  #pvChat .a-body{font-size:28px;line-height:1.6;padding:22px 28px;border-color:var(--line)}
+  #pvChat .mic-tag{font-size:19px}
+  #pvChat .a-body .md-link{min-height:60px;padding:10px 26px}
+  #pvChat .tools button{width:56px;height:56px}#pvChat .tools svg{width:30px;height:30px}
+  #pvChat .stars button{width:58px;height:58px;font-size:38px}
+  #pvChat .rate{font-size:21px}
+  #pvInfo .nc.invite p{display:none}
+  #pvInfo .nc.invite b{font-size:44px}
   #pvChat .scroll{position:absolute;left:0;right:0;top:220px;bottom:520px;overflow-y:auto;scroll-behavior:smooth}
   #board:not([hidden]) ~ #pvChat .scroll{top:1000px}
   #pvChat .dock{position:absolute;left:30px;right:30px;bottom:30px;display:flex;flex-direction:column;gap:16px}
@@ -534,6 +548,8 @@
   #pvWeb small{font:400 19px var(--head);opacity:.8}
   #pvWeb .pill{margin-left:auto}
   #tourView iframe{position:absolute;left:0;top:128px;width:100%;height:calc(100% - 128px)}
+  /* จอตัวอย่าง (?preview=1 ในหน้าครู/จับภาพ): ไม่เล่นแอนิเมชัน */
+  body.preview *,body.preview *::before,body.preview *::after{animation:none!important;transition:none!important}
 
 </style>
 </head>

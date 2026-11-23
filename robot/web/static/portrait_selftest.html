@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- เทสต์ฟังก์ชันใน portrait_util.js — web/test_portrait.py เปิดหน้านี้ด้วย Chrome headless แล้วหาคำว่า PASS -->
+<html lang="th"><head><meta charset="UTF-8"><title>portrait selftest</title></head>
+<body>
+<script src="portrait_util.js"></script>
+<script>
+  const cases = [
+    ["สวัสดีครับ \u{1F44B} วันนี้", "สวัสดีครับ วันนี้"],
+    ["\u{1F3A4} พูด", "พูด"],
+    ["ขอบคุณ \u{1F64F}\u{1F3FD}", "ขอบคุณ"],
+    ["ดูทางซ้าย \u{1F448}", "ดูทางซ้าย"],
+    ["\u2699\uFE0F ภาพรวม", "ภาพรวม"],
+    ["\u{1F468}\u200D\u{1F393} นักศึกษา", "นักศึกษา"],
+    ["โทร 0-3628-1295", "โทร 0-3628-1295"],
+    ["\u2605\u2605\u2605", "\u2605\u2605\u2605"],
+    ["บรรทัด\nใหม่ \u{1F4D6}", "บรรทัด\nใหม่"],
+  ];
+  const bad = [];
+  try {
+    for (const [inp, want] of cases) {
+      const got = window.stripEmoji(inp);
+      if (got !== want) bad.push(JSON.stringify(inp) + " -> " + JSON.stringify(got));
+    }
+  } catch (e) { bad.push(String(e)); }
+  // แบบในข้อความบนหน้า (text node): ลบอีโมจิ ยุบช่องว่างซ้อน แต่ไม่ตัดช่องว่างหัวท้าย (คำข้างตัวหนาจะได้ไม่ติดกัน)
+  const inl = [[" ดู \u{1F448} ", " ดู "], ["ข้อ \u{1F449} ", "ข้อ "], ["ปกติ ", "ปกติ "]];
+  try {
+    for (const [inp, want] of inl) {
+      const got = window.stripEmojiInline(inp);
+      if (got !== want) bad.push("inline " + JSON.stringify(inp) + " -> " + JSON.stringify(got));
+    }
+  } catch (e) { bad.push(String(e)); }
+  document.body.textContent =bad.length ? "FAIL: " + bad.join(" | ") : "PASS";
+</script>
+</body></html>

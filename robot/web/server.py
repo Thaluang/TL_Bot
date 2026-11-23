@@ -25,6 +25,7 @@ from ai import ask_ai, ask_ai_stream, is_quota_error, speak_wav, transcribe     
 from wayfinding import wants_map                               # noqa: E402
 from places import photos_for, menu_tree                       # noqa: E402
 import directors                                               # noqa: E402
+import portrait_systems                                        # noqa: E402
 import json                                                    # noqa: E402
 import queue                                                   # noqa: E402
 from gpio_btn import GpioButton                                # noqa: E402
@@ -133,6 +134,12 @@ def screen_page():
 @app.get("/screen-v")
 def screen_portrait_page():
     return send_from_directory(STATIC_DIR, "screen_v.html")
+
+
+@app.get("/pv/systems")
+def portrait_systems_list():
+    """ระบบภายนอกของปุ่ม 2–5 บนจอแนวตั้ง + embed = เปิดซ้อนในจอนี้ได้ไหม (ไม่ได้ → จอขึ้น QR)"""
+    return jsonify(portrait_systems.systems(request.host_url.rstrip("/")))
 
 
 @app.get("/face")

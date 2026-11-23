@@ -63,3 +63,99 @@ def test_screen_v_css_braces_balanced():
         depth += line.count("{") - line.count("}")
         assert depth >= 0, line
     assert depth == 0
+
+
+# ---- ระบบภายนอก (ปุ่ม 2–5): เปิดซ้อนในจอได้ไหม — ไม่ได้ต้องขึ้น QR แทนจอว่าง ----
+import portrait_systems as ps
+
+ORIGIN = "http://localhost:5000"
+
+
+def test_frameable_without_headers():
+    assert ps.frameable({}, ORIGIN) is True
+
+
+def test_frameable_x_frame_options_blocks():
+    assert ps.frameable({"X-Frame-Options": "DENY"}, ORIGIN) is False
+    assert ps.frameable({"x-frame-options": "SAMEORIGIN"}, ORIGIN) is False
+
+
+def test_frameable_frame_ancestors():
+    csp = lambda fa: {"Content-Security-Policy": "default-src 'self'; frame-ancestors " + fa + "; base-uri 'self'"}
+    assert ps.frameable(csp("'none'"), ORIGIN) is False
+    assert ps.frameable(csp("'self' https:"), ORIGIN) is False        # TLMis ตอนนี้: จอ Pi เป็น http → ยังโดนบล็อก
+    assert ps.frameable(csp("'self' https: http://localhost:5000"), ORIGIN) is True
+    assert ps.frameable(csp("http://localhost:*"), ORIGIN) is True
+    assert ps.frameable(csp("http:"), ORIGIN) is True
+    assert ps.frameable(csp("*"), ORIGIN) is True
+    assert ps.frameable(csp("'self' https:"), "https://kiosk.example") is True
+    assert ps.frameable({"Content-Security-Policy": "default-src 'self'"}, ORIGIN) is True   # ไม่มี frame-ancestors
+
+
+def test_systems_endpoint_marks_embed(monkeypatch):
+    blocked = "https://tl-mis.vercel.app/login"
+    monkeypatch.setattr(ps, "fetch_headers", lambda url: {"X-Frame-Options": "DENY"} if url == blocked else {})
+    ps.clear_cache()
+    rows = make_client().get("/pv/systems").get_json()
+    by = {r["key"]: r for r in rows}
+    assert set(by) == {"admit", "mis", "sch", "room"}
+    assert by["mis"]["url"] == blocked and by["mis"]["embed"] is False
+    assert by["admit"]["embed"] is True
+    assert by["admit"]["url"] == "https://tctatc.github.io/thaluang-admission/"
+    assert by["sch"]["url"] == "https://thaluangcementhaianusorn.github.io/scholarship-system/"
+    assert by["room"]["url"] == "https://tctatc.github.io/nasakorn-thaluang-room-booking2/#/"
+
+
+def test_systems_endpoint_fetch_error_means_qr(monkeypatch):
+    def boom(url):
+        raise OSError("no net")
+    monkeypatch.setattr(ps, "fetch_headers", boom)
+    ps.clear_cache()
+    rows = make_client().get("/pv/systems").get_json()
+    assert all(r["embed"] is False for r in rows)
+
+
+# ---- ตัวลบอีโมจิของหน้าแนวตั้ง (portrait_util.js) — เครื่องนี้ไม่มี Node จึงรันใน Chrome headless ----
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+
+def _chrome():
+    for c in ["C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"]:
+        if Path(c).exists():
+            return c
+    return shutil.which("chromium") or shutil.which("chromium-browser") or shutil.which("google-chrome")
+
+
+def test_strip_emoji_selftest(tmp_path):
+    chrome = _chrome()
+    if not chrome:
+        pytest.skip("ไม่มี Chrome/Chromium")
+    page = (Path(__file__).parent / "static" / "portrait_selftest.html").resolve().as_uri()
+    out = subprocess.run([chrome, "--headless=new", "--disable-gpu", f"--user-data-dir={tmp_path}", "--dump-dom", page],
+                         capture_output=True, text=True, encoding="utf-8", timeout=60).stdout
+    assert "PASS" in out, out[-500:]
+
+
+def test_screen_v_boots_in_chrome(tmp_path, monkeypatch):
+    """เปิดหน้าใน Chrome จริง (เซิร์ฟเวอร์ทดสอบในเทรด) — portrait.js ต้องรันจบ (สคริปต์พังเงียบ = จอทั้งหน้าใช้ไม่ได้)"""
+    import threading
+    from werkzeug.serving import make_server
+    chrome = _chrome()
+    if not chrome:
+        pytest.skip("ไม่มี Chrome/Chromium")
+    monkeypatch.setattr(ps, "fetch_headers", lambda url: {})
+    srv = make_server("127.0.0.1", 0, server.app, threaded=True)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{srv.server_port}/screen-v?preview=1"
+        out = subprocess.run([chrome, "--headless=new", "--disable-gpu", f"--user-data-dir={tmp_path}", "--timeout=8000",
+                              "--dump-dom", url], capture_output=True, text=True, encoding="utf-8", timeout=90).stdout
+    finally:
+        srv.shutdown()
+    assert 'data-pv-ready="1"' in out, out[-800:]
+    assert 'id="siteQr"><svg' in out          # QR ท้ายจอวาดแล้ว
+    assert 'data-menu="trips"' in out          # เมนูอื่นๆ เติมแล้ว

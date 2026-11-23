@@ -1,5 +1,16 @@
-// จอเนื้อหา: คุมไมค์ (STT) + พิมพ์ → เรียก /ask → แสดงคำตอบ + พูด (TTS) + แจ้ง /state
-// รองรับ 2 ภาษา (th/en) และโหมดมืด/สว่าง — ภาษาที่เลือกส่งไปเซิร์ฟเวอร์ด้วย ให้จอใบหน้าและ AI ใช้ตาม
+// จอ 1920 ฝั่งขวา (แชท): คุมไมค์ (STT) + พิมพ์ → เรียก /ask → แสดงคำตอบ + พูด (TTS) + แจ้ง /state
+// ฝั่งซ้าย (ข่าว/แผนผัง/รูป/เมนู) อยู่ใน news.js — ส่งของไปโชว์ด้วย Board.show(...)
+// รองรับ 2 ภาษา (th/en) — ภาษาที่เลือกส่งไปเซิร์ฟเวอร์ด้วย ให้จอใบหน้าและ AI ใช้ตาม
+// ?preview=1 = จอตัวอย่างในหน้าครู: ไม่พูด ไม่ทัก ไม่ส่งสถานะไปหุ่น ไม่เล่นวิดีโอ
+const PREVIEW = /[?&]preview=1/.test(location.search);
+if (PREVIEW) document.body.classList.add("preview");
+
+// แอนิเมชันตกแต่งเล่นเป็นช่วง: 4 วิ ทุก 12 วิ (CSS body.anim-on) — วนตลอดทำให้ Pi วาดจอใหม่ไม่หยุด
+setInterval(() => {
+  if (document.hidden) return;
+  document.body.classList.add("anim-on");
+  setTimeout(() => document.body.classList.remove("anim-on"), 4100);
+}, 12000);
 
 // ---- ข้อความทุกภาษา ----
 const T = {
@@ -10,25 +21,48 @@ const T = {
     phone: "โทร 0-3628-1295", phoneNote: "ข้อมูลไม่ครบ ติดต่อเจ้าหน้าที่ได้เลยครับ",
     hello: "อยากรู้อะไรเกี่ยวกับ<em>ท่าหลวงฯ</em>ดี?",
     sub: "แตะไมค์เพื่อพูด หรือพิมพ์ถามได้เลยครับ 😊", subNoMic: "พิมพ์คำถามด้านล่างได้เลยครับ 😊",
-    placeholder: "ถามอะไรก็ได้เกี่ยวกับวิทยาลัย…", listening: "กำลังฟัง… พูดได้เลยครับ (แตะไมค์เพื่อหยุด)",
+    placeholder: "แตะเพื่อพิมพ์คำถาม…", listening: "กำลังฟัง… พูดได้เลยครับ (แตะไมค์เพื่อหยุด)",
     send: "ส่ง", mic: "กดเพื่อพูด", replay: "ฟังอีกครั้ง", theme: "สลับโหมดมืด/สว่าง",
-    cMap: "แผนผังวิทยาลัย", cPrograms: "สาขาที่เปิดสอน", cApply: "คุณสมบัติผู้สมัคร",
+    cMap: "แผนผังวิทยาลัย", cPrograms: "หลักสูตร", cApply: "สมัครเรียน",
     cContact: "ช่องทางติดต่อ", cTrips: "ที่เที่ยวสระบุรี", cSouvenir: "ของฝากสระบุรี",
-    cTour: "แนะนำสถานที่วิทยาลัย", openLink: "แตะเพื่อเปิด", scanQr: "📱 สแกนเปิดในโทรศัพท์", closeTour: "ปิด กลับหน้าถามตอบ",
+    cDirectors: "ข้อมูล ผอ.สอจ.สระบุรี", cDirectorsShort: "ผอ.สอจ.สระบุรี", cDirectorsSub: "ผู้อำนวยการวิทยาลัยในสระบุรี",
+    directorsTitle: "ข้อมูล ผอ.สอจ.สระบุรี", directorsSub: "แตะที่ท่านเพื่อดูประวัติและผลงาน",
+    cMapShort: "แผนผัง", cTripsShort: "สถานที่ท่องเที่ยว", cApplySub: "คุณสมบัติ วิธีสมัคร", cProgramsSub: "สาขาที่เปิดสอน",
+    cMapSub: "อาคาร ห้องต่าง ๆ", cTourSub: "เดินชมวิทยาลัยเสมือนจริง", cTripsSub: "วัด น้ำตก ธรรมชาติ",
+    cSouvenirSub: "OTOP ของกินขึ้นชื่อ", cStay: "ที่พักใกล้วิทยาลัย", cStaySub: "รีสอร์ท ห้องพัก 5 แห่ง",
+    cFood: "ร้านอาหาร", cFoodSub: "ก๋วยเตี๋ยว หมูกระทะ ตามสั่ง", cCafe: "คาเฟ่แนะนำ", cCafeSub: "กาแฟ ระบายสี 5 ร้าน",
+    cMarket: "ตลาด", cMarketSub: "ตลาดนัด ตลาดสด", cAwards: "ผลงานรางวัล", cAwardsSub: "รางวัลพระราชทาน เหรียญทอง",
+    cCalendar: "ปฏิทินแนะแนว", cGallery: "คลังภาพกิจกรรม", cSurvey: "แบบประเมิน",
+    cGuide: "คู่มือการใช้งาน", cGuideSub: "วิธีใช้หุ่นทีละขั้น", cOverview: "ภาพรวมการทำงาน", cOverviewSub: "หุ่นทำงานอย่างไร",
+    guideMsg: "นี่คือคู่มือการใช้งานหุ่นครับ 📖 ดูรูปทางซ้ายได้เลย แตะรูปเพื่อขยายเต็มจอครับ",
+    overviewMsg: "นี่คือภาพรวมการทำงานของผมครับ ⚙️ ดูรูปทางซ้ายได้เลย แตะรูปเพื่อขยายเต็มจอครับ", openHours: "เวลาเปิด", tel: "โทร", cContactSub: "โทร 0-3628-1295", newChatSub: "ล้างบทสนทนา",
+    botName: "น้องทานตะวัน-Bot", botSub: "ถามอะไรก็ได้ ยินดีช่วยเสมอครับ", place: "📍 ท่าหลวง สระบุรี", newsHead: "ข่าวเด่นวันนี้",
+    backNews: "กลับหน้าข่าว", allMenu: "เมนูทั้งหมด", allMenuTitle: "เมนูทั้งหมด", allMenuSub: "แตะเลือกได้เลยครับ",
+    talk: "แตะเพื่อพูด", talkSub: "หุ่นฟังจนคุณพูดจบเอง", listenTalk: "กำลังฟัง…", listenSub: "แตะอีกครั้งเมื่อพูดจบ",
+    intro: "สวัสดีครับ 👋 วันนี้มาติดต่อเรื่องอะไรครับ แตะปุ่มด้านล่างแล้วพูดได้เลย หรือแตะข่าวทางซ้ายให้ผมอ่านให้ฟังก็ได้ครับ",
+    seeLeft: "ดูรูปใหญ่ทางซ้าย 👈", photosTitle: "รูปสถานที่", newsTag: "📰 ข่าว",
+    cTour: "ทัวร์ 3 มิติ", openLink: "แตะเพื่อเปิด", scanQr: "📱 สแกนเปิดในโทรศัพท์", closeTour: "ปิด กลับหน้าถามตอบ",
     hint: "หุ่นยนต์ตอบจากข้อมูลของวิทยาลัย ถ้าไม่แน่ใจ สอบถามเจ้าหน้าที่ได้นะครับ",
     spoken: "🎤 พูด", mapAlt: "แผนผังวิทยาลัย",
-    mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ แตะที่รูปเพื่อขยายดูได้เลย",
+    mapMsg: "นี่คือแผนผังวิทยาลัยครับ 🗺️ ดูทางซ้ายได้เลย แตะที่รูปเพื่อขยาย\n\nสามารถเยี่ยมชมวิทยาลัยในรูปแบบ 3D ได้ด้วยนะครับ แตะปุ่มด้านล่างได้เลย 👇",
+    tour3d: "🏫 เยี่ยมชมแบบ 3D",
+    fromCollege: "ระยะทางจากวิทยาลัย", scanMap: "📍 สแกนเปิดแผนที่ นำทางไปได้เลย", scanMapSub: "เปิดใน Google Maps แล้วกด \"เส้นทาง\"",
+    scanMapSay: "สแกนคิวอาร์โค้ดบนจอ เพื่อเปิดแผนที่นำทางในมือถือได้เลยครับ",
     sysErr: "ขออภัยครับ ระบบขัดข้อง ลองใหม่อีกครั้งนะครับ",
     noHear: "ไม่ได้ยินครับ ลองพูดใหม่ หรือพิมพ์คำถามดูนะครับ 🙏",
+    netGood: "เน็ตดี", netSlow: "เน็ตช้า", netDown: "ไม่มีเน็ต",
+    liveHint: "🎤 กำลังฟัง…", liveWait: "พูดได้เลยครับ…",
+    thinkSlow: "เน็ตช้านิดนึง รอสักครู่นะครับ…", thinkLong: "ขอคิดแป๊บนึงนะครับ…",
     menuPick: "เลือกหมวดได้เลยครับ 👇", menuItems: "แตะดูรายละเอียดได้เลยครับ 👇",
     back: "ย้อนกลับ", home: "หน้าแรก", districtPre: "อ.",
-    greet: "สวัสดีครับ ผมชื่อทีแอลบอท มีอะไรให้ช่วยไหมครับ",
+    // ใช้พูดอย่างเดียว: "บอท" ภาษาไทย (เขียน -Bot เสียงสลับไปอ่านอังกฤษ สะดุด) + ไม่เว้นวรรคช่วงแนะนำตัว ให้พูดต่อกันลื่น ๆ
+    greet: "สวัสดีครับผมชื่อน้องทานตะวันบอท มีอะไรให้ช่วยไหมครับ",
     rateAsk: "คำตอบนี้ช่วยได้ไหมครับ?", rateThanks: "ขอบคุณที่ให้คะแนนครับ 🙏", starUnit: "ดาว",
-    attractSub: "สวัสดีครับ ผมชื่อทีแอลบอท ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
+    attractSub: "สวัสดีครับ ผมชื่อน้องทานตะวัน-Bot ผู้ช่วยตอบคำถามของวิทยาลัย", attractTap: "👆 แตะจอเพื่อถามหุ่นยนต์",
     announceTag: "ประกาศ",
     scanned: "📷 สแกน QR", qrUnknown: "ยังไม่รู้จัก QR นี้ครับ 🙏 ลองถามด้วยเสียงหรือพิมพ์ดูนะครับ",
     stopTalk: "⏹ หยุดพูด", seeScreen: "รายละเอียดเพิ่มเติมดูบนจอได้เลยครับ",
-    states: { idle: "พร้อมรับคำถาม", greeting: "สวัสดีครับ 👋", listening: "กำลังฟัง…", thinking: "กำลังคิด…", answering: "กำลังตอบ", error: "เกิดข้อผิดพลาด" },
+    states: { idle: "พร้อมคุย", greeting: "สวัสดีครับ 👋", listening: "กำลังฟัง…", thinking: "กำลังคิด…", answering: "กำลังตอบ", error: "เกิดข้อผิดพลาด" },
     speech: "th-TH",
   },
   en: {
@@ -38,21 +72,43 @@ const T = {
     phone: "Tel. 0-3628-1295", phoneNote: "Need more info? Our staff are happy to help.",
     hello: "What would you like to know about <em>Tha Luang</em>?",
     sub: "Tap the mic to speak, or type your question 😊", subNoMic: "Type your question below 😊",
-    placeholder: "Ask anything about the college…", listening: "Listening… go ahead (tap the mic to stop)",
+    placeholder: "Tap to type a question…", listening: "Listening… go ahead (tap the mic to stop)",
     send: "Send", mic: "Tap to speak", replay: "Play again", theme: "Switch dark/light mode",
-    cMap: "Campus map", cPrograms: "Programs offered", cApply: "Admission requirements",
+    cMap: "Campus map", cPrograms: "Programs", cApply: "Apply",
     cContact: "Contact us", cTrips: "Places to visit", cSouvenir: "Local souvenirs",
-    cTour: "Campus tour (3D)", openLink: "Tap to open", scanQr: "📱 Scan to open on your phone", closeTour: "Close",
+    cDirectors: "Saraburi college directors", cDirectorsShort: "Directors", cDirectorsSub: "Vocational college directors in Saraburi",
+    directorsTitle: "Saraburi college directors", directorsSub: "Tap a director to see their profile",
+    cMapShort: "Map", cTripsShort: "Places to visit", cApplySub: "Requirements, how to apply", cProgramsSub: "Programs offered",
+    cMapSub: "Buildings and rooms", cTourSub: "Virtual campus walk", cTripsSub: "Temples, waterfalls, nature",
+    cSouvenirSub: "OTOP and local food", cStay: "Places to stay", cStaySub: "5 resorts and rooms nearby",
+    cFood: "Places to eat", cFoodSub: "Noodles, mookata, made-to-order", cCafe: "Cafés", cCafeSub: "Coffee and painting, 5 spots",
+    cMarket: "Markets", cMarketSub: "Evening and fresh markets", cAwards: "Awards", cAwardsSub: "Royal awards, gold medals",
+    cCalendar: "Guidance calendar", cGallery: "Photo gallery", cSurvey: "Survey",
+    cGuide: "User guide", cGuideSub: "How to use me, step by step", cOverview: "How I work", cOverviewSub: "System overview",
+    guideMsg: "Here is my user guide 📖 See the picture on the left — tap it to view full screen.",
+    overviewMsg: "Here is how I work ⚙️ See the picture on the left — tap it to view full screen.", openHours: "Open", tel: "Tel.", cContactSub: "Tel. 0-3628-1295", newChatSub: "Clear the conversation",
+    botName: "Nong Tantawan-Bot", botSub: "Ask me anything, happy to help", place: "📍 Tha Luang, Saraburi", newsHead: "Today's highlights",
+    backNews: "Back to news", allMenu: "All menus", allMenuTitle: "All menus", allMenuSub: "Tap to choose",
+    talk: "Tap to speak", talkSub: "I'll listen until you finish", listenTalk: "Listening…", listenSub: "Tap again when done",
+    intro: "Hi! 👋 How can I help you today? Tap the button below and speak, or tap a news card on the left and I'll read it to you.",
+    seeLeft: "See the large picture on the left 👈", photosTitle: "Photos", newsTag: "📰 News",
+    cTour: "3D campus tour", openLink: "Tap to open", scanQr: "📱 Scan to open on your phone", closeTour: "Close",
     hint: "Answers come from the college's own information. When in doubt, please ask our staff.",
     spoken: "🎤 Spoken", mapAlt: "Campus map",
-    mapMsg: "Here's the campus map 🗺️ Tap the image to zoom in.",
+    mapMsg: "Here's the campus map 🗺️ It's on the left — tap it to zoom in.\n\nYou can also visit the campus in 3D — tap the button below 👇",
+    tour3d: "🏫 Visit in 3D",
+    fromCollege: "Distance from the college:", scanMap: "📍 Scan to open the map", scanMapSub: "Opens Google Maps — tap \"Directions\"",
+    scanMapSay: "Scan the QR code on the screen to get directions on your phone.",
     sysErr: "Sorry, something went wrong. Please try again.",
     noHear: "Sorry, I didn't catch that. Try speaking again or type your question 🙏",
+    netGood: "Good net", netSlow: "Slow net", netDown: "Offline",
+    liveHint: "🎤 Listening…", liveWait: "Go ahead…",
+    thinkSlow: "The internet is slow — one moment please…", thinkLong: "Just a moment…",
     menuPick: "Pick a category 👇", menuItems: "Tap one to see more 👇",
     back: "Back", home: "Home", districtPre: "",
-    greet: "Hi! I'm TL-Bot. How can I help you today?",
+    greet: "Hi! I'm Nong Tantawan-Bot. How can I help you today?",
     rateAsk: "Was this answer helpful?", rateThanks: "Thanks for rating! 🙏", starUnit: "stars",
-    attractSub: "Hi! I'm TL-Bot, the college's question assistant.", attractTap: "👆 Tap the screen to ask the robot",
+    attractSub: "Hi! I'm Nong Tantawan-Bot, the college's question assistant.", attractTap: "👆 Tap the screen to ask the robot",
     announceTag: "Announcement",
     scanned: "📷 QR scan", qrUnknown: "Sorry, I don't recognise this QR code 🙏 Try asking by voice or typing.",
     stopTalk: "⏹ Stop", seeScreen: "More details are on the screen.",
@@ -70,7 +126,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
 };
 
-let lang = T[store.get("lang")] ? store.get("lang") : "th";
+let lang = "th";   // จอหน้าวิทยาลัยใช้ภาษาไทยอย่างเดียว (ตาราง T.en เก็บไว้เผื่อเปิดใช้ภายหลัง)
 let convo = 0;   // เพิ่มทุกครั้งที่กด "คุยใหม่" — คำตอบของบทสนทนาเก่าที่ยังไหลอยู่จะหยุดเอง
 let state = "idle";
 const t = () => T[lang];
@@ -81,6 +137,7 @@ function setState(s) {
   state = s; idleSince = Date.now();
   body.className = body.className.replace(/\bstate-\S+/, "state-" + s);
   if (ledText) ledText.textContent = t().states[s] || s;
+  if (PREVIEW) return;   // จอตัวอย่างในหน้าครู ไม่บังคับหน้าหุ่น
   fetch("/state", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state: s, lang }),
@@ -88,13 +145,6 @@ function setState(s) {
 }
 // กำลังอ่านคำตอบออกเสียง (ไม่ใช่กำลังพิมพ์คำตอบ) ไม่นับว่ายุ่ง — ถามข้อใหม่/กดไมค์แล้วเสียงเก่าหยุดเอง
 const busy = () => state === "thinking" || (state === "answering" && !answerTalking);
-
-// ---- หน้าแรก ↔ หน้าคุย: ย้ายช่องถามจากกลางจอลงล่าง ----
-function setView(v) {
-  body.classList.toggle("v-welcome", v === "welcome");
-  body.classList.toggle("v-thread", v === "thread");
-  (v === "welcome" ? $("welcomeSlot") : $("dockSlot")).appendChild(composer);
-}
 
 // ---- ภาษา ----
 function applyLang(l) {
@@ -104,17 +154,11 @@ function applyLang(l) {
   document.querySelectorAll("[data-ph]").forEach((e) => { e.placeholder = t()[e.dataset.ph]; });
   document.querySelectorAll("[data-title]").forEach((e) => { e.title = t()[e.dataset.title]; });
   document.querySelectorAll("#langSeg button").forEach((b) => b.classList.toggle("on", b.dataset.lang === l));
-  $("themeBtn").title = t().theme;
-  if (!SR) $("welcomeSub").textContent = t().subNoMic;
   if (recog) recog.lang = t().speech;
   setState(state);   // อัปเดตป้ายสถานะ + บอกเซิร์ฟเวอร์ว่าเปลี่ยนภาษา
+  showNet(netLevel);
+  window.dispatchEvent(new Event("lang-change"));   // news.js วาดฝั่งซ้ายใหม่ตามภาษา
 }
-
-// ---- โหมดมืด/สว่าง ----
-$("themeBtn").addEventListener("click", () => {
-  const next = root.dataset.theme === "light" ? "dark" : "light";
-  root.dataset.theme = next; store.set("theme", next);
-});
 
 // ---- ข้อความ ----
 function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
@@ -191,12 +235,21 @@ function speechSummary(text, lng) {
     if (out.length && len + p.length > SPEAK_MAX_CHARS) { cut = true; break; }
     out.push(p); len += p.length;
   }
-  let say = out.join(" ");
+  let say = out.join("\n");                                      // ขึ้นบรรทัด = จบประโยค เสียงหยุดตรงนี้ (เซิร์ฟเวอร์ใส่จุดให้)
   if (say.length > SPEAK_MAX_CHARS * 1.5) {                      // ย่อหน้าแรกยาวมาก → ตัดที่ช่องว่างก่อนถึงขีดจำกัด
-    const sp = say.lastIndexOf(" ", SPEAK_MAX_CHARS);
+    const sp = Math.max(say.lastIndexOf(" ", SPEAK_MAX_CHARS), say.lastIndexOf("\n", SPEAK_MAX_CHARS));
     say = say.slice(0, sp > 40 ? sp : SPEAK_MAX_CHARS); cut = true;
   }
-  return cut ? say + " " + T[lng].seeScreen : say;
+  return cut ? say + "\n" + T[lng].seeScreen : say;
+}
+
+// เริ่มพูดได้ก่อนคำตอบไหลจบ: ใช้เฉพาะบรรทัดที่มาครบแล้ว — ถ้าตัวย่อเสียงตัดจบในนั้นแล้ว (เจอหัวข้อ/รายการ
+// หรือยาวพอ) ส่วนที่จะอ่านก็ครบแล้ว คืนข้อความช่วงนั้นให้ speakAnswer เลย ไม่ต้องรออีก 1–3 วิ / ยังไม่ครบ คืน null
+function earlySpeech(text, lng) {
+  const nl = text.lastIndexOf("\n");
+  if (nl < 0) return null;
+  const done = text.slice(0, nl);
+  return speechSummary(done, lng).endsWith(T[lng].seeScreen) ? done : null;
 }
 
 const AVA = '<div class="ava"><div class="face"><i></i><i></i></div></div>';
@@ -205,9 +258,11 @@ const REPLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.
 function scrollDown() { requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight; }); }
 // ตอนคำตอบกำลังไหล เลื่อนตามเฉพาะถ้าผู้ใช้ยังอยู่ท้ายแชท (ถ้าเลื่อนขึ้นไปอ่านอยู่ ไม่ดึงกลับ)
 function nearBottom() { return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80; }
+// ผู้ใช้เอานิ้วเลื่อนแชทเองเมื่อไร — คำตอบที่กำลังไหลเลิกดึงจอลง (ไม่งั้นเลื่อนตามคำตอบตลอด)
+let userScrollAt = 0;
+["touchstart", "wheel", "pointerdown"].forEach((ev) => scroller.addEventListener(ev, () => { userScrollAt = Date.now(); }, { passive: true }));
 
 function addMsg(role, text, opts = {}) {
-  setView("thread");
   const m = document.createElement("div");
   m.className = "msg " + role;
   if (role === "user") {
@@ -231,17 +286,22 @@ function renderBot(m, text, opts = {}) {
     box.innerHTML = html;
     return;
   }
-  const img = opts.image ? `<img class="map-thumb" src="${opts.image}" alt="${t().mapAlt}">` : "";
+  // แผนผัง/รูปสถานที่ขึ้นใหญ่ทางซ้าย (Board) — ในแชทเหลือรูปย่อไว้แตะเปิดซ้ำ
+  const pics = opts.image ? [{ src: opts.image, name: opts.imageName || t().mapAlt, map: true, ...(opts.noTour ? { tour: false } : {}) }] : (opts.photos || []);
+  if (pics.length) showPictures(pics);
+  const img = pics.length ? `<button type="button" class="see-left" data-pics="${escapeHtml(JSON.stringify(pics)).replace(/"/g, "&quot;")}">` +
+    `<img src="${pics[0].src}" alt="">${t().seeLeft}</button>` : "";
   const tools = opts.warn ? "" :
     `<div class="tools"><button type="button" class="replay" title="${t().replay}">${REPLAY_ICON}</button></div>`;
   const follow = nearBottom();
-  box.innerHTML = html + img + photosHtml(opts.photos) + tools + (opts.rateQ ? rateHtml(opts.rateQ) : "");
+  box.innerHTML = html + img + tools + (opts.rateQ ? rateHtml(opts.rateQ) : "");
   // รูปโหลดเสร็จทีหลัง ความสูงเพิ่ม — เลื่อนตามถ้าผู้ใช้อยู่ท้ายแชท ไม่งั้นรูปโดนตัดขอบล่าง
   if (follow) box.querySelectorAll("img").forEach((i) => i.addEventListener("load", scrollDown, { once: true }));
   const r = box.querySelector(".replay");
   if (r) {
     const sayLang = lang;
-    r.addEventListener("click", () => { if (busy()) return; setState("answering"); speakAnswer(text, sayLang); });
+    const say = opts.say;   // มีสรุปสำหรับพูด → ปุ่มฟังซ้ำพูดสรุปเดิม
+    r.addEventListener("click", () => { if (busy()) return; setState("answering"); say ? speakAnswer(say, sayLang, true) : speakAnswer(text, sayLang); });
   }
 }
 
@@ -264,20 +324,26 @@ function sendRating(btn) {
   row.querySelector("span").outerHTML = `<span class="thanks">${t().rateThanks}</span>`;
 }
 
-// รูปสถานที่ใต้คำตอบ: รูปเดียวโชว์ใหญ่, หลายรูปเรียงเป็นแถวรูปเล็ก (แตะขยายได้)
-function photosHtml(photos) {
-  if (!photos || !photos.length) return "";
-  const fig = (p) => `<figure><img class="place-photo" src="${p.src}" alt="${escapeHtml(p.name)}">` +
-    `<figcaption>${escapeHtml(p.name)}${p.caption ? " · " + t().districtPre + escapeHtml(p.caption) : ""}</figcaption></figure>`;
-  return photos.length === 1 ? `<div class="photo-one">${fig(photos[0])}</div>`
-    : `<div class="photo-row">${photos.map(fig).join("")}</div>`;
+// รูปสถานที่/แผนผังขึ้นเต็มฝั่งซ้าย: แผนผัง = รูปเดียวเต็มกรอบ, รูปสถานที่ = แกลเลอรี (แตะขยายได้)
+function showPictures(pics) {
+  if (pics[0].map) {
+    Board.show("map", `<img class="board-img" src="${pics[0].src}" alt="${escapeHtml(pics[0].name)}">` +
+      (pics[0].tour === false ? "" : `<button type="button" class="tour3d" data-action="campusTour">${t().tour3d}</button>`),   // คู่มือ/ภาพรวมไม่มีปุ่ม 3D
+      pics[0].tour === false ? pics[0].name : t().cMap, "", pics[0].tour === false ? "📖" : "🗺️");
+    return;
+  }
+  const fig = (p) => `<figure><img class="place-photo${p.person ? " person" : ""}" src="${p.src}" alt="${escapeHtml(p.name)}">` +
+    `<figcaption>${escapeHtml(p.name)}${p.caption ? ` <small>· ${p.person ? "" : t().districtPre}${escapeHtml(p.caption)}</small>` : ""}</figcaption></figure>`;
+  Board.show("photos", `<div class="gallery${pics.length === 1 ? " one" : ""}">${pics.map(fig).join("")}</div>`,
+    pics.length === 1 ? pics[0].name : t().photosTitle, pics.length > 1 ? pics.map((p) => p.name).join(" · ") : "", "📷");
 }
 
 // ---- พิมพ์คำตอบแบบค่อย ๆ ไหล: รับข้อความเข้ามาเป็นก้อน แต่โชว์ไล่ตามทีละนิดให้ลื่น ----
 function typewriter(m) {
   let full = "", shown = 0, finished = false, finalOpts = null, onDone = null, raf = 0;
+  const startedAt = Date.now();
   function frame() {
-    const follow = nearBottom();
+    const follow = userScrollAt < startedAt;   // เลื่อนตามคำตอบตลอด จนกว่าผู้ใช้จะเลื่อนจอเอง
     const backlog = full.length - shown;
     if (backlog > 0) {
       shown += Math.max(1, Math.ceil(backlog / 14));   // ค้างเยอะ = เร่ง, ค้างน้อย = ช้าลง
@@ -300,22 +366,36 @@ function typewriter(m) {
 }
 // ---- โชว์แผนผังทันที (ไม่เรียก /ask) ----
 function showMap() {
-  addMsg("bot", t().mapMsg, { image: "static/map.jpg" });
+  const m = addMsg("bot", t().mapMsg, { image: "static/map.jpg" });   // renderBot ส่งแผนผังขึ้นฝั่งซ้ายให้
+  // ชวนเยี่ยมชมแบบ 3D: ปุ่มเปิดทัวร์ 3 มิติต่อท้ายคำตอบ
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "tour-btn"; b.dataset.action = "campusTour"; b.textContent = t().tour3d;
+  const box = m.querySelector(".a-body");
+  box.insertBefore(b, box.querySelector(".tools"));
 }
 
+const THINK_NOTE_MS = 5000;
 function typing(on) {
   let el = $("typing");
   if (on && !el) {
     el = document.createElement("div"); el.id = "typing"; el.className = "msg bot typing";
-    el.innerHTML = AVA + '<div class="shimmer"><i></i><i></i><i></i></div>';
+    el.innerHTML = AVA + '<div class="a-body"><i></i><i></i><i></i></div>';
     chat.appendChild(el); scrollDown();
+    // รอนานเกิน 5 วิ → บอกคนรอว่าทำไมช้า (เน็ตช้า หรือแค่คิดนาน)
+    setTimeout(() => {
+      if (!el.isConnected) return;
+      checkNet();
+      const note = document.createElement("small"); note.className = "think-note";
+      note.textContent = netLevel === "good" ? t().thinkLong : t().thinkSlow;
+      el.querySelector(".a-body").appendChild(note); scrollDown();
+    }, THINK_NOTE_MS);
   } else if (!on && el) { el.remove(); }
 }
 
 // ---- พูดออกเสียง ----
 // หลัก: เสียง AI จากเซิร์ฟเวอร์ (/tts — Gemini เสียงผู้ชายเป็นธรรมชาติ)
 // สำรอง: เสียงในเครื่อง (Web Speech) — ใช้เมื่อสร้างเสียงไม่ทัน / โควตาหมด / ไม่มีเน็ต
-const SPEECH_RATE = 1.15;      // ความเร็วพูดของเสียงในเครื่อง (1 = ปกติ) — เสียง AI ตั้งที่ EDGE_TTS_RATE ใน config.py
+const SPEECH_RATE = 0.95;      // ความเร็วพูดของเสียงในเครื่อง (1 = ปกติ) — เสียง AI ตั้งที่ EDGE_TTS_RATE ใน config.py
 const TTS_TIMEOUT_MS = 6000;   // รอเสียง AI เริ่มดังนานสุดเท่านี้ ไม่ทันก็ใช้เสียงในเครื่อง
 let ttsJob = null;             // เสียงที่กำลังพูดอยู่ (มีได้ทีละอัน)
 
@@ -323,6 +403,7 @@ const ttsUrl = (text, lng) => "/tts?lang=" + lng + "&text=" + encodeURIComponent
 // ให้เซิร์ฟเวอร์สร้างเสียงเก็บไว้ล่วงหน้า (คำทักทาย/ประกาศ) ตอนพูดจริงจะได้ทันที
 const warmed = new Set();
 function warmTts(text, lng) {
+  if (PREVIEW) return;
   const url = ttsUrl(text, lng);
   if (warmed.has(url) || !window.fetch) return;
   warmed.add(url);
@@ -336,6 +417,7 @@ loadVoices();
 if ("speechSynthesis" in window) window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
 
 function speak(text, speakLang, onEnd) {
+  if (PREVIEW) { if (onEnd) setTimeout(onEnd, 0); return; }
   stopSpeech();   // พูดได้ทีละอัน — อันเก่าจบ (เรียก onEnd ของมัน) ก่อนเริ่มอันใหม่
   const job = { ended: false, audio: null };
   job.finish = () => {
@@ -363,10 +445,29 @@ function speak(text, speakLang, onEnd) {
   a.play().catch(() => { clearTimeout(timer); if (!started) local(); });   // บล็อกเสียงอัตโนมัติ → เสียงในเครื่อง
 }
 
+// เว้นวรรคเหมือนคนพูด (เหมือน tts_text.py ฝั่งเซิร์ฟเวอร์): หายใจตรงจบประโยค/ระหว่างวลียาว ๆ
+// คำสั้น ๆ ที่ถูกเว้นวรรคแยกออกมา ต่อติดกันไป ไม่หยุดกลางวลี
+const PHRASE_MIN = 8;
+const IS_THAI = /[฀-๿]/;
+function humanGaps(text) {
+  return text.split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean).map((line) =>
+    line.replace(/\s+ๆ/g, "ๆ").replace(/(ครับ|นะ|จ้า|จ้ะ) (?=[฀-๿])/g, "$1|BR|").split("|BR|").map((part) => {
+      let out = "", phrase = "";
+      for (const tok of part.split(" ")) {
+        if (!out) { out = phrase = tok; continue; }
+        const end = out[out.length - 1];
+        const join = IS_THAI.test(end) && end !== "ๆ" && IS_THAI.test(tok[0] || "");
+        if (join && (phrase.length < PHRASE_MIN || tok.length < PHRASE_MIN)) { out += tok; phrase += tok; }
+        else { out += " " + tok; phrase = tok; }
+      }
+      return out;
+    }).join(" ")).join(" ");
+}
+
 function localSpeak(text, speakLang, job) {
   if (!("speechSynthesis" in window)) { job.finish(); return; }
   const code = T[speakLang].speech;
-  const u = new SpeechSynthesisUtterance(text);
+  const u = new SpeechSynthesisUtterance(speakLang === "th" ? humanGaps(text) : text);
   u.lang = code;
   const voices = (localVoices.length ? localVoices : window.speechSynthesis.getVoices())
     .filter((v) => v.lang && v.lang.toLowerCase().startsWith(code.slice(0, 2)));
@@ -390,10 +491,11 @@ function stopSpeech() {
 
 // อ่านคำตอบ (แบบย่อ) + โชว์ปุ่มหยุดพูด — ถามข้อใหม่/กดไมค์/กดหยุด แล้วเสียงหยุดทันที
 let answerTalking = false, answerGen = 0;
-function speakAnswer(text, lng) {
+// exact = ข้อความนี้เป็นสรุปสำหรับพูดจาก AI แล้ว → พูดทั้งหมด ไม่ต้องย่อ/ตัด
+function speakAnswer(text, lng, exact = false) {
   const g = ++answerGen;
   answerTalking = true; body.classList.add("speaking");
-  speak(speechSummary(text, lng), lng, () => {
+  speak(exact ? plainForSpeech(text) : speechSummary(text, lng), lng, () => {
     if (g !== answerGen) return;   // เสียงนี้ถูกเสียงใหม่แทนที่ไปแล้ว
     answerTalking = false; body.classList.remove("speaking");
     lastActive = Date.now();
@@ -410,6 +512,7 @@ async function ask(question, opts = {}) {
   question = (question || "").trim();
   if (!question) { setState("idle"); return; }
   stopAnswer();   // ยังอ่านคำตอบเก่าอยู่ → หยุดก่อนถามข้อใหม่
+  clearLive();    // ฟองตัวหนังสือสดระหว่างพูด → แทนด้วยคำถามจริง
   const askLang = lang, myConvo = convo;
   const stale = () => myConvo !== convo;
   addMsg("user", question, { voice: !!opts.voice, qr: !!opts.qr });
@@ -434,7 +537,7 @@ async function ask(question, opts = {}) {
     }
     // อ่านคำตอบทีละบรรทัด JSON: {"t": ท่อนใหม่} … {"done": true, "image": …} หรือ {"error": …}
     const reader = r.body.getReader(), dec = new TextDecoder();
-    let buf = "", tw = null, end = null;
+    let buf = "", tw = null, end = null, spokeEarly = false, say = "";
     while (!end) {
       const { value, done } = await reader.read();
       if (stale()) { reader.cancel().catch(() => {}); return; }
@@ -447,21 +550,28 @@ async function ask(question, opts = {}) {
         const msg = JSON.parse(line);
         if (msg.t) {
           if (!tw) {   // ท่อนแรกมาถึง: เลิกโชว์ shimmer เริ่มพิมพ์คำตอบ
-            typing(false); setState("answering");
+            typing(false); setState("answering"); checkNet();
             const m = document.createElement("div");
             m.className = "msg bot"; m.innerHTML = AVA + '<div class="a-body"></div>';
             chat.appendChild(m); tw = typewriter(m);
           }
           tw.push(msg.t);
+          if (!spokeEarly) {   // ได้ช่วงต้นที่จะอ่านครบแล้ว → พูดเลยระหว่างตัวหนังสือยังไหล
+            const early = earlySpeech(tw.text, askLang);
+            if (early) { spokeEarly = true; speakAnswer(early, askLang); }
+          }
+        } else if (msg.say) {   // สรุปสำหรับพูด (ไม่โชว์บนจอ) มาก่อนคำตอบ → พูดเลย ไม่ต้องรอตัวหนังสือ
+          say = msg.say;
+          if (!spokeEarly) { spokeEarly = true; speakAnswer(say, askLang, true); }
         } else if (msg.done || msg.error) { end = msg; break; }
       }
     }
     if (!tw) { fail(end && end.error); return; }          // พังก่อนได้สักคำ
-    if (!(end && end.error)) speakAnswer(tw.text, askLang);
+    if (!(end && end.error) && !spokeEarly) speakAnswer(tw.text, askLang);
     const ok = !(end && end.error);   // ตอบไม่จบ ไม่ต้องขอดาว
-    tw.finish({ image: (end && end.image) || null, photos: (end && end.photos) || [], rateQ: ok ? question : "" }, () => {
+    tw.finish({ image: (end && end.image) || null, photos: (end && end.photos) || [], rateQ: ok ? question : "", say }, () => {
       if (stale()) return;
-      if (end && end.error) { addMsg("bot", t().sysErr, { warn: true }); speakAnswer(tw.text, askLang); }   // ขาดกลางทาง: อ่านส่วนที่ได้
+      if (end && end.error) { addMsg("bot", t().sysErr, { warn: true }); if (!spokeEarly) speakAnswer(tw.text, askLang); }   // ขาดกลางทาง: อ่านส่วนที่ได้
     });
   } catch (e) {
     fail();
@@ -479,7 +589,7 @@ let greeting = null;               // Promise ระหว่างกำลั�
 setTimeout(() => warmTts(T.th.greet, "th"), 2000);
 
 function greet() {
-  if (greeting || busy() || listening) return;
+  if (PREVIEW || greeting || busy() || listening) return;
   lastActive = Date.now();
   setState("greeting");
   fetch("/greet", { method: "POST" }).catch(() => {});
@@ -495,33 +605,203 @@ function onActivity(e) {
   const quiet = Date.now() - lastActive > GREET_IDLE_MS;
   lastActive = Date.now();
   if (e && e.target.closest && e.target.closest('[data-action="newChat"]')) return;
-  if (quiet) greet();
+  // แตะคลิปหน้ารอ ("แตะจอเพื่อถามหุ่นยนต์") = มีคนมาใหม่ → โบกทักเสมอ
+  // (ดักแบบ capture จึงทำงานก่อน stopAttract — attractOn ยังเป็น true ตอนนี้)
+  if (quiet || attractOn) greet();
 }
 document.addEventListener("pointerdown", onActivity, true);
 document.addEventListener("keydown", onActivity, true);
 
 // ---- ไมค์ (STT) ----
+// ใช้ Web Speech API ของเบราว์เซอร์ก่อน (Chrome/Edge บน Windows ใช้ได้)
+// Chromium บน Pi ไม่มีคีย์บริการเสียงของ Google → error "network" ทุกครั้ง
+// เจอแล้วสลับไปอัดเสียงเอง ส่งให้เซิร์ฟเวอร์ถอดเป็นข้อความ (POST /stt) แล้วใช้ทางนั้นตลอด
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recog = null, listening = false;
+const CAN_RECORD = !!(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let recog = null, listening = false, rec = null;
+let useServerStt = !SR || store.get("serverStt") === "1";
+// ---- ตัวหนังสือขึ้นสดระหว่างพูด: ฟองข้อความฝั่งผู้ใช้ (ขอบประ) อัปเดตตามที่ได้ยิน ----
+let liveEl = null;
+function liveStart() {
+  if (PREVIEW) return;
+  clearLive();
+  liveEl = document.createElement("div");
+  liveEl.className = "msg user live";
+  liveEl.innerHTML = '<span class="mic-tag">' + t().liveHint + '</span><span class="live-text wait"></span>';
+  liveEl.querySelector(".live-text").textContent = t().liveWait;
+  chat.appendChild(liveEl); scrollDown();
+}
+function liveUpdate(text) {   // อัปเดตเฉพาะตอนฟองยังอยู่ (กดยกเลิก/คุยใหม่แล้ว ไม่สร้างขึ้นมาใหม่)
+  if (!liveEl || !liveEl.isConnected || !text) return;
+  const box = liveEl.querySelector(".live-text");
+  box.textContent = text; box.classList.remove("wait");
+  scrollDown();
+}
+function clearLive() { if (liveEl) liveEl.remove(); liveEl = null; }
+
+function cancelMic() {   // เลิกฟัง ไม่ส่งเสียงที่อัดไว้
+  clearLive();
+  if (!listening) return;
+  listening = false;
+  if (rec) rec.finish(); else if (recog) recog.stop();
+}
+function noHear() { listening = false; clearLive(); addMsg("bot", t().noHear, { warn: true }); setState("idle"); }
 function toggleMic() {
-  if (!recog) return;
-  if (listening) { recog.stop(); listening = false; setState("idle"); return; }
+  if (listening) {   // กดซ้ำระหว่างฟัง = พูดจบแล้ว
+    if (rec) rec.finish(); else { recog.stop(); listening = false; setState("idle"); }
+    return;
+  }
   if (busy()) return;
   if (greeting) { greeting.then(toggleMic); return; }   // ทักให้จบก่อน แล้วเริ่มฟังเอง
   stopSpeech();
   setState("listening"); listening = true;
-  try { recog.start(); } catch (e) { listening = false; setState("idle"); }
+  liveStart();
+  if (useServerStt) { serverListen(); return; }
+  recog.lang = t().speech;
+  try { recog.start(); } catch (e) { listening = false; clearLive(); setState("idle"); }
 }
+
+// อัดเสียงจนคนพูดจบ (เงียบ ~1.2 วิ หลังเริ่มพูด) แล้วส่งให้เซิร์ฟเวอร์ถอดเป็นข้อความ
+// ระหว่างพูด: ส่งเสียงช่วงที่พูดไปแล้วให้ถอดเป็นระยะ → ตัวหนังสือขึ้นตามที่พูด (ช้ากว่าเสียงจริง ~1–2 วิ ตามความเร็วเน็ต)
+// พอหยุดพูด ถอดอีกรอบทันที — รอบนั้นได้ครบประโยคแล้ว ใช้ถามต่อได้เลย ไม่ต้องรอถอดใหม่ทั้งก้อน (ตอบไวขึ้น)
+const STT_SILENCE_MS = 1200, STT_NO_SPEECH_MS = 6000, STT_MAX_MS = 12000;
+const STT_LIVE = true;            // false = ปิดตัวหนังสือสด (ประหยัดโควตา Gemini — ถอดครั้งเดียวตอนพูดจบ)
+const STT_LIVE_EVERY_MS = 1200;   // ถอดสดห่างกันอย่างน้อยเท่านี้ (ทีละคำขอ อันเก่ายังไม่เสร็จไม่ส่งใหม่)
+const STT_TAIL_MS = 450;          // ผลถอดสดนับว่า "ครบประโยค" ถ้าเสียงที่ส่งไปเลยจุดพูดคำสุดท้ายไปอย่างน้อยเท่านี้
+const STT_CHUNK_MS = 250;
+async function serverListen() {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(
+      { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) { console.warn("mic:", e); noHear(); return; }
+  if (!listening) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+  const type = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm"]
+    .find((m) => MediaRecorder.isTypeSupported(m)) || "";
+  const mr = new MediaRecorder(stream, type ? { mimeType: type } : {});
+  const chunks = [];
+  let heard = false, done = false;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const an = ctx.createAnalyser(); an.fftSize = 1024;
+  ctx.createMediaStreamSource(stream).connect(an);
+  const buf = new Float32Array(an.fftSize);
+  const t0 = performance.now();
+  let floor = 0, lastLoud = t0;
+  let mrT0 = t0, partial = null, lastPartialAt = 0;   // partial = ผลถอดสดล่าสุด {n, covers, text, promise}
+  const mime = () => mr.mimeType || type || "audio/webm";
+  const sendPartial = (now) => {
+    const n = chunks.length;
+    const p = { n, covers: mrT0 + n * STT_CHUNK_MS, text: null };
+    p.promise = fetch("/stt?partial=1&lang=" + lang,
+      { method: "POST", headers: { "Content-Type": mime() }, body: new Blob(chunks.slice(0, n), { type: mime() }) })
+      .then((r) => (r.ok ? r.json() : {})).then((d) => (d && d.text) || "").catch(() => "")
+      .then((txt) => { p.text = txt; if (partial === p) liveUpdate(txt); return txt; });
+    partial = p; lastPartialAt = now;
+  };
+  const level = () => {
+    an.getFloatTimeDomainData(buf);
+    let s = 0; for (const v of buf) s += v * v;
+    return Math.sqrt(s / buf.length);
+  };
+  const timer = setInterval(() => {
+    const now = performance.now(), v = level();
+    if (now - t0 < 300) { floor = Math.max(floor, v); return; }   // 0.3 วิแรก = วัดเสียงรบกวนในห้อง
+    if (v > Math.max(0.02, floor * 2.5)) { heard = true; lastLoud = now; }
+    if ((heard && now - lastLoud > STT_SILENCE_MS) || (!heard && now - t0 > STT_NO_SPEECH_MS) || now - t0 > STT_MAX_MS) { finish(); return; }
+    if (STT_LIVE && heard && chunks.length && !(partial && partial.text === null)) {
+      const fresh = !partial || chunks.length > partial.n + 1;
+      const pausedNow = now - lastLoud > STT_TAIL_MS && (!partial || partial.covers < lastLoud + STT_TAIL_MS);
+      if (fresh && (now - lastPartialAt > STT_LIVE_EVERY_MS || pausedNow)) sendPartial(now);
+    }
+  }, 50);
+  function finish() {
+    if (done) return; done = true;
+    clearInterval(timer);
+    if (mr.state !== "inactive") mr.stop(); else onStop();
+  }
+  function onStop() {
+    stream.getTracks().forEach((tr) => tr.stop());
+    ctx.close().catch(() => {});
+    rec = null;
+    if (!listening) return;            // ผู้ใช้กดยกเลิก/คุยใหม่ระหว่างฟัง
+    listening = false;
+    if (!heard) { noHear(); return; }
+    const all = new Blob(chunks, { type: mime() });
+    // ผลถอดสดรอบล่าสุดครอบคลุมจนพูดจบแล้ว → ใช้เลย (ยังไม่เสร็จก็รอมัน) ไม่ต้องถอดใหม่ทั้งก้อน
+    if (partial && partial.covers >= lastLoud + STT_TAIL_MS) {
+      setState("thinking");
+      partial.promise.then((txt) => { if (state !== "thinking") return; if (txt) ask(txt, { voice: true }); else sendStt(all); });
+      return;
+    }
+    sendStt(all);
+  }
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop = onStop;
+  rec = { finish: () => { heard = true; finish(); } };   // กดไมค์ซ้ำ = พูดจบ ส่งเลย
+  mrT0 = performance.now();
+  mr.start(STT_CHUNK_MS);
+}
+async function sendStt(blob) {
+  setState("thinking");
+  try {
+    const r = await fetch("/stt?lang=" + lang, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { clearLive(); addMsg("bot", d.error || t().sysErr, { warn: true }); setState("idle"); return; }
+    if (!d.text) { noHear(); return; }
+    ask(d.text, { voice: true });
+  } catch (e) { clearLive(); addMsg("bot", t().sysErr, { warn: true }); setState("idle"); }
+}
+
 if (SR) {
   recog = new SR();
-  recog.lang = t().speech; recog.interimResults = false; recog.maxAlternatives = 1;
-  recog.onresult = (e) => { listening = false; ask(e.results[0][0].transcript, { voice: true }); };
-  recog.onerror = () => { listening = false; addMsg("bot", t().noHear, { warn: true }); setState("idle"); };
-  recog.onend = () => { listening = false; if (state === "listening") setState("idle"); };
-  mic.addEventListener("click", toggleMic);
-} else {
-  mic.style.display = "none";
+  recog.lang = t().speech; recog.interimResults = true; recog.maxAlternatives = 1;   // interim = ตัวหนังสือขึ้นสดระหว่างพูด
+  recog.onresult = (e) => {
+    let txt = "", final = false;
+    for (const r of e.results) { txt += r[0].transcript; if (r.isFinal) final = true; }
+    if (!final) { liveUpdate(txt); return; }
+    listening = false; ask(txt, { voice: true });
+  };
+  recog.onerror = (e) => {
+    // บริการเสียงของเบราว์เซอร์ใช้ไม่ได้ → สลับไปฟังผ่านเซิร์ฟเวอร์ แล้วฟังต่อเลยไม่ต้องกดใหม่
+    if (CAN_RECORD && (e.error === "network" || e.error === "service-not-allowed")) {
+      useServerStt = true; store.set("serverStt", "1");
+      if (listening) serverListen();
+      return;
+    }
+    noHear();
+  };
+  recog.onend = () => { if (!useServerStt) { listening = false; if (state === "listening") { clearLive(); setState("idle"); } } };
 }
+if ((SR || CAN_RECORD) && !PREVIEW) mic.addEventListener("click", toggleMic);
+else if (!PREVIEW) mic.style.display = "none";
+
+// ---- ป้ายสถานะเน็ต (มุมขวาบน): เน็ตดี / เน็ตช้า / ไม่มีเน็ต ----
+// เซิร์ฟเวอร์วัดจากเครื่องหุ่นออกไปหา Google + เวลาที่ AI เริ่มตอบจริง (GET /net)
+const NET_EVERY_MS = 15000;
+var netEl = document.getElementById("net");   // var: applyLang ตอนเปิดจอเรียก showNet ก่อนบรรทัดนี้
+var netLevel = "good", netBusy = false;
+function showNet(level, ms) {
+  if (!level) return;
+  netLevel = level;
+  if (!netEl) return;
+  netEl.className = "net net-" + level;
+  netEl.querySelector(".net-text").textContent = t()[{ good: "netGood", slow: "netSlow", down: "netDown" }[level]];
+  if (ms !== undefined) netEl.title = ms == null ? "" : ms + " ms";
+}
+async function checkNet() {
+  if (netBusy || document.hidden) return;
+  netBusy = true;
+  try {
+    const r = await fetch("/net", { cache: "no-store" });
+    const d = await r.json();
+    showNet(["good", "slow", "down"].includes(d.level) ? d.level : "down", d.ms);
+  } catch (e) { showNet("down", null); }   // ต่อเครื่องหุ่นไม่ได้เลย
+  netBusy = false;
+}
+checkNet();
+setInterval(checkNet, NET_EVERY_MS);
+window.addEventListener("online", checkNet);
+window.addEventListener("offline", () => showNet("down", null));
 
 // ---- พิมพ์ ----
 composer.addEventListener("submit", (e) => {
@@ -572,7 +852,7 @@ function onScan(code) {
   if (attractOn) stopAttract();
   closeTour();
   if (busy() || announcing) return;
-  if (recog && listening) { recog.stop(); listening = false; }
+  cancelMic();
   fetch("/qr?code=" + encodeURIComponent(code) + "&lang=" + lang)
     .then((r) => (r.ok ? r.json() : null))
     .then((d) => {
@@ -586,18 +866,16 @@ function onScan(code) {
     .catch(() => addMsg("bot", t().sysErr, { warn: true }));
 }
 
-// ---- คำถามยอดนิยม: ต้นฉบับอยู่ใน #quickQs คัดลอกไปแถบซ้ายและแถวเหนือช่องถาม ----
-document.querySelectorAll("#quickQs .chip").forEach((chip) => {
-  const side = chip.cloneNode(true); side.className = "nav"; $("sideQs").appendChild(side);
-  $("dockQs").appendChild(chip.cloneNode(true));
-});
-
+// เริ่มคุยใหม่: ล้างแชท (คนต่อไปไม่เห็นบทสนทนาคนก่อน) ฝั่งซ้ายกลับหน้าข่าว แล้วขึ้นคำทักทายของหุ่น (ไม่พูด)
 function newChat() {
-  if (recog && listening) { recog.stop(); listening = false; }
+  cancelMic();
   stopSpeech();
   convo++;
   chat.innerHTML = "";
-  setView("welcome");
+  Board.home();
+  const intro = addMsg("bot", t().intro);
+  const tools = intro.querySelector(".tools");
+  if (tools) tools.remove();
   setState("idle");
 }
 
@@ -608,43 +886,62 @@ loadMenu();
 const pick = (o) => (o && (o[lang] || o.th)) || "";   // ชื่อตามภาษา (ไม่มีอังกฤษ → ไทย)
 const L = (o) => escapeHtml(pick(o));
 
-// ต่อเมนูเป็นข้อความในแชท: บับเบิลผู้ใช้ = ปุ่มที่แตะ (ข้อความดิบ addMsg escape ให้), บับเบิลหุ่น = ตัวเลือกชั้นถัดไป
-function menuStep(label, html, back) {
-  addMsg("user", label);
-  const m = document.createElement("div");
-  m.className = "msg bot";
-  m.innerHTML = AVA + '<div class="a-body">' + html + '<div class="menu-nav">' +
-    (back ? `<button type="button" class="menu-btn" ${back}>← ${t().back}</button>` : "") +
-    `<button type="button" class="menu-btn" data-action="newChat">🏠 ${t().home}</button></div></div>`;
-  chat.appendChild(m); scrollDown();
-  m.querySelectorAll("img").forEach((i) => i.addEventListener("load", scrollDown, { once: true }));
+// เมนูขึ้นที่แผงซ้าย: หมวด → รายชื่อ → รายละเอียด (ปุ่มย้อนกลับอยู่ท้ายแผง)
+function menuStep(label, html, back, sub) {
+  Board.show("menu", html + (back ? `<div class="menu-nav"><button type="button" class="back" ${back}>← ${t().back}</button></div>` : ""),
+    label, sub || "", "☰");
 }
 const district = (d) => (d ? `📍 ${t().districtPre}${escapeHtml(d)}` : "");
 
+// หุ่นพูดแนะนำสถานที่ (เปิดรายละเอียดในเมนู / กด 🔊 ฟังอีกครั้ง)
+let lastPlace = null;
+function speakPlace(it) {
+  lastPlace = it || lastPlace;
+  if (!lastPlace) return;
+  const p = lastPlace;
+  const text = [pick(p.name), p.district ? `อำเภอ${p.district}` : "", p.highlight,
+    p.hours ? `เปิด ${p.hours}` : "",
+    p.distance ? `${t().fromCollege} ${p.distance}` : "", p.map ? t().scanMapSay : ""].filter(Boolean).join(" ");
+  setState("answering");
+  speakAnswer(text, "th");
+}
 function openMenu(b) {
-  const [sec, i, j] = (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem).split(":");
+  let [sec, i, j] = (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem).split(":");
   const s = menuData && menuData[sec];
   if (!s || !s.categories.length) return false;
+  const single = s.categories.length === 1;   // หมวดเดียว (เช่น ที่พัก) → ข้ามหน้าเลือกหมวด ไปรายชื่อเลย
+  if (i === undefined && single) i = "0";
   if (i === undefined) {
-    menuStep(pick(s.label), `<p class="md-p">${t().menuPick}</p><div class="menu-grid">` +
-      s.categories.map((c, k) => `<button type="button" class="menu-btn" data-menu-cat="${sec}:${k}">${c.icon} ${L(c.label)}</button>`).join("") +
-      "</div>");
+    menuStep(pick(s.label), '<div class="menu-grid">' +
+      s.categories.map((c, k) => `<button type="button" class="menu-btn" data-menu-cat="${sec}:${k}"><em>${c.icon}</em><span>${L(c.label)}</span></button>`).join("") +
+      "</div>", 'data-action="allMenu"', t().menuPick);
     return true;
   }
   const c = s.categories[i];
   if (j === undefined) {
-    menuStep(`${c.icon} ${pick(c.label)}`, `<p class="md-p">${t().menuItems}</p><div class="menu-list">` +
+    menuStep(`${c.icon} ${pick(single ? s.label : c.label)}`, '<div class="menu-list">' +
       c.items.map((it, k) => `<button type="button" class="menu-item" data-menu-item="${sec}:${i}:${k}">` +
         (it.photo ? `<img src="${it.photo}" alt="">` : `<span class="m-icon">${c.icon}</span>`) +
         `<span><b>${L(it.name)}</b><small>${district(it.district)}</small></span></button>`).join("") +
-      "</div>", `data-menu="${sec}"`);
+      "</div>", single ? 'data-action="allMenu"' : `data-menu="${sec}"`, t().menuItems);
     return true;
   }
   const it = c.items[j];
+  // ที่เที่ยว/วัด: QR เปิด Google Maps (สแกนแล้วกดนำทางในมือถือ) + หุ่นพูดชื่อ จุดเด่น ระยะทาง
+  const code = it.map ? qrSvg(it.map) : "";
   menuStep(pick(it.name), '<div class="place-card">' +
     (it.photo ? `<img class="place-photo" src="${it.photo}" alt="${L(it.name)}">` : `<div class="m-icon">${c.icon}</div>`) +
-    `<h3>${L(it.name)}</h3><small>${district(it.district)}</small>` +
-    (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") + "</div>", `data-menu-cat="${sec}:${i}"`);
+    `<div><h3>${L(it.name)}</h3><small>${district(it.district)}</small>` +
+    (it.highlight ? `<p>${escapeHtml(it.highlight)}</p>` : "") +
+    (it.distance ? `<p class="dist">🚗 ${t().fromCollege} ${escapeHtml(it.distance)}</p>` : "") +
+    // ร้านอาหาร/ตลาด: เวลาเปิด โทร ที่อยู่ (มีเท่าไหร่โชว์เท่านั้น)
+    (it.hours ? `<p class="dist">⏰ ${t().openHours} ${escapeHtml(it.hours)}</p>` : "") +
+    (it.phone ? `<p class="dist">📞 ${t().tel} ${escapeHtml(it.phone)}</p>` : "") +
+    (it.address ? `<p class="dist">🏠 ${escapeHtml(it.address)}</p>` : "") +
+    (code ? `<div class="place-qr">${code}<span><b>${t().scanMap}</b><small>${t().scanMapSub}</small></span></div>` : "") +
+    `<button type="button" class="tour-btn" data-action="placeSpeak">🔊 ${t().replay}</button>` +
+    "</div></div>", `data-menu-cat="${sec}:${i}"`, pick(c.label));
+  speakPlace(it);
   return true;
 }
 
@@ -654,6 +951,9 @@ document.addEventListener("click", (e) => {
   const action = b.dataset.action;
   if (action === "newChat") { newChat(); return; }
   if (action === "closeTour") { closeTour(); return; }
+  if (action === "boardHome") { Board.home(); return; }
+  if (action === "allMenu") { showAllMenu(); return; }
+  if (action === "placeSpeak") { if (!busy()) speakPlace(); return; }
   if (busy()) return;   // กันแตะรัวระหว่างหุ่นกำลังคิด/พูด
   if (b.dataset.menu || b.dataset.menuCat || b.dataset.menuItem) {
     // เมนูยังไม่มา (โหลดไม่ทัน/เคยพัง) → ลองโหลดใหม่ก่อน ถ้ายังไม่ได้จริง ๆ ชิปค่อยตกไปถาม AI แบบเดิม
@@ -663,15 +963,32 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (action === "showMap") { showMap(); return; }
+  if (action === "showDirectors") { (menuData ? Promise.resolve() : loadMenu()).then(showDirectors); return; }
+  if (action === "showGuide") { addMsg("bot", t()[b.dataset.msg] || "", { image: b.dataset.img, noTour: true, imageName: b.textContent.trim() }); return; }   // คู่มือเป็นรูป → ขึ้นแผงซ้ายเหมือนแผนผัง
   if (action === "campusTour") { openTour(); return; }
+  // ปฏิทินแนะแนว / คลังภาพ / แบบประเมิน และปุ่มข้างในแผง (extras.js)
+  if (action && window.Extras && Extras[action]) { Extras[action](b); return; }
+  if (action) return;   // ปุ่มคำสั่งที่ไม่รู้จัก ไม่ส่งชื่อปุ่มไปถาม AI
   askChip(b);
 });
+function showAllMenu() {
+  Board.show("menu", $("allMenuTpl").innerHTML, t().allMenuTitle, t().allMenuSub, "☰");
+  $("boardBody").querySelectorAll("[data-t]").forEach((e) => { if (t()[e.dataset.t]) e.innerHTML = t()[e.dataset.t]; });
+}
+// ข้อมูล ผอ.สอจ.สระบุรี: รายชื่อพร้อมรูปทางซ้าย → แตะท่านไหน ถาม AI ประวัติท่านนั้น (คำตอบขึ้นรูปท่านทางซ้ายเอง)
+function showDirectors() {
+  const list = (menuData && menuData.directors) || [];
+  if (!list.length) return;
+  Board.show("menu", '<div class="menu-list">' + list.map((d) =>
+    `<button type="button" class="menu-item" data-q="${escapeHtml(d.q.th)}" data-q-en="${escapeHtml(d.q.en)}">` +
+    `<img class="person" src="${d.photo}" alt=""><span><b>${L(d.name)}</b><small>${L(d.role)}</small></span></button>`).join("") +
+    "</div>", t().directorsTitle, t().directorsSub, "👔");
+}
 function askChip(b) {
   const q = (lang === "en" && b.dataset.qEn) || b.dataset.q || b.textContent.trim();
   ask(q, { voice: false });   // data-q = คำถามเต็ม, ป้ายบนปุ่มย่อให้สั้น
 }
 
-document.querySelectorAll("#langSeg button").forEach((b) => b.addEventListener("click", () => applyLang(b.dataset.lang)));
 
 // ---- แนะนำสถานที่วิทยาลัย: ทัวร์ 3 มิติ (static/campus_tour.html) เต็มจอ — โหลดตอนเปิด ปิดแล้วทิ้ง (คืนหน่วยความจำ WebGL) ----
 const TOUR_SRC = "static/campus_tour.html", TOUR_IDLE_MS = 5 * 60 * 1000;
@@ -682,7 +999,7 @@ const EXTERNAL_IDLE_MS = 15 * 60 * 1000;
 let tourOpen = false, tourIdleMs = TOUR_IDLE_MS;
 function openTour(src = TOUR_SRC) {
   if (tourOpen) return;
-  if (recog && listening) { recog.stop(); listening = false; }
+  cancelMic();
   stopSpeech();
   tourOpen = true; idleSince = Date.now();
   tourIdleMs = src === TOUR_SRC ? TOUR_IDLE_MS : EXTERNAL_IDLE_MS;
@@ -712,17 +1029,35 @@ chat.addEventListener("click", (e) => {
   if (link) { e.preventDefault(); openTour(link.dataset.openUrl); return; }
   const star = e.target.closest("[data-stars]");
   if (star) { sendRating(star); return; }
-  if (e.target.classList.contains("map-thumb") || e.target.classList.contains("place-photo")) {
+  const see = e.target.closest("[data-pics]");
+  if (see) { try { showPictures(JSON.parse(see.dataset.pics)); } catch (err) {} }
+});
+$("boardBody").addEventListener("click", (e) => {
+  if (e.target.matches(".board-img, .place-photo")) {
     lightbox.querySelector("img").src = e.target.src;
     lightbox.classList.add("open");
   }
 });
 
-setView("welcome");
+// แตะการ์ดข่าว (news.js) → หุ่นอ่านหัวข้อ + รายละเอียด และขึ้นในแชทด้วย
+window.addEventListener("news-read", (e) => {
+  const n = e.detail;
+  if (!n || busy() || announcing) return;
+  cancelMic();
+  stopAnswer();
+  const text = `**${n.title}**` + (n.subtitle ? "\n" + n.subtitle : "") + (n.detail ? "\n" + n.detail : "") +
+    (n.link ? "\n[" + t().openLink + "](" + n.link + ")" : "");
+  addMsg("user", t().newsTag + " " + n.title);
+  addMsg("bot", text);
+  if (n.image_url) showPictures([{ src: n.image_url, name: n.title, caption: "" }]);   // รูป/โปสเตอร์ขึ้นใหญ่ฝั่งซ้าย แตะอีกทีขยายเต็มจอ
+  setState("answering");
+  speakAnswer(text, "th");   // ครูเขียนข่าวเป็นภาษาไทย — อ่านด้วยเสียงไทยเสมอ (จออังกฤษก็ตาม)
+});
+
 applyLang(lang);   // ตั้งภาษา + ส่งสถานะ idle ไปเซิร์ฟเวอร์
 
 // ---- GPIO button via SSE ----
-const evtSrc = new EventSource("/events");
+const evtSrc = PREVIEW ? {} : new EventSource("/events");
 evtSrc.onmessage = (e) => {
   if (e.data === "mic-start" && !listening && !busy()) { stopAttract(); closeTour(); onActivity(); toggleMic(); }
   if (e.data === "greet") { stopAttract(); greet(); }   // เซนเซอร์เจอคนเดินมา
@@ -731,27 +1066,30 @@ evtSrc.onmessage = (e) => {
 // ---- โหมดรอ: ไม่มีใครใช้นาน → เปิดวิดีโอวนเต็มจอ, แตะจอ/เซนเซอร์เจอคน → กลับหน้าถามตอบ (เริ่มคุยใหม่) ----
 // วิดีโอมาจาก /attract (ไฟล์ใน web/static/videos/) ไม่มีวิดีโอ = โชว์ตราวิทยาลัยแทน
 const attractEl = $("attract"), video = attractEl.querySelector("video");
-let attractCfg = { videos: [], after: 90 }, attractOn = false, vidIdx = 0, vidFails = 0;
-fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {})
-  .then(() => startAttract());   // เปิดหน้าเว็บมา เริ่มที่โหมดรอเลย
+let attractCfg = { videos: [], after: 60 }, attractOn = false, vidIdx = 0, vidFails = 0;
+fetch("/attract").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) attractCfg = d; }).catch(() => {});
 
+// จอว่างนาน → วิดีโอหน้ารอเล่นวน (หลายคลิปเล่นต่อกัน) จนกว่าจะมีคนแตะจอ
+const ATTRACT_VOLUME = 0.35;   // เสียงวิดีโอหน้ารอ (0–1) — เบากว่าเสียงหุ่นพูด
 function playVideo() {
   const list = attractCfg.videos || [];
-  attractEl.classList.toggle("no-video", !list.length || vidFails >= list.length);
-  if (attractEl.classList.contains("no-video")) return;
+  if (!list.length || vidFails >= list.length) { stopAttract(); return; }
   video.src = list[vidIdx % list.length];
   video.loop = list.length === 1;
   video.muted = false;
+  video.volume = ATTRACT_VOLUME;
   // เบราว์เซอร์บางตัวห้ามเล่นมีเสียงเอง (บน Pi ตั้ง kiosk ให้เล่นได้แล้ว) → ลองแบบเงียบแทน
   video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
 }
 video.addEventListener("ended", () => { vidIdx++; playVideo(); });
+video.addEventListener("timeupdate", () => {
+  if (video.duration) $("vidProg").style.transform = `scaleX(${video.currentTime / video.duration})`;   // transform ไม่ต้องจัดหน้าใหม่
+});
 video.addEventListener("error", () => { if (!attractOn) return; vidFails++; vidIdx++; playVideo(); });
 video.addEventListener("playing", () => { vidFails = 0; });
 
 function startAttract() {
-  if (attractOn) return;
-  newChat();   // คนต่อไปเริ่มหน้าใหม่ ไม่เห็นบทสนทนาของคนก่อน
+  if (attractOn || PREVIEW || !(attractCfg.videos || []).length) return;
   attractOn = true; vidFails = 0;
   attractEl.classList.add("open");
   playVideo();
@@ -767,11 +1105,17 @@ function stopAttract() {
 attractEl.addEventListener("click", stopAttract);
 document.addEventListener("pointerdown", () => { idleSince = Date.now(); }, true);
 document.addEventListener("keydown", () => { idleSince = Date.now(); }, true);
+let cleared = true;   // คุยแล้วว่างนาน → ล้างแชทครั้งเดียว (ไม่ล้างซ้ำทุก 2 วิ)
+document.addEventListener("pointerdown", () => { cleared = false; }, true);
 setInterval(() => {
   if (attractOn || state !== "idle" || listening || greeting || announcing) return;
-  // เปิดทัวร์ทิ้งไว้: ให้เวลานานกว่าปกติ (ทัวร์อัตโนมัติยาว ~3-4 นาที) แล้วค่อยปิดเข้าโหมดรอ
-  const after = (attractCfg.after || 90) * 1000, limit = tourOpen ? Math.max(after, tourIdleMs) : after;
-  if (Date.now() - idleSince > limit) { closeTour(); startAttract(); }
+  // เปิดทัวร์ทิ้งไว้: ให้เวลานานกว่าปกติ (ทัวร์อัตโนมัติยาว ~3-4 นาที) แล้วค่อยปิด
+  const after = (attractCfg.after || 60) * 1000, limit = tourOpen ? Math.max(after, tourIdleMs) : after;
+  if (Date.now() - idleSince > limit) {
+    closeTour();
+    if (!cleared) { newChat(); cleared = true; }   // คนต่อไปเริ่มหน้าใหม่ ไม่เห็นบทสนทนาของคนก่อน
+    startAttract();
+  }
 }, 2000);
 
 // ---- ประกาศตามเวลา: ถามเซิร์ฟเวอร์ทุก 15 วิ ว่ามีประกาศถึงเวลาไหม (ตั้งใน robot/announcements.json) ----
@@ -784,6 +1128,7 @@ const annQueue = [];
 let announcing = false;
 
 function pollAnnouncements() {
+  if (PREVIEW) return;
   fetch("/announcements/due").then((r) => (r.ok ? r.json() : null)).then((d) => {
     for (const a of (d && d.due) || []) {
       if (annDone.has(a.id) || annQueue.some((q) => q.id === a.id)) continue;
@@ -819,3 +1164,5 @@ function runAnnouncements() {
 }
 pollAnnouncements();
 setInterval(pollAnnouncements, 15000);
+
+newChat();   // เปิดหน้ามา: แชทมีคำทักทาย ฝั่งซ้ายเป็นหน้าข่าว

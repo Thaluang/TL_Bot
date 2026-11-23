@@ -41,6 +41,20 @@
       { question: "รถเมล์สายไหนผ่านวิทยาลัย", stars: 2, ts: "2026-11-01 14:03:18" },
     ],
   };
+  // ข่าวตัวอย่าง (หุ่นจริง: ครูลงผ่านหน้า stats) — เดโมแก้ข่าวไม่ได้
+  const SAMPLE_NEWS = [
+    { id: "d1", category: "admission", title: "เปิดรับนักศึกษาใหม่ ปีการศึกษา 2570", subtitle: "รับสมัครถึง 31 มี.ค. 2570",
+      detail: "รับสมัคร ปวช. และ ปวส. ทุกสาขา สมัครออนไลน์ได้ทันที", link: "https://tctatc.github.io/thaluang-admission/",
+      image_url: "static/places/phraphutthabat.jpg", image: "x", start: "", end: "2027-03-31", hidden: false },
+    { id: "d2", category: "event", title: "งานเปิดบ้าน Open House 2569", subtitle: "20 ธ.ค. · หอประชุมวิทยาลัย",
+      detail: "มีกิจกรรมแนะแนวทุกสาขา ทดลองเรียนจริง", link: "", image_url: "static/map.jpg", image: "x", start: "", end: "", hidden: false },
+    { id: "d3", category: "scholarship", title: "ทุนปูนซิเมนต์ไทย เปิดรับสมัครแล้ว", subtitle: "ยื่นได้ถึง 15 ธ.ค. 2569",
+      detail: "ทุนการศึกษาสำหรับนักศึกษาเรียนดี", link: "", image_url: "", image: "", start: "", end: "", hidden: false },
+  ];
+  // ปุ่มระบบ 2–5 ของจอแนวตั้ง — build_demo.py ใส่รายการจาก web/portrait_systems.py
+  const PV_SYSTEMS = [{"key": "admit", "title": "ระบบรับสมัครเรียน", "sub": "สมัครเรียน ปวช. และ ปวส. ออนไลน์", "url": "https://tctatc.github.io/thaluang-admission/", "color": "#e07b00", "icon": "i-clip", "embed": true}, {"key": "mis", "title": "TLMis ระบบบริการนักเรียน นักศึกษา", "sub": "ยื่นคำร้องและดูผลการเรียน ครบในที่เดียว", "url": "https://tl-mis.vercel.app/login", "color": "#16924a", "icon": "i-users", "embed": true}, {"key": "sch", "title": "TL Scholarship", "sub": "ระบบบริหารจัดการและสรุปผลทุนการศึกษา", "url": "https://thaluangcementhaianusorn.github.io/scholarship-system/", "color": "#6b3fd1", "icon": "i-award", "embed": true}, {"key": "room", "title": "ระบบจองห้องประชุม", "sub": "จองห้อง ส่งคำขอ และอนุมัติ ครบในที่เดียว", "url": "https://tctatc.github.io/nasakorn-thaluang-room-booking2/#/", "color": "#0a8fb0", "icon": "i-board", "embed": true}];
+  const DEMO_NO_EDIT = { error: "นี่คือเดโม — แก้ข่าวได้เฉพาะบนหุ่นตัวจริง" };
+  window.DEMO_SCREEN_URL = "index.html";   // หน้าครูใช้เป็นจอตัวอย่าง
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
@@ -59,6 +73,14 @@
     if (u === "/attract") return json({ videos: ["static/videos/lv_0_20261103085325.mp4"], after: 90 });     // build_demo.py ใส่รายการวิดีโอจาก static/videos/ ให้ (ไม่มี = โชว์ตราวิทยาลัย)
     if (u === "/announcements/due") return json({ due: [] });
     if (u === "/stats.json") return json(SAMPLE_STATS);
+    if (u === "/news") return json({ version: "demo", items: SAMPLE_NEWS });
+    if (u === "/screen-layout") return json({ layout: "portrait" });   // เดโม: หน้าแรกเป็นจอแนวตั้ง
+    if (u === "/pv/systems") return json(PV_SYSTEMS);
+    if (u === "/net") return json({ level: "good", ms: 300 });   // เดโม: ป้ายเน็ตโชว์ "เน็ตดี"
+    if (u === "/weather") return json({ temp: 33, code: 2, text_th: "แดดสลับเมฆ", text_en: "Partly cloudy", high: 35, low: 24, rain: 40 });
+    if (u === "/admin/news" && !(opts && opts.method && opts.method !== "GET"))
+      return json({ items: SAMPLE_NEWS, today: new Date().toISOString().slice(0, 10), storage: { persistent: true, path: "demo" } });
+    if (u.startsWith("/admin/")) return Promise.resolve(new Response(JSON.stringify(DEMO_NO_EDIT), { status: 403, headers: { "Content-Type": "application/json" } }));
     if (u === "/ask/stream") {
       let lang = "th", q = "";
       try { const b = JSON.parse(opts.body); lang = b.lang === "en" ? "en" : "th"; q = String(b.question || ""); } catch (e) {}
@@ -91,7 +113,7 @@
       ".demo-bar.float:not(.open)>:not(.tag){display:none}}";
     document.head.appendChild(css);
     const bar = document.createElement("div");
-    bar.className = "demo-bar " + (page === "stats" ? "inflow" : "float");
+    bar.className = "demo-bar float";   // ลอยมุมจอทุกหน้า (หน้าครูรุ่นใหม่มีเมนูด้านข้าง แทรกบนสุดแล้วดันเนื้อหาเพี้ยน)
     const add = (label, href, onClick) => {
       const el = document.createElement(href ? "a" : "button");
       const [icon, ...rest] = label.split(" ");
@@ -118,6 +140,6 @@
     tag.className = "tag";
     tag.addEventListener("click", () => bar.classList.toggle("open"));
     bar.appendChild(tag);
-    if (page === "stats") document.body.prepend(bar); else document.body.appendChild(bar);
+    document.body.appendChild(bar);
   });
 })();

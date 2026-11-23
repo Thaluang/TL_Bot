@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<!--
+  จอ 1920 (จอสัมผัสที่คนเดินผ่านเห็น) ของหุ่นน้องทานตะวัน-Bot — วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์
+  ซ้าย: นาฬิกา อากาศ ข่าวเด่น (news.js) — แผนผัง/รูป/เมนู ขึ้นแทนข่าวชั่วคราว (Board)
+  ขวา: คุยกับหุ่น (screen.js) — พูด/พิมพ์/สแกน QR
+  ออกแบบที่ 1920×1080 แล้วย่อ/ขยายทั้งหน้าให้พอดีจอ (เปิดบนจอเล็กก็ยังใช้ได้)
+  ข้อความทุกภาษาอยู่ใน screen.js (ตัวแปร T) — ในนี้เป็นค่าเริ่มต้นภาษาไทย
+  ?preview=1 = จอตัวอย่างในหน้าครู (ไม่พูด ไม่ส่งสถานะไปหุ่น)
+-->
+<html lang="th" translate="no">
+<head>
+<meta name="google" content="notranslate">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>น้องทานตะวัน-Bot · ท่าหลวงฯ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1240; --ink2:#4a3f72; --muted:#8a80aa; --violet:#7c3aed; --night:#160b3a;
+    --glass:rgba(255,255,255,.8);
+    --c-admission:#7c3aed;--b-admission:#f1ebff; --c-event:#e11d74;--b-event:#ffe8f2;
+    --c-scholarship:#d97706;--b-scholarship:#fff4dc; --c-award:#059669;--b-award:#e2f8ef; --c-general:#64748b;--b-general:#eef1f5;
+    --head:"Kanit","IBM Plex Sans Thai",system-ui,sans-serif;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  html,body{height:100%;overflow:hidden;background:#eae6f7}
+  body{font-family:"IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink)}
+  button{font:inherit;color:inherit}
+
+  /* ---------- กรอบ 1920×1080 ย่อ/ขยายพอดีจอ ---------- */
+  #app{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;
+    display:grid;grid-template-columns:minmax(0,1fr) 680px;grid-template-rows:minmax(0,1fr) auto;column-gap:32px;row-gap:0;padding:36px;
+    background:#f4f1ff;isolation:isolate}
+  #app::before{content:"";position:absolute;inset:-200px;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(520px 420px at 8% 6%,#ffc6e3 0,transparent 70%),
+      radial-gradient(640px 520px at 62% -6%,#c9d6ff 0,transparent 70%),
+      radial-gradient(520px 480px at 104% 40%,#d9c8ff 0,transparent 70%),
+      radial-gradient(700px 420px at 30% 112%,#ffe7a8 0,transparent 70%),
+      radial-gradient(500px 400px at 90% 110%,#bff0dc 0,transparent 70%)}
+    /* ไม่ใช้ backdrop-filter: blur — Pi ต้องเบลอใหม่ทุกเฟรมที่มีแอนิเมชัน (กิน GPU หนัก) พื้นหลังเป็นสีไล่นุ่มอยู่แล้ว ทึบขึ้นนิดหน่อยแทน */
+  .glass{background:var(--glass);
+    border:1.5px solid rgba(255,255,255,.85);box-shadow:0 18px 50px -18px rgba(76,29,149,.28)}
+
+  /* ---------- ซ้าย: หน้าข่าว ---------- */
+  .left{position:relative;min-height:0;min-width:0}
+  .home{height:100%;display:grid;grid-template-rows:232px 64px minmax(0,1fr);gap:22px}
+  .top{display:grid;grid-template-columns:1.32fr 1fr;gap:22px}
+  .top.no-weather{grid-template-columns:1fr}
+  .clock{border-radius:40px;padding:34px 42px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+  .clock .hi{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--ink2)}
+  .clock .hi i{width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 6px #22c55e22}
+  .clock .t{font-family:var(--head);font-weight:600;font-size:118px;line-height:1;letter-spacing:-2px;margin:10px 0 8px;
+    background:linear-gradient(180deg,#2a1466,#6d28d9);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .clock .t span{font-weight:300;opacity:.55}
+  .clock .d{font-size:23px;color:var(--ink2)}
+  .clock .logo{position:absolute;right:30px;top:30px;width:84px;height:84px;border-radius:50%;background:#fff url(static/logo.jpg) center/78% no-repeat;box-shadow:0 8px 24px #4c1d9522}
+  .weather{border-radius:40px;padding:26px 40px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;
+    background:linear-gradient(140deg,#ffb36b 0%,#ff7d9c 55%,#d65bd9 100%);box-shadow:0 22px 50px -18px #e2557f99}
+  .weather.rain{background:linear-gradient(140deg,#60a5fa 0%,#818cf8 55%,#a78bfa 100%);box-shadow:0 22px 50px -18px #6366f199}
+  .weather::after{content:"";position:absolute;right:-80px;bottom:-120px;width:320px;height:320px;border-radius:50%;background:radial-gradient(#ffffff40,transparent 70%)}
+  .weather small{font-size:21px;opacity:.92}
+  .weather .t{font-family:var(--head);font-weight:500;font-size:96px;line-height:1;margin:8px 0 8px;letter-spacing:-2px}
+  .weather .t sup{font-size:48px;font-weight:300;vertical-align:top;position:relative;top:10px}
+  .weather .d{font-size:21px;opacity:.95;position:relative;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:120px}
+  .weather .ic{position:absolute;right:34px;top:30px;width:118px;height:118px;filter:drop-shadow(0 8px 18px #b4235a55)}
+
+  .head{display:flex;justify-content:space-between;align-items:center;padding:0 6px}
+  .head h3{font-family:var(--head);font-weight:600;font-size:36px;display:flex;align-items:center;gap:14px}
+  .head-l{display:flex;align-items:center;gap:10px;min-width:0}
+  .head h3{white-space:nowrap}
+  .guide-chip{all:unset;cursor:pointer;box-sizing:border-box;font:500 18px var(--head);color:var(--ink);background:#fff;border:1.5px solid #e6defb;
+    border-radius:999px;padding:9px 13px;white-space:nowrap;box-shadow:0 6px 16px -10px #4c1d9540}
+  .guide-chip:active{transform:scale(.97)}
+  .head h3 .spark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#a78bfa,#f472b6);color:#fff}
+  /* ตัวบอกชุดข่าวอยู่ใต้กรอบข่าว (หัวแถวเต็มด้วยปุ่ม 5 ปุ่ม) */
+  .pager i{width:10px;height:10px;border-radius:99px;background:#d6ccf5;transition:width .3s}
+  .pager i.on{width:34px;background:var(--violet)}
+
+  .news{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:22px;min-height:0}
+  .news.fade{animation:fade .6s both}
+  .nc{all:unset;box-sizing:border-box;cursor:pointer;border-radius:36px;overflow:hidden;position:relative;display:flex;flex-direction:column;min-height:0}
+  .nc:active{transform:scale(.99)}
+  .nc.glass{background:var(--glass);border:1.5px solid rgba(255,255,255,.85);box-shadow:0 18px 50px -18px rgba(76,29,149,.28)}
+  .tag{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;font:500 18px var(--head);border-radius:999px;padding:6px 16px}
+  .tag::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+  .k-admission{background:var(--b-admission);color:var(--c-admission)}.k-event{background:var(--b-event);color:var(--c-event)}
+  .k-scholarship{background:var(--b-scholarship);color:var(--c-scholarship)}.k-award{background:var(--b-award);color:var(--c-award)}
+  .k-general{background:var(--b-general);color:var(--c-general)}
+  .nc h4{font-family:var(--head);font-weight:500;line-height:1.28;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+  .when{display:flex;align-items:center;gap:10px;font-size:18px;color:var(--ink2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .when svg{width:20px;height:20px;opacity:.7;flex:none}
+  /* การ์ดมีรูป: รูปโชว์เต็ม (contain) พื้นหลังเป็นรูปเดียวกันเบลอ ๆ */
+  .nc .pic{position:relative;overflow:hidden;background:#efeaff;min-width:0;min-height:0}
+  .nc .pic::before{content:"";position:absolute;inset:-20px;background:var(--img) center/cover;filter:blur(18px) saturate(1.2);opacity:.55}
+  .nc .pic img{position:relative;width:100%;height:100%;object-fit:contain;display:block}
+  .nc.portrait{display:grid;grid-template-columns:44% 1fr}
+  .nc.landscape{display:grid;grid-template-rows:60% 1fr}
+  .nc.portrait .tx,.nc.landscape .tx,.nc.textonly .tx{padding:20px 24px;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;position:relative}
+  .nc.portrait h4{font-size:26px;-webkit-line-clamp:5}
+  .nc.landscape .tx{padding:14px 22px 16px}
+  .nc.landscape h4{font-size:24px;-webkit-line-clamp:2}
+  .nc.landscape .tag{position:absolute;left:16px;top:-44px;box-shadow:0 4px 12px #0002}
+  .nc.textonly h4{font-size:30px;-webkit-line-clamp:4}
+  .nc .tx .when{margin-top:auto;padding-right:56px;font-size:17px}
+  .qr-mini{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+  .qr-mini svg{width:96px;height:96px;background:#fff;border-radius:10px;padding:4px;flex:none}
+  .nc.landscape .qr-mini{position:absolute;right:16px;top:-120px;flex-direction:column;gap:2px;background:#fff;border-radius:14px;padding:6px 6px 4px;box-shadow:0 6px 18px #0003}
+  .nc.landscape .qr-mini svg{width:84px;height:84px;padding:0}
+  .nc.textonly{color:var(--ink)}
+  .nc.textonly .big{position:absolute;right:26px;bottom:6px;font:700 120px/1 var(--head);color:#c4b5fd;opacity:.4;pointer-events:none}
+  .nc.textonly.k-scholarship .big{color:#fcd34d}
+  .tapme{position:absolute;right:20px;bottom:18px;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:#fff;box-shadow:0 6px 18px #4c1d9522;color:var(--violet)}
+  .tapme svg{width:22px;height:22px}
+  .nc.invite{grid-row:1/3;grid-column:1/-1;align-items:center;justify-content:center;text-align:center;gap:18px;padding:40px;cursor:default}
+  .nc.invite b{font:600 52px var(--head);line-height:1.25}
+  .nc.invite b em{font-style:normal;background:linear-gradient(90deg,#7c3aed,#db2777);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .nc.invite p{font-size:26px;color:var(--ink2)}
+
+  /* ---------- ซ้าย: แผงแสดงผล (แผนผัง/รูป/เมนู) ---------- */
+  .board{position:absolute;inset:0;border-radius:40px;padding:26px;display:flex;flex-direction:column;gap:18px;animation:fade .35s both}
+  .board .bar{display:flex;align-items:center;gap:16px}
+  .board .bar .ic{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;font-size:30px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;flex:none}
+  .board .bar b{font:600 34px var(--head);display:block;line-height:1.2}
+  .board .bar small{display:block;color:var(--muted);font-size:19px}
+  .back{all:unset;cursor:pointer;margin-left:auto;display:flex;align-items:center;gap:10px;font:500 22px var(--head);background:#fff;border:1.5px solid #e5dcff;color:var(--violet);border-radius:999px;padding:12px 26px;flex:none}
+  .board-body{flex:1;min-height:0;overflow:auto;position:relative;border-radius:28px}
+  .board-body::-webkit-scrollbar{width:10px}.board-body::-webkit-scrollbar-thumb{background:#d6ccf5;border-radius:9px}
+  .board-img{display:block;width:100%;height:100%;object-fit:contain;background:#fff;border-radius:28px;border:1.5px solid #efe9ff;cursor:zoom-in}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px}
+  .gallery.one{grid-template-columns:1fr;height:100%}
+  .gallery figure{background:#fff;border-radius:24px;overflow:hidden;border:1.5px solid #efe9ff;display:flex;flex-direction:column}
+  .gallery img{width:100%;height:260px;object-fit:cover;cursor:zoom-in;display:block}
+  .gallery.one img{height:auto;flex:1;min-height:0;object-fit:contain;background:#faf8ff}
+  .gallery figcaption{padding:12px 18px;font-size:20px}
+  .gallery figcaption small{color:var(--muted)}
+  .gallery img.person{object-fit:contain;background:#faf8ff}   /* รูป ผอ. ไม่ตัดหัว/ไหล่ */
+  .menu-item img.person{width:84px;height:84px;object-fit:cover;object-position:top}
+  .tour3d{all:unset;cursor:pointer;position:absolute;right:22px;bottom:22px;display:flex;align-items:center;gap:10px;padding:16px 28px;border-radius:999px;
+    font:600 24px var(--head);color:#fff;background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 14px 30px -10px #7c3aedcc}
+  .tour-btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:12px 24px;border-radius:999px;
+    font:600 21px var(--head);color:#fff;background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 10px 24px -10px #7c3aedaa}
+  .tour-btn:active,.tour3d:active{transform:scale(.97)}
+  .board-auto{position:absolute;left:24px;bottom:22px;font-size:17px;color:var(--muted);background:#ffffffd8;padding:6px 14px;border-radius:999px;pointer-events:none}
+  /* เมนู */
+  .menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .menu-btn{all:unset;cursor:pointer;box-sizing:border-box;min-height:120px;padding:20px 24px;border-radius:28px;background:#fff;border:1.5px solid #efe9ff;
+    display:flex;align-items:center;gap:18px;font:500 26px var(--head);box-shadow:0 10px 24px -16px #4c1d9560}
+  .menu-btn:active,.menu-item:active{transform:scale(.98)}
+  .menu-btn em{font-style:normal;width:66px;height:66px;border-radius:20px;display:grid;place-items:center;font-size:34px;flex:none;background:#f1ebff}
+  .menu-btn small{display:block;font:400 17px "IBM Plex Sans Thai",sans-serif;color:var(--muted)}
+  .menu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px}
+  .menu-item{all:unset;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:16px;padding:12px;border-radius:24px;background:#fff;border:1.5px solid #efe9ff}
+  .menu-item img,.menu-item .m-icon{width:112px;height:84px;border-radius:16px;object-fit:cover;flex:none}
+  .menu-item .m-icon{display:grid;place-items:center;font-size:40px;background:#f4f1ff}
+  .menu-item b{display:block;font:500 23px var(--head);line-height:1.3}
+  .menu-item small{color:var(--muted);font-size:17px}
+  .place-card{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;height:100%}
+  .place-card img,.place-card .m-icon{width:100%;height:100%;min-height:0;object-fit:cover;border-radius:24px;cursor:zoom-in}
+  .place-card .m-icon{display:grid;place-items:center;font-size:120px;background:#f4f1ff;cursor:default}
+  .place-card h3{font:600 40px var(--head);color:var(--ink);line-height:1.25}
+  .place-card small{color:var(--muted);font-size:20px}
+  .place-card p{font-size:23px;line-height:1.7;margin-top:16px}
+  .place-card .dist{font-size:21px;color:var(--ink2);margin-top:10px}
+  .place-qr{display:flex;align-items:center;gap:18px;margin-top:18px;padding:14px;border-radius:22px;background:#fff;border:1.5px solid #efe9ff}
+  .place-qr svg{width:240px;height:240px;flex:none}
+  .place-qr b{display:block;font:600 24px var(--head);color:#5b21b6;line-height:1.3}
+  .place-qr small{display:block;font-size:17px;margin-top:6px}
+  .menu-nav{display:flex;gap:12px;margin-top:18px}
+  .menu-nav .back{margin-left:0}
+
+  /* ---------- ปฏิทินแนะแนว / คลังภาพ / แบบประเมิน (extras.js) ---------- */
+  .cal{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:22px;height:100%}
+  .cal-month{background:#fff;border:1.5px solid #efe9ff;border-radius:26px;padding:18px 20px;display:flex;flex-direction:column;min-height:0}
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cal-nav b{font:600 30px var(--head)}
+  .cal-nav button{all:unset;cursor:pointer;width:58px;height:58px;border-radius:18px;display:grid;place-items:center;font-size:30px;background:#f4f1ff;color:var(--violet)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;flex:1;grid-auto-rows:1fr}
+  .cal-grid .dow{font:500 18px var(--head);color:var(--muted);text-align:center;align-self:center}
+  .cal-grid .day{all:unset;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:500 24px var(--head);color:var(--ink)}
+  .cal-grid .day.out{visibility:hidden}
+  .cal-grid .day.past{color:#c0b8d8}
+  .cal-grid .day.today{box-shadow:inset 0 0 0 2.5px var(--violet)}
+  .cal-grid .day.has{cursor:pointer;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;box-shadow:0 8px 18px -10px #7c3aedcc}
+  .cal-grid .day.has.past{background:#e9e4f7;color:#8a80aa;box-shadow:none}
+  .cal-grid .day.has i{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .cal-grid .day.sel{outline:3px solid #fbbf24;outline-offset:2px}
+  .cal-list{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0}
+  .cal-list h4{font:600 24px var(--head);color:var(--ink2);padding:2px 4px}
+  .ev{all:unset;cursor:pointer;box-sizing:border-box;display:flex;gap:16px;align-items:center;padding:14px 16px;border-radius:22px;background:#fff;border:1.5px solid #efe9ff}
+  .ev.sel{border-color:#fbbf24;background:#fffbeb}
+  .ev.past{opacity:.55}
+  .ev .dd{flex:none;width:84px;height:84px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f1ebff;color:#5b21b6;line-height:1.1}
+  .ev .dd b{font:600 34px var(--head)}
+  .ev .dd small{font:500 17px var(--head)}
+  .ev .tx b{display:block;font:500 23px var(--head);line-height:1.3}
+  .ev .tx small{display:block;color:var(--muted);font-size:18px;margin-top:2px}
+  .ev .tx p{font-size:18px;color:var(--ink2);margin-top:4px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .empty-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;text-align:center;color:var(--ink2);font-size:24px}
+  .empty-box b{font:600 36px var(--head);color:var(--ink)}
+  .album{margin-bottom:22px}
+  .album h4{font:600 26px var(--head);margin:0 4px 10px}
+  .album h4 small{font:400 18px "IBM Plex Sans Thai",sans-serif;color:var(--muted);margin-left:10px}
+  .album .gallery{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .album .gallery img{height:190px}
+  .survey{display:flex;flex-direction:column;gap:14px}
+  .sv-roles{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:500 22px var(--head)}
+  .sv-roles button,.sv-row button{all:unset;cursor:pointer;box-sizing:border-box;background:#fff;border:1.5px solid #e6defb;border-radius:999px;text-align:center}
+  .sv-roles button{padding:12px 22px;font:500 21px var(--head)}
+  .sv-roles button.on,.sv-row button.on{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-color:transparent}
+  .sv-head,.sv-row{display:grid;grid-template-columns:minmax(0,1fr) repeat(5,92px);gap:8px;align-items:center}
+  .sv-head span{font:500 15px var(--head);color:var(--muted);text-align:center;line-height:1.2}
+  .sv-head span:first-child{text-align:left;padding-left:20px}
+  .sv-row{background:#fff;border:1.5px solid #efe9ff;border-radius:22px;padding:10px 12px 10px 20px}
+  .sv-row.miss,.sv-roles.miss{border:2px solid #f87171;border-radius:22px;background:#fff5f5}
+  .sv-roles.miss{padding:8px 10px}
+  .sv-row .q{font:500 21px var(--head);line-height:1.3}
+  .sv-row .q small{display:block;font:500 15px var(--head);color:var(--violet)}
+  .survey h4{font:600 25px var(--head);color:#5b21b6;margin-top:8px}
+  .survey h4 small,.sv-roles .lb small{font:400 16px "IBM Plex Sans Thai",sans-serif;color:var(--muted)}
+  .sv-intro{font-size:18px;color:var(--ink2);background:#f4f1ff;border-radius:16px;padding:10px 16px}
+  .sv-roles .lb{min-width:120px}
+  .sv-text{display:flex;flex-direction:column;gap:6px;font:500 20px var(--head)}
+  .sv-text input{font:inherit;font-size:21px;font-weight:400;border:1.5px solid #e6defb;border-radius:18px;padding:14px 18px;background:#fff;outline:0;color:var(--ink)}
+  .sv-text input:focus{border-color:#a78bfa;box-shadow:0 0 0 4px #a78bfa26}
+  .sv-row button{height:64px;border-radius:18px;font:600 26px var(--head);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .sv-row button small{font-size:15px;font-weight:400;margin-top:2px}
+  .sv-send{all:unset;cursor:pointer;align-self:center;margin-top:4px;padding:16px 46px;border-radius:999px;font:600 26px var(--head);color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 14px 30px -10px #7c3aedcc}
+  .sv-send:disabled{opacity:.5}
+  .sv-note{text-align:center;font-size:19px;color:var(--muted);min-height:1.4em}
+  .sv-note.bad{color:#dc2626}
+
+  /* ---------- ขวา: แชท ---------- */
+  .chat-panel{border-radius:44px;overflow:hidden;display:flex;flex-direction:column;background:rgba(255,255,255,.8);min-height:0;position:relative}
+  .ch{position:relative;padding:28px 34px;color:#fff;overflow:hidden;flex:none;
+    background:radial-gradient(420px 200px at 85% -20%,#c4b5fd 0,transparent 70%),linear-gradient(135deg,#6d28d9,#8b5cf6 55%,#a855f7)}
+  .ch::after{content:"";position:absolute;right:-40px;bottom:-60px;width:260px;height:260px;border-radius:50%;background:radial-gradient(#ffffff26,transparent 70%);pointer-events:none}
+  .ch .row{display:flex;align-items:center;gap:24px;position:relative;z-index:1}
+  .face{width:108px;height:108px;border-radius:34px;flex:none;position:relative;margin-top:10px;
+    background:linear-gradient(180deg,#1b0f45,#2b1773);box-shadow:inset 0 0 0 3px #ffffff30,0 14px 30px #2e106566;display:flex;align-items:center;justify-content:center;gap:16px}
+  .face i{width:24px;height:34px;border-radius:10px;background:#e0f2ff;box-shadow:0 0 18px #9fd8ff,0 0 4px #fff;margin-bottom:14px}
+  .face b{position:absolute;bottom:22px;left:50%;margin-left:-15px;transform-origin:50% 0;width:30px;height:14px;border:4px solid #e0f2ff;border-top:0;border-radius:0 0 20px 20px}
+  .face::before{content:"";position:absolute;top:-16px;left:50%;width:4px;height:14px;background:#ffffffaa;transform:translateX(-50%)}
+  .face::after{content:"";position:absolute;top:-26px;left:50%;width:14px;height:14px;border-radius:50%;background:#fde047;transform:translateX(-50%);box-shadow:0 0 14px #fde047}
+  /* แอนิเมชันตกแต่ง (ตากะพริบ วงไมค์ ปุ่ม 3D) เล่นเป็นช่วง ๆ ทุก 12 วิ ช่วงละ 4 วิ (screen.js ใส่ class anim-on)
+     วนตลอดไม่ได้ — Pi ต้องวาดจอ 1080p ใหม่ 60 ครั้ง/วิ กิน CPU รวม ~65% ทั้งที่ไม่มีใครใช้ (วัดจริง ปิดแล้วเหลือ <2%) */
+  body.anim-on .face i{animation:eye 4s 1}
+  body.anim-on .tour3d{animation:tap 2s ease-in-out 2}
+  body.state-answering .face b,body.state-greeting .face b{animation:talk .35s ease-in-out infinite alternate}
+  body.state-thinking .face i{animation:think 1.2s ease-in-out infinite}
+  .ch h2{font:600 38px var(--head);line-height:1.1}
+  .ch p{font-size:20px;opacity:.9;margin-top:6px}
+  .ch .side{margin-left:auto;align-self:center;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+  .led{display:flex;align-items:center;gap:8px;font-size:17px;background:#ffffff26;border:1px solid #ffffff40;border-radius:999px;padding:7px 16px;white-space:nowrap}
+  .led .d{width:9px;height:9px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px #4ade8040}
+  /* ป้ายสถานะเน็ต: ขีดสัญญาณ 3 ขีด เขียว=ดี เหลือง=ช้า แดง=ไม่มีเน็ต */
+  .badges{display:contents}   /* ป้ายเน็ต + ป้ายสถานะ เรียงแนวตั้งในคอลัมน์ขวา ไม่เบียดชื่อหุ่น */
+  .net{display:flex;align-items:center;gap:8px;font-size:17px;background:#ffffff26;border:1px solid #ffffff40;border-radius:999px;padding:7px 14px;white-space:nowrap;transition:background .3s}
+  .net .bars{display:flex;align-items:flex-end;gap:3px;height:16px}
+  .net .bars i{width:4px;border-radius:2px;background:#ffffff59}
+  .net .bars i:nth-child(1){height:6px}.net .bars i:nth-child(2){height:11px}.net .bars i:nth-child(3){height:16px}
+  .net-good .bars i{background:#4ade80}
+  .net-slow{background:#facc1540;border-color:#fde04799}
+  .net-slow .bars i:nth-child(-n+2){background:#fde047}
+  .net-down{background:#ef444455;border-color:#fca5a5aa}
+  .net-down .bars i:nth-child(1){background:#f87171}
+  .net-down .net-text,.net-slow .net-text{font-weight:600}
+  /* ตัวหนังสือที่พูดใส่ไมค์ ขึ้นสดระหว่างพูด */
+  .msg.user.live{opacity:.9;border:2px dashed #ffffffaa}
+  .msg.user.live .live-text::after{content:"";display:inline-block;width:3px;height:1em;margin-left:4px;vertical-align:-3px;background:#fff;animation:blink .8s infinite}
+  .msg.user.live .live-text.wait{opacity:.7}
+  .typing .a-body{flex-wrap:wrap;align-items:center}
+  .think-note{flex-basis:100%;font-size:17px;color:var(--muted);margin-top:6px}
+  .new-chat{all:unset;cursor:pointer;box-sizing:border-box;font-size:17px;color:#fff;background:#ffffff1f;border:1px solid #ffffff59;border-radius:999px;padding:7px 18px;white-space:nowrap}
+  .new-chat:active{transform:scale(.96);background:#ffffff40}
+  body.state-listening .led .d{background:#f472b6;box-shadow:0 0 0 4px #f472b640;animation:blink .7s infinite}
+  body.state-thinking .led .d{background:#fde047;animation:blink 1s infinite}
+  body.state-answering .led .d{background:#93c5fd;animation:blink 1.4s infinite}
+  body.state-error .led .d{background:#f87171}
+  .seg{display:flex;gap:6px}
+  .seg button{all:unset;cursor:pointer;font:500 17px var(--head);padding:6px 16px;border-radius:999px;background:#ffffff1f}
+  .seg button.on{background:#fff;color:#6d28d9}
+
+  .scroll{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth}
+  .scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:#ddd6fe;border-radius:9px}
+  .chat{padding:26px 28px 14px;display:flex;flex-direction:column;gap:18px}
+  .msg{animation:rise .4s both;max-width:86%}
+  .msg.user{align-self:flex-end;color:#fff;padding:18px 24px;border-radius:28px;border-top-right-radius:10px;font-size:23px;line-height:1.5;
+    background:linear-gradient(135deg,#7c3aed,#a855f7);box-shadow:0 10px 24px -10px #7c3aedaa;overflow-wrap:anywhere}
+  .mic-tag{display:block;font-size:16px;opacity:.75;margin-bottom:2px}
+  .msg.bot{align-self:flex-start}
+  .ava{display:none}
+  .a-body{background:#fff;padding:18px 24px;border-radius:28px;border-top-left-radius:10px;box-shadow:0 6px 20px -8px #4c1d9533;
+    border:1px solid #f0eaff;font-size:22px;line-height:1.6;overflow-wrap:anywhere}
+  .a-body.warn{border-color:#fcd34d;background:#fffbeb}
+  .a-body .md-p{margin-bottom:8px}.a-body .md-p:last-child{margin-bottom:0}
+  .a-body .md-h{font-weight:600;color:#6d28d9;margin:12px 0 4px}.a-body .md-h:first-child{margin-top:0}
+  .a-body .md-list{padding-left:26px;margin-bottom:8px}.a-body .md-list li{margin:4px 0}.a-body .md-list li::marker{color:#a855f7}
+  .a-body b{font-weight:600;color:#000}
+  .a-body .md-link{display:inline-flex;align-items:center;gap:6px;min-height:52px;padding:8px 22px;margin:6px 0;border-radius:999px;
+    background:linear-gradient(90deg,#7c3aed,#db2777);color:#fff;font-weight:600;text-decoration:none}
+  .a-body .link-card{display:inline-flex;vertical-align:middle;flex-wrap:wrap;align-items:center;gap:14px 18px;margin:6px 0}
+  .a-body .link-qr{display:inline-flex;flex-direction:column;align-items:center;gap:4px}
+  .a-body .link-qr svg{width:150px;height:150px;border-radius:10px;display:block}
+  .a-body .link-qr small{font-size:15px;opacity:.8}
+  .see-left{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:12px;margin-top:10px;padding:6px 16px 6px 6px;border-radius:18px;background:#f4f1ff;font-size:18px;color:#5b21b6}
+  .see-left img{width:84px;height:58px;border-radius:12px;object-fit:cover}
+  .tools{display:flex;gap:2px;margin:6px 0 0 -8px}
+  .tools button{all:unset;cursor:pointer;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+  .tools svg{width:24px;height:24px;fill:currentColor}
+  .caret{display:inline-block;width:.55em;height:.55em;margin-left:4px;border-radius:50%;vertical-align:middle;background:#a855f7;animation:blink .8s infinite}
+  .typing .a-body{display:flex;gap:8px;padding:24px 28px}
+  .typing .a-body i{width:12px;height:12px;border-radius:50%;background:#c4b5fd;animation:bob 1.2s infinite}
+  .typing .a-body i:nth-child(2){animation-delay:.15s}.typing .a-body i:nth-child(3){animation-delay:.3s}
+  .rate{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:8px;font-size:17px;color:var(--muted)}
+  .stars{display:flex;flex-direction:row-reverse}
+  .stars button{all:unset;cursor:pointer;width:46px;height:46px;display:grid;place-items:center;font-size:30px;line-height:1;color:#e4dcf7}
+  .stars button:hover,.stars button:hover~button,.stars button.on,.stars button.on~button{color:#f5b301}
+  .rate.done .stars{pointer-events:none}
+  .rate .thanks{color:var(--ink)}
+
+  .stop-talk{position:absolute;left:50%;bottom:330px;transform:translate(-50%,12px);z-index:5;border:0;cursor:pointer;
+    padding:12px 26px;border-radius:999px;font:600 20px var(--head);background:#1f0f55;color:#fff;box-shadow:0 10px 30px -10px #1f0f55;
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  body.speaking .stop-talk{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+
+  .dock{flex:none;padding:14px 28px 28px;display:flex;flex-direction:column;gap:14px}
+  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .chip{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:24px;
+    font:500 17px var(--head);line-height:1.25;background:#fff;border:1.5px solid #efe9ff;box-shadow:0 6px 16px -10px #4c1d9540;text-align:center}
+  .chip:active,.talk:active,.menu-open:active{transform:scale(.97)}
+  .chip em{font-style:normal;width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:24px}
+  .inrow{display:grid;grid-template-columns:1fr 112px;gap:14px}
+  .composer{display:flex;align-items:center;gap:8px;border-radius:28px;padding:0 10px 0 24px;background:#fff;border:1.5px solid #ece6fb;min-height:72px}
+  .composer input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:21px;color:var(--ink)}
+  .composer input::placeholder{color:#a49ac4}
+  .composer .send{all:unset;cursor:pointer;width:54px;height:54px;border-radius:50%;display:none;place-items:center;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff}
+  .composer.has-text .send{display:grid}
+  .composer .send svg{width:24px;height:24px;fill:currentColor}
+  .menu-open{all:unset;cursor:pointer;border-radius:28px;background:#fff;border:1.5px solid #ece6fb;display:flex;flex-direction:column;align-items:center;justify-content:center;font:500 16px var(--head);color:var(--ink2);gap:2px}
+  .menu-open svg{width:28px;height:28px;color:var(--violet)}
+  .talk{all:unset;cursor:pointer;position:relative;height:108px;border-radius:36px;display:flex;align-items:center;justify-content:center;gap:18px;color:#fff;font:600 31px var(--head);
+    background:linear-gradient(135deg,#1f0f55,#3b1a8f 60%,#5b21b6);box-shadow:0 18px 40px -14px #3b1a8fcc,inset 0 1px 0 #ffffff30}
+  .talk .mic-ic{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#f472b6,#a855f7);position:relative}
+  .talk .mic-ic::before,.talk .mic-ic::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:2px solid #f9a8d4;opacity:0}
+  body.anim-on .talk .mic-ic::before{animation:ring 2s 2}
+  body.anim-on .talk .mic-ic::after{animation:ring 2s 1s 1}
+  .talk .mic-ic svg{width:30px;height:30px;fill:#fff}
+  .talk small{font:400 18px "IBM Plex Sans Thai",sans-serif;opacity:.75;display:block}
+  .talk .wave{display:none;gap:6px;align-items:center;height:50px}
+  .talk .wave i{width:7px;border-radius:9px;background:#fff;animation:wv 1s infinite ease-in-out}
+  .talk .wave i:nth-child(1){height:18px}.talk .wave i:nth-child(2){height:36px;animation-delay:.1s}.talk .wave i:nth-child(3){height:50px;animation-delay:.2s}
+  .talk .wave i:nth-child(4){height:30px;animation-delay:.3s}.talk .wave i:nth-child(5){height:44px;animation-delay:.4s}.talk .wave i:nth-child(6){height:22px;animation-delay:.5s}
+  .talk .when-listen{display:none}
+  body.state-listening .talk{background:linear-gradient(135deg,#be185d,#db2777 50%,#a855f7)}
+  body.state-listening .talk .mic-ic,body.state-listening .talk .when-idle{display:none}
+  body.state-listening .talk .wave{display:flex}
+  body.state-listening .talk .when-listen{display:block}
+  body.state-thinking .talk{opacity:.7}
+
+  /* ---------- คีย์บอร์ดบนจอ (osk.js) — แถวล่างเต็มความกว้าง ---------- */
+  .osk-host{grid-column:1/-1;min-height:0}
+  .osk{display:none;flex-direction:column;gap:10px;padding:16px 18px 18px;border-radius:32px;background:#ffffffee;border:1.5px solid #efe9ff;
+    box-shadow:0 -10px 40px -18px rgba(76,29,149,.4);user-select:none;touch-action:manipulation}
+  .osk.open{display:flex;margin-top:24px;animation:osk-up .22s ease-out both}
+  .osk-row{display:flex;gap:10px;justify-content:center}
+  .osk .k{all:unset;box-sizing:border-box;flex:1 1 0;min-width:0;max-width:120px;height:72px;border-radius:18px;display:grid;place-items:center;
+    background:#f4f1ff;color:var(--ink);font-size:32px;line-height:1;cursor:pointer;box-shadow:0 2px 0 rgba(76,29,149,.15)}
+  .osk .k:active{background:#ddd6fe;transform:translateY(1px);box-shadow:none}
+  .osk .k.fn{flex:1.5 1 0;max-width:170px;background:#ede9fe;font-size:24px}
+  .osk .k.ico{font-size:38px}
+  .osk .k.fn.on{background:#7c3aed;color:#fff}
+  .osk .k.space{flex:6 1 0;max-width:none;font-size:22px;color:var(--muted)}
+  .osk .k.send{flex:2 1 0;max-width:240px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:24px;font-weight:600}
+  body.osk-open .home .top,body.osk-open .head{display:none}
+  body.osk-open .home{grid-template-rows:minmax(0,1fr)}
+  body.osk-open .chips,body.osk-open .talk{display:none}
+
+  /* ---------- ซ้อนทับ (อยู่ในกรอบ 1920 เหมือนกัน) ---------- */
+  #lightbox{display:none;position:absolute;inset:0;z-index:200;background:rgba(10,6,30,.9);align-items:center;justify-content:center;cursor:zoom-out}
+  #lightbox.open{display:flex}
+  #lightbox img{max-width:94%;max-height:92%;border-radius:16px;object-fit:contain}
+  #tourView{display:none;position:absolute;inset:0;z-index:140;background:#0f1724}
+  #tourView.open{display:block;animation:fade .4s both}
+  #tourView iframe{width:100%;height:100%;border:0;display:block}
+  #tourView .close{all:unset;cursor:pointer;position:absolute;right:28px;bottom:64px;min-height:72px;padding:0 30px;border-radius:999px;
+    display:flex;align-items:center;gap:10px;background:#d7263d;color:#fff;font:500 26px var(--head);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  #attract{display:none;position:absolute;inset:0;z-index:150;background:#000;cursor:pointer;overflow:hidden}
+  #attract.open{display:block;animation:fade .6s both}
+  #attract video{width:100%;height:100%;object-fit:contain;display:block}
+  #attract .prog{position:absolute;left:0;right:0;top:0;height:6px;background:#ffffff26}
+  #attract .prog i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:0 0;background:linear-gradient(90deg,#f472b6,#a855f7)}
+  #attract .brand{position:absolute;left:60px;top:44px;display:flex;align-items:center;gap:16px;color:#fff;font:500 24px var(--head);text-shadow:0 2px 12px #0008}
+  #attract .brand span{width:64px;height:64px;border-radius:50%;background:#fff url(static/logo.jpg) center/80% no-repeat}
+  #attract .tap{position:absolute;right:60px;bottom:56px;display:flex;align-items:center;gap:18px;background:rgba(20,10,45,.45);
+    border:1.5px solid #ffffff55;border-radius:999px;padding:16px 34px 16px 18px;color:#fff;font:500 28px var(--head);animation:tap 2.4s ease-in-out infinite}
+  #attract .tap i{font-style:normal;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#a855f7);display:grid;place-items:center;font-size:30px}
+  #announce{display:none;position:absolute;inset:0;z-index:250;align-items:center;justify-content:center;padding:40px;background:rgba(20,10,50,.7)}
+  #announce.open{display:flex;animation:fade .4s both}
+  #announce .card{max-width:1100px;background:#fff;border-radius:40px;padding:44px 52px;box-shadow:0 30px 80px -20px #2e1065aa;animation:rise .5s both}
+  #announce .tag{font-size:22px;margin-bottom:16px;background:#f1ebff;color:#6d28d9}
+  #announce p{font:400 40px/1.5 var(--head)}
+
+  /* ---------- จอตัวอย่างในหน้าครู ---------- */
+  body.preview .chat-panel .dock,body.preview .stop-talk{pointer-events:none}
+
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes blink{50%{opacity:.3}}
+  @keyframes bob{0%,60%,100%{transform:none;opacity:.6}30%{transform:translateY(-8px);opacity:1}}
+  @keyframes ring{0%{transform:scale(.8);opacity:.8}100%{transform:scale(1.5);opacity:0}}
+  @keyframes wv{50%{transform:scaleY(.4)}}
+  @keyframes eye{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
+  @keyframes think{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+  @keyframes talk{from{transform:scaleY(.6)}to{transform:scaleY(1.4)}}
+  @keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  @keyframes osk-up{from{transform:translateY(30%);opacity:0}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body class="page-screen state-idle">
+<div id="app">
+  <!-- ===== ซ้าย ===== -->
+  <section class="left">
+    <div class="home" id="home">
+      <div class="top" id="topRow">
+        <div class="glass clock"><span class="logo"></span>
+          <div class="hi"><i></i><span id="hello">สวัสดีครับ</span></div>
+          <div class="t" id="clock">--<span>:</span>--</div>
+          <div class="d" id="today">&nbsp;</div>
+        </div>
+        <div class="weather" id="weather" hidden>
+          <small data-t="place">📍 ท่าหลวง สระบุรี</small>
+          <svg class="ic" id="wxIcon" viewBox="0 0 120 120"></svg>
+          <div class="t"><span id="wxTemp">--</span><sup>°</sup></div>
+          <div class="d" id="wxText">&nbsp;</div>
+        </div>
+      </div>
+      <div class="head"><div class="head-l"><h3><span class="spark">✦</span><span data-t="newsHead">ข่าวเด่นวันนี้</span></h3>
+        <!-- คู่มือเป็นรูป: แตะแล้วขึ้นแผงซ้ายเหมือนแผนผัง (แตะรูปอีกทีขยายเต็มจอ) -->
+        <button type="button" class="guide-chip" data-action="showGuide" data-img="static/guides/user-guide.jpg" data-msg="guideMsg">📖 <span data-t="cGuide">คู่มือการใช้งาน</span></button>
+        <button type="button" class="guide-chip" data-action="showGuide" data-img="static/guides/overview.jpg" data-msg="overviewMsg">⚙️ <span data-t="cOverview">ภาพรวมการทำงาน</span></button>
+        <!-- ครูลงข้อมูลเองที่หน้า /stats (extras.js วาดในแผงซ้าย) -->
+        <button type="button" class="guide-chip" data-action="showCalendar">📅 <span data-t="cCalendar">ปฏิทินแนะแนว</span></button>
+        <button type="button" class="guide-chip" data-action="showGallery">🖼️ <span data-t="cGallery">คลังภาพกิจกรรม</span></button>
+        <button type="button" class="guide-chip" data-action="showSurvey">📝 <span data-t="cSurvey">แบบประเมิน</span></button>
+      </div><div class="pager" id="pager"></div></div>
+      <div class="news" id="newsGrid"></div>
+    </div>
+
+    <div class="board glass" id="board" hidden>
+      <div class="bar"><span class="ic" id="boardIcon">🗺️</span><div><b id="boardTitle"></b><small id="boardSub"></small></div>
+        <button type="button" class="back" data-action="boardHome">← <span data-t="backNews">กลับหน้าข่าว</span></button></div>
+      <div class="board-body" id="boardBody"></div>
+      <span class="board-auto" id="boardAuto"></span>
+    </div>
+  </section>
+
+  <!-- ===== ขวา: แชท ===== -->
+  <section class="chat-panel glass">
+    <div class="ch">
+      <div class="row">
+        <div class="face"><i></i><i></i><b></b></div>
+        <div><h2 data-t="botName">น้องทานตะวัน-Bot</h2><p data-t="botSub">ถามอะไรก็ได้ ยินดีช่วยเสมอครับ</p></div>
+        <div class="side">
+          <div class="badges">
+            <div class="net net-good" id="net"><span class="bars"><i></i><i></i><i></i></span><span class="net-text">เน็ตดี</span></div>
+            <div class="led"><span class="d"></span><span class="led-text">พร้อมคุย</span></div>
+          </div>
+          <button type="button" class="new-chat" data-action="newChat">✏️ <span data-t="newShort">คุยใหม่</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll" id="scroll"><main class="chat" id="chat"></main></div>
+    <button type="button" id="stopTalk" class="stop-talk" data-t="stopTalk">⏹ หยุดพูด</button>
+
+    <div class="dock">
+      <div class="chips" id="dockQs">
+        <button type="button" class="chip" data-q="วิทยาลัยมีผลงานและรางวัลอะไรบ้าง" data-q-en="What awards and achievements does the college have?"><em class="k-event">🏆</em><span data-t="cAwards">ผลงานรางวัล</span></button>
+        <button type="button" class="chip" data-q="สมัครเรียนต้องทำอย่างไร มีคุณสมบัติอะไรบ้าง" data-q-en="How do I apply, and what are the requirements?"><em class="k-admission">🎓</em><span data-t="cApply">สมัครเรียน</span></button>
+        <button type="button" class="chip" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em class="k-award">🏞️</em><span data-t="cTripsShort">สถานที่ท่องเที่ยว</span></button>
+        <button type="button" class="chip" data-action="showDirectors"><em class="k-scholarship">👔</em><span data-t="cDirectorsShort">ผอ.สอจ.สระบุรี</span></button>
+      </div>
+      <div class="inrow">
+        <form class="composer" id="composer">
+          <span aria-hidden="true">⌨️</span>
+          <input id="q" data-ph="placeholder" placeholder="แตะเพื่อพิมพ์คำถาม…" autocomplete="off">
+          <button type="submit" class="send" data-title="send" title="ส่ง"><svg viewBox="0 0 24 24"><path d="M3 20.5V14l8-2-8-2V3.5L22 12 3 20.5z"/></svg></button>
+        </form>
+        <button type="button" class="menu-open" data-action="allMenu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+          <span data-t="allMenu">เมนูทั้งหมด</span></button>
+      </div>
+      <button type="button" class="talk" id="mic" data-title="mic" title="แตะเพื่อพูด">
+        <span class="mic-ic"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1a7 7 0 0 0 6-6.9h-2z"/></svg></span>
+        <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="when-idle"><span data-t="talk">แตะเพื่อพูด</span><small data-t="talkSub">หุ่นฟังจนคุณพูดจบเอง</small></span>
+        <span class="when-listen"><span data-t="listenTalk">กำลังฟัง…</span><small data-t="listenSub">แตะอีกครั้งเมื่อพูดจบ</small></span>
+      </button>
+    </div>
+  </section>
+
+  <div class="osk-host"></div>
+
+  <!-- เมนูทั้งหมด: news.js/screen.js คัดลอกไปขึ้นในแผงซ้าย -->
+  <template id="allMenuTpl">
+    <div class="menu-grid">
+      <button type="button" class="menu-btn" data-q="สมัครเรียนต้องทำอย่างไร มีคุณสมบัติอะไรบ้าง" data-q-en="How do I apply, and what are the requirements?"><em>🎓</em><span><span data-t="cApply">สมัครเรียน</span><small data-t="cApplySub">คุณสมบัติ วิธีสมัคร</small></span></button>
+      <button type="button" class="menu-btn" data-q="เปิดสอนสาขาอะไรบ้าง" data-q-en="What programs does the college offer?"><em>📚</em><span><span data-t="cPrograms">หลักสูตร</span><small data-t="cProgramsSub">สาขาที่เปิดสอน</small></span></button>
+      <button type="button" class="menu-btn" data-action="showDirectors"><em>👔</em><span><span data-t="cDirectors">ข้อมูล ผอ.สอจ.สระบุรี</span><small data-t="cDirectorsSub">ผู้อำนวยการวิทยาลัยในสระบุรี</small></span></button>
+      <button type="button" class="menu-btn" data-q="วิทยาลัยมีผลงานและรางวัลอะไรบ้าง" data-q-en="What awards and achievements does the college have?"><em>🏆</em><span><span data-t="cAwards">ผลงานรางวัล</span><small data-t="cAwardsSub">รางวัลพระราชทาน เหรียญทอง</small></span></button>
+      <button type="button" class="menu-btn" data-action="showMap"><em>🗺️</em><span><span data-t="cMap">แผนผังวิทยาลัย</span><small data-t="cMapSub">อาคาร ห้องต่าง ๆ</small></span></button>
+      <button type="button" class="menu-btn" data-action="campusTour"><em>🏫</em><span><span data-t="cTour">ทัวร์ 3 มิติ</span><small data-t="cTourSub">เดินชมวิทยาลัยเสมือนจริง</small></span></button>
+      <button type="button" class="menu-btn" data-q="ติดต่อวิทยาลัยได้ช่องทางไหนบ้าง" data-q-en="How can I contact the college?"><em>📞</em><span><span data-t="cContact">ช่องทางติดต่อ</span><small data-t="cContactSub">โทร 0-3628-1295</small></span></button>
+      <button type="button" class="menu-btn" data-menu="trips" data-q="สระบุรีมีที่เที่ยวที่ไหนบ้าง" data-q-en="What are the places to visit in Saraburi?"><em>🏞️</em><span><span data-t="cTrips">ที่เที่ยวสระบุรี</span><small data-t="cTripsSub">วัด น้ำตก ธรรมชาติ</small></span></button>
+      <button type="button" class="menu-btn" data-menu="souvenirs" data-q="ของฝากขึ้นชื่อของสระบุรีมีอะไรบ้าง" data-q-en="What are the famous souvenirs from Saraburi?"><em>🛍️</em><span><span data-t="cSouvenir">ของฝากสระบุรี</span><small data-t="cSouvenirSub">OTOP ของกินขึ้นชื่อ</small></span></button>
+      <button type="button" class="menu-btn" data-menu="food" data-q="ร้านอาหารใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Where can I eat near the college?"><em>🍜</em><span><span data-t="cFood">ร้านอาหาร</span><small data-t="cFoodSub">ก๋วยเตี๋ยว หมูกระทะ ตามสั่ง</small></span></button>
+      <button type="button" class="menu-btn" data-menu="cafe" data-q="คาเฟ่ใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Are there cafés near the college?"><em>☕</em><span><span data-t="cCafe">คาเฟ่แนะนำ</span><small data-t="cCafeSub">กาแฟ ระบายสี 5 ร้าน</small></span></button>
+      <button type="button" class="menu-btn" data-menu="stay" data-q="ที่พักใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Where can I stay near the college?"><em>🏨</em><span><span data-t="cStay">ที่พักใกล้วิทยาลัย</span><small data-t="cStaySub">รีสอร์ท ห้องพัก 5 แห่ง</small></span></button>
+      <button type="button" class="menu-btn" data-menu="market" data-q="ตลาดใกล้วิทยาลัยมีที่ไหนบ้าง" data-q-en="Are there markets near the college?"><em>🛒</em><span><span data-t="cMarket">ตลาด</span><small data-t="cMarketSub">ตลาดนัด ตลาดสด</small></span></button>
+    </div>
+  </template>
+
+  <div id="lightbox"><img src="" alt=""></div>
+  <div id="tourView"><iframe title="แนะนำสถานที่วิทยาลัย 3 มิติ" allow="fullscreen"></iframe>
+    <button type="button" class="close" data-action="closeTour">✕ <span data-t="closeTour">ปิด กลับหน้าถามตอบ</span></button></div>
+
+  <!-- วิดีโอแทรก: จอว่างนาน → เล่น 1 คลิปแล้วกลับหน้าข่าว -->
+  <div id="attract" aria-hidden="true">
+    <video playsinline preload="auto"></video>
+    <div class="prog"><i id="vidProg"></i></div>
+    <div class="brand"><span></span><b data-t="college">วิทยาลัยเทคนิคท่าหลวงซิเมนต์ไทยอนุสรณ์</b></div>
+    <div class="tap"><i>👆</i><span data-t="attractTap">แตะจอเพื่อถามหุ่นยนต์</span></div>
+  </div>
+
+  <div id="announce" role="alert">
+    <div class="card"><div class="tag">📢 <span data-t="announceTag">ประกาศ</span></div><p id="announceText"></p></div>
+  </div>
+</div>
+
+<script src="demo.js"></script>
+<script>
+  // ย่อ/ขยายกรอบ 1920×1080 ให้พอดีจอ (จัดกลาง)
+  (function () {
+    const app = document.getElementById("app");
+    function fit() {
+      const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+      app.style.transform = `translate(${(innerWidth - 1920 * k) / 2}px,${(innerHeight - 1080 * k) / 2}px) scale(${k})`;
+    }
+    addEventListener("resize", fit); fit();
+  })();
+</script>
+<script src="static/vendor/qrcode.js"></script>
+<script src="static/news.js"></script>
+<script src="static/screen.js"></script>
+<script src="static/extras.js"></script>
+<script src="static/osk.js"></script>
+</body>
+</html>

@@ -245,3 +245,35 @@ def test_attract_hides_pages_underneath():
     css = _css().replace(" ", "")
     for part in ("#home", "#pvChat", "#board"):
         assert f"body:has(#attract.open){part}" in css, part
+
+
+# ---- บันทึกเวลาช่วงพูดคุย (ฟัง → ถอดเสียง → ถาม → ตอบ → เสียงดัง) ลง log ของหุ่น ไว้หาว่าช้า/ตกหล่นตรงไหน ----
+def test_voice_log_endpoint_prints(capsys):
+    r = make_client().post("/pv/log", json={"ev": "final", "ms": 1234, "data": "สมัครเรียนทำยังไง"})
+    assert r.status_code == 204
+    out = capsys.readouterr().out
+    assert "[เสียง]" in out and "final" in out and "สมัครเรียนทำยังไง" in out
+
+
+def test_voice_log_endpoint_ignores_junk():
+    assert make_client().post("/pv/log", data="xx").status_code == 204
+
+
+def test_screen_v_boots_without_preview(tmp_path, monkeypatch):
+    """โหมดปกติ (ไม่ใช่ preview) มีตัวบันทึกเวลาเสียง — หน้ายังต้องรันจบ"""
+    import threading
+    from werkzeug.serving import make_server
+    chrome = _chrome()
+    if not chrome:
+        pytest.skip("ไม่มี Chrome/Chromium")
+    monkeypatch.setattr(ps, "fetch_headers", lambda url: {})
+    monkeypatch.setattr(server, "state", {**server.state})   # หน้าจอส่งสถานะ idle มา ไม่ให้ค้างไปเทสต์อื่น
+    srv = make_server("127.0.0.1", 0, server.app, threaded=True)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{srv.server_port}/screen-v"
+        out = subprocess.run([chrome, "--headless=new", "--disable-gpu", f"--user-data-dir={tmp_path}", "--timeout=8000",
+                              "--dump-dom", url], capture_output=True, text=True, encoding="utf-8", timeout=90).stdout
+    finally:
+        srv.shutdown()
+    assert 'data-pv-ready="1"' in out, out[-800:]

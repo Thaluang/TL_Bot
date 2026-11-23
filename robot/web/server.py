@@ -142,6 +142,16 @@ def screen_layout():
     return jsonify(layout=getattr(config, "SCREEN_LAYOUT", "landscape"))
 
 
+@app.post("/pv/log")
+def portrait_voice_log():
+    """จอแนวตั้งส่งเวลาแต่ละช่วงของการพูดคุยมาลง log (ดู /dev/shm/tlbot.log บน Pi) — ใช้หาว่าช้า/ตกหล่นตรงไหน"""
+    d = request.get_json(silent=True) or {}
+    if isinstance(d, dict) and d.get("ev"):
+        data = str(d.get("data", ""))[:200].replace("\n", " ")
+        print(f"[เสียง] {datetime.now():%H:%M:%S} +{d.get('ms', '')}ms {str(d['ev'])[:30]} {data}", flush=True)
+    return "", 204
+
+
 @app.get("/pv/systems")
 def portrait_systems_list():
     """ระบบภายนอกของปุ่ม 2–5 บนจอแนวตั้ง + embed = เปิดซ้อนในจอนี้ได้ไหม (ไม่ได้ → จอขึ้น QR)"""
